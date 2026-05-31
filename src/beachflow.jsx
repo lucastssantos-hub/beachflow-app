@@ -1274,7 +1274,7 @@ function ScreenPlano({ nav, params }) {
 
         {/* scout de validação */}
         {p.scoutValidacao && <Card style={{ marginTop:10 }}>
-          <Mini color={C.turq}>◎ Validar no scout</Mini>
+          <Mini color={C.turq}>◎ Validar no próximo scout</Mini>
           <div style={{ fontSize:12.5, color:C.inkDim, marginTop:6, lineHeight:1.4 }}>{p.scoutValidacao}</div>
         </Card>}
 
@@ -1290,7 +1290,7 @@ function ScreenPlano({ nav, params }) {
       <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'12px 20px 30px',
         background:'linear-gradient(transparent,'+C.navy900+' 30%)', display:'flex', gap:10 }}>
         <Btn kind="ghost" style={{ flex:1 }} icon="edit" onClick={startEdit}>Ajustar</Btn>
-        <Btn kind="primary" style={{ flex:2 }} icon="play" onClick={()=>nav.go('scout')}>Iniciar aula</Btn>
+        <Btn kind="primary" style={{ flex:2 }} icon="check" onClick={nav.back}>Usar plano na aula</Btn>
       </div>
     </Screen>
   );
