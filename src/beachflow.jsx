@@ -2,7 +2,7 @@ import React from 'react';
 import { gerarPlano, contextFromParams, salvarEdicao, salvarAvaliacao, listarPlanos } from './ia/gerarPlano.js';
 import { supabase, authEnabled } from './supabaseClient.js';
 import { listAlunos, listTurmas, getResumo } from './data/alunos.js';
-import { listPartidas, getPartida, criarPartida, salvarPonto, encerrarPartida } from './data/scout.js';
+import { listPartidas, getPartida, criarPartida, salvarPonto, encerrarPartida, scoutContext } from './data/scout.js';
 import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutDeciding, tennis, modeLabel } from './data/scoutScore.js';
 
 
@@ -1029,11 +1029,11 @@ function ScreenPlano({ nav, params }) {
     let alive=true;
     if(params.plano){ setSt({ loading:false, plano:params.plano, fonte:params.fonte||'ia', id:params.id||null }); return; }
     setSt({ loading:true, plano:null, fonte:null, id:null });
-    gerarPlano(contextFromParams(params)).then(r=>{ if(alive) setSt({ loading:false, plano:r.plano, fonte:r.fonte, id:r.id }); });
+    gerarPlano(params.contexto || contextFromParams(params)).then(r=>{ if(alive) setSt({ loading:false, plano:r.plano, fonte:r.fonte, id:r.id }); });
     return ()=>{ alive=false; };
-  }, [a && a.id]);
+  }, [a && a.id, params.contexto]);
 
-  const titulo = a ? a.nome.split(' ')[0] : 'Turma B';
+  const titulo = a ? a.nome.split(' ')[0] : (params.titulo || 'Turma B');
   const radarData = a && a.radar ? a.radar : [0.55,0.8,0.7,0.45,0.6,0.4];
 
   if(st.loading){
@@ -1244,7 +1244,7 @@ function ScreenPartida({ nav, params }) {
   return (
     <Screen>
       <Header onBack={nav.back} kicker={`Scout · ${fmtData(d.data)}`} title={d.titulo}/>
-      <Body top={16} bottom={26}>
+      <Body top={16} bottom={96}>
         <Card glow>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <div style={{ flex:1, fontSize:13.5, color:C.ink }}>{d.timeA}</div>
@@ -1292,6 +1292,11 @@ function ScreenPartida({ nav, params }) {
           </div>
         </Card>}
       </Body>
+      {d.pts.length>0 && <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'12px 20px 30px',
+        background:'linear-gradient(transparent,'+C.navy900+' 30%)' }}>
+        <Btn kind="primary" style={{ width:'100%' }} icon="clip"
+          onClick={()=>nav.go('plano',{ contexto: scoutContext(d), titulo: d.titulo })}>Gerar plano deste scout</Btn>
+      </div>}
     </Screen>
   );
 }

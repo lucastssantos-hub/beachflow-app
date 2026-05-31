@@ -61,6 +61,33 @@ export async function encerrarPartida(id) {
   await supabase.from('scout_matches').update({ ended: true, active: false, ended_at: new Date().toISOString() }).eq('id', id);
 }
 
+// Constrói o contexto da IA a partir de uma partida (getPartida): scout como fonte principal.
+export function scoutContext(d) {
+  const erros = {}, winners = {}, ctx = {};
+  for (const p of (d.pts || [])) {
+    const f = p.shot || p.technique;
+    if (!f) continue;
+    if (/erro/i.test(p.outcome || '')) erros[f] = (erros[f] || 0) + 1;
+    if (/winner/i.test(p.outcome || '')) winners[f] = (winners[f] || 0) + 1;
+    if (p.zone) (ctx[f] = ctx[f] || []).push(p.zone);
+  }
+  const padroes = Object.entries(erros).sort((a, b) => b[1] - a[1]).slice(0, 5)
+    .map(([fundamento, frequencia]) => ({ tipo: 'erro não forçado', fundamento, frequencia }));
+  return {
+    alvo: 'turma',
+    nome: d.titulo || 'Partida',
+    nivel: 'Intermediário',
+    duracaoMin: 60,
+    scout: {
+      pontosAnalisados: d.stats ? d.stats.total : (d.pts || []).length,
+      placar: `${d.gamesA}x${d.gamesB} games`,
+      padroes,
+      errosPorGolpe: erros,
+      winnersPorGolpe: winners,
+    },
+  };
+}
+
 // Lista as partidas de scout do professor (mais recentes primeiro), com nº de pontos.
 export async function listPartidas() {
   if (!supabase) return [];
