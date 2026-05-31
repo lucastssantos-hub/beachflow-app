@@ -1,6 +1,65 @@
-// Camada de dados de scout (READ-ONLY) — lê as partidas/pontos do app antigo.
-// Tabelas: scout_matches, scout_points. RLS por teacher_id = auth.uid().
+// Camada de dados de scout — lê e (no ao vivo) grava em scout_matches/scout_points.
+// RLS por teacher_id = auth.uid().
 import { supabase } from '../supabaseClient.js';
+import { initialScoutScore, applyScoutWinner, scoutScoreText, scoutDeciding, inferIntention } from './scoutScore.js';
+
+async function uid() { const { data } = await supabase.auth.getUser(); return data?.user?.id || null; }
+
+// Cria uma partida ao vivo. players = {a1,a2,b1,b2} (objetos {id,name}); a2/b2 nulos se simples.
+export async function criarPartida({ titulo, mode, singles, a1, a2, b1, b2, classId }) {
+  if (!supabase) return null;
+  const tid = await uid();
+  const teamA = [a1, singles ? null : a2].filter(Boolean);
+  const teamB = [b1, singles ? null : b2].filter(Boolean);
+  const row = {
+    teacher_id: tid, title: titulo || 'Partida ao vivo', mode, format: mode, score_mode: mode,
+    team_a: teamA.map((p) => p.id), team_b: teamB.map((p) => p.id),
+    team_a_names: teamA.map((p) => p.name), team_b_names: teamB.map((p) => p.name),
+    games_a: 0, games_b: 0, points_a: 0, points_b: 0,
+    active: true, ended: false, score_state: initialScoutScore(mode),
+    ...(classId ? { class_id: classId } : {}),
+  };
+  const { data, error } = await supabase.from('scout_matches').insert(row).select('id').single();
+  if (error) { console.warn('[criarPartida]', error.message); return null; }
+  return { id: data.id, titulo: row.title, mode, singles, players: { a: teamA, b: teamB }, score: row.score_state };
+}
+
+// Salva um ponto: aplica a pontuação, grava o ponto e atualiza a partida. Retorna o novo placar.
+export async function salvarPonto(match, draft, scoreState, pointNumber) {
+  const tid = await uid();
+  const before = scoreState;
+  const after = applyScoutWinner(before, draft.winner);
+  const serveEvent = draft.outcome === 'Ace' || draft.outcome === 'Erro de saque';
+  const technique = serveEvent ? 'Saque' : draft.technique;
+  const intention = inferIntention(technique, draft.outcome, draft.zone);
+  const all = [...match.players.a, ...match.players.b];
+  const teamOf = (pid) => (match.players.a.some((p) => p.id === pid) ? 'a' : (match.players.b.some((p) => p.id === pid) ? 'b' : null));
+  const serverName = all.find((p) => p.id === draft.server)?.name || '';
+  const point = {
+    teacher_id: tid, match_id: match.id, point_number: pointNumber,
+    set_number: before.set_number, server_id: draft.server, server_name: serverName,
+    server_team: teamOf(draft.server), serve_side: draft.serve_side,
+    outcome: draft.outcome, shot: technique, technique, inferred_intention: intention,
+    zone: draft.zone || '', winner_team: draft.winner,
+    score_before: scoutScoreText(before), score_after: scoutScoreText(after),
+    games_before: `${before.games.a}x${before.games.b}`, games_after: `${after.games.a}x${after.games.b}`,
+    sets_before: `${before.sets.a}x${before.sets.b}`, sets_after: `${after.sets.a}x${after.sets.b}`,
+    is_deciding_point: scoutDeciding(before), is_tiebreak: !!before.tie, is_super_tiebreak: !!before.superTie,
+  };
+  const { error } = await supabase.from('scout_points').insert(point);
+  if (error) console.warn('[salvarPonto]', error.message);
+  await supabase.from('scout_matches').update({
+    games_a: after.games.a, games_b: after.games.b, points_a: after.points.a, points_b: after.points.b,
+    score_state: after, ended: after.finished,
+    ...(after.finished ? { ended_at: new Date().toISOString(), active: false } : {}),
+  }).eq('id', match.id);
+  return after;
+}
+
+export async function encerrarPartida(id) {
+  if (!supabase) return;
+  await supabase.from('scout_matches').update({ ended: true, active: false, ended_at: new Date().toISOString() }).eq('id', id);
+}
 
 // Lista as partidas de scout do professor (mais recentes primeiro), com nº de pontos.
 export async function listPartidas() {

@@ -2,7 +2,8 @@ import React from 'react';
 import { gerarPlano, contextFromParams, salvarEdicao, salvarAvaliacao, listarPlanos } from './ia/gerarPlano.js';
 import { supabase, authEnabled } from './supabaseClient.js';
 import { listAlunos, listTurmas, getResumo } from './data/alunos.js';
-import { listPartidas, getPartida } from './data/scout.js';
+import { listPartidas, getPartida, criarPartida, salvarPonto, encerrarPartida } from './data/scout.js';
+import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutDeciding, tennis, modeLabel } from './data/scoutScore.js';
 
 
 /* ===== app/ios-frame.jsx ===== */
@@ -1204,9 +1205,11 @@ function ScreenScout({ nav }) {
   return (
     <Screen>
       <Body top={50} bottom={12}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:26, letterSpacing:'-.02em', color:'#fff' }}>Scout</div>
-          {partidas && <span style={{ fontFamily:'var(--ff-m)', fontSize:11, color:C.inkDim }}>{base.length} partidas</span>}
+          <div className="bf-tap" onClick={()=>nav.go('scoutNovo')} style={{ display:'flex', alignItems:'center', gap:6,
+            background:C.coral, color:'#fff', borderRadius:11, padding:'8px 13px', fontWeight:600, fontSize:13,
+            boxShadow:'0 6px 16px rgba(255,106,69,.3)' }}><Icon name="plus" size={16} color="#fff"/>Nova partida</div>
         </div>
         <div style={{ marginTop:10 }}>
           {partidas===null && <div style={{ textAlign:'center', color:C.inkDim, fontSize:13, marginTop:30 }}>Carregando partidas…</div>}
@@ -1225,7 +1228,6 @@ function ScreenScout({ nav }) {
               </div>
             </Card>)}
         </div>
-        {partidas && base.length>0 && <div style={{ textAlign:'center', fontSize:11, color:C.n500, marginTop:16 }}>Registro de partida ao vivo chega em breve.</div>}
       </Body>
       <TabBar active="scout" onTab={nav.tab}/>
     </Screen>
@@ -1301,6 +1303,175 @@ function ScoutBtn({ label, big, c, onClick, n }) {
     <div style={{ fontFamily:'var(--ff-m)', fontSize:9, textTransform:'uppercase', color:C.inkDim }}>{label}</div>
     <div style={{ position:'absolute', top:7, right:9, fontFamily:'var(--ff-m)', fontSize:11, color:C.ink }}>{n}</div>
   </div>;
+}
+
+// ---------- SCOUT: NOVA PARTIDA (setup) ----------
+function ScreenScoutNovo({ nav }) {
+  const [alunos,setAlunos] = React.useState(null);
+  const [titulo,setTitulo] = React.useState('Partida ao vivo');
+  const [singles,setSingles] = React.useState(false);
+  const [mode,setMode] = React.useState('lesson4');
+  const [sel,setSel] = React.useState({ a1:'', a2:'', b1:'', b2:'' });
+  const [busy,setBusy] = React.useState(false);
+  React.useEffect(()=>{ let alive=true; listAlunos().then(r=>{ if(!alive) return; setAlunos(r);
+    if(r.length>=2) setSel({ a1:r[0].id, a2:(r[1]||r[0]).id, b1:(r[2]||r[1]||r[0]).id, b2:(r[3]||r[2]||r[1]||r[0]).id }); }); return ()=>{alive=false;}; },[]);
+  const byId = (id)=> (alunos||[]).find(a=>a.id===id);
+  const selStyle = { width:'100%', marginTop:4, background:'rgba(255,255,255,.05)', color:C.ink,
+    border:`1px solid ${C.line2}`, borderRadius:10, padding:'9px 11px', fontFamily:'var(--ff-u)', fontSize:13.5, outline:'none' };
+  const Sel = ({ k, label }) => <div style={{ flex:1 }}>
+    <span style={{ fontFamily:'var(--ff-m)', fontSize:9, letterSpacing:'.08em', textTransform:'uppercase', color:C.n500 }}>{label}</span>
+    <select value={sel[k]} onChange={e=>setSel(s=>({...s,[k]:e.target.value}))} style={selStyle}>
+      {(alunos||[]).map(a=><option key={a.id} value={a.id}>{a.nome}</option>)}
+    </select></div>;
+  const iniciar = async ()=>{
+    const a1=byId(sel.a1), b1=byId(sel.b1);
+    if(!a1||!b1) return;
+    if(!singles && (!byId(sel.a2)||!byId(sel.b2))) return;
+    setBusy(true);
+    const m = await criarPartida({ titulo, mode, singles,
+      a1:{id:a1.id,name:a1.nome}, a2: singles?null:{id:sel.a2,name:byId(sel.a2).nome},
+      b1:{id:b1.id,name:b1.nome}, b2: singles?null:{id:sel.b2,name:byId(sel.b2).nome} });
+    setBusy(false);
+    if(m) nav.go('scoutAoVivo',{ match:m }); else alert('Não foi possível criar a partida.');
+  };
+  return (
+    <Screen>
+      <Header onBack={nav.back} kicker="Scout" title="Nova partida"/>
+      <Body top={16} bottom={26}>
+        {alunos===null && <div style={{ textAlign:'center', color:C.inkDim, fontSize:13, marginTop:30 }}>Carregando alunos…</div>}
+        {alunos && alunos.length<2 && <Card style={{ textAlign:'center', padding:'24px 16px' }}>
+          <div style={{ fontSize:13, color:C.ink }}>Você precisa de pelo menos 2 alunos cadastrados.</div></Card>}
+        {alunos && alunos.length>=2 && <>
+          <span style={{ fontFamily:'var(--ff-m)', fontSize:9, letterSpacing:'.08em', textTransform:'uppercase', color:C.n500 }}>Título</span>
+          <input value={titulo} onChange={e=>setTitulo(e.target.value)} style={selStyle}/>
+          <div style={{ display:'flex', gap:8, marginTop:14 }}>
+            {[['Duplas',false],['Simples',true]].map(([l,v])=>
+              <div key={l} className="bf-tap" onClick={()=>setSingles(v)} style={{ flex:1, textAlign:'center', padding:'10px 0',
+                borderRadius:11, fontSize:13, fontWeight:600, border:`1px solid ${singles===v?C.turq:C.line2}`,
+                color:singles===v?C.turq:C.inkDim, background:singles===v?'rgba(22,194,163,.12)':'transparent' }}>{l}</div>)}
+          </div>
+          <div style={{ marginTop:14 }}>
+            <span style={{ fontFamily:'var(--ff-m)', fontSize:9, letterSpacing:'.08em', textTransform:'uppercase', color:C.n500 }}>Formato</span>
+            <select value={mode} onChange={e=>setMode(e.target.value)} style={selStyle}>
+              {MODES.map(([v,l])=><option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+          <Card style={{ marginTop:14 }}>
+            <Mini color={C.turq}>Dupla A</Mini>
+            <div style={{ display:'flex', gap:10, marginTop:6 }}>
+              <Sel k="a1" label="Jogador A1"/>{!singles && <Sel k="a2" label="Jogador A2"/>}</div>
+          </Card>
+          <Card style={{ marginTop:10 }}>
+            <Mini color={C.coral}>Dupla B</Mini>
+            <div style={{ display:'flex', gap:10, marginTop:6 }}>
+              <Sel k="b1" label="Jogador B1"/>{!singles && <Sel k="b2" label="Jogador B2"/>}</div>
+          </Card>
+        </>}
+      </Body>
+      {alunos && alunos.length>=2 &&
+        <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'12px 20px 30px',
+          background:'linear-gradient(transparent,'+C.navy900+' 30%)' }}>
+          <Btn kind="primary" style={{ width:'100%' }} icon="play" onClick={iniciar}>{busy?'…':'Iniciar scout'}</Btn>
+        </div>}
+    </Screen>
+  );
+}
+
+// ---------- SCOUT: AO VIVO ----------
+function ScreenScoutAoVivo({ nav, params }) {
+  const m = params.match;
+  const [score,setScore] = React.useState(m ? m.score : null);
+  const [pts,setPts] = React.useState([]);
+  const [draft,setDraft] = React.useState(null);
+  const [busy,setBusy] = React.useState(false);
+  if(!m) return <Screen><Header onBack={nav.back} title="Scout"/><Body top={20}><div style={{textAlign:'center',color:C.inkDim}}>Partida não encontrada.</div></Body></Screen>;
+  const players = [...m.players.a, ...m.players.b];
+  const fn = (nm='')=> nm.split(' ')[0];
+  const teamName = (t)=> (t==='a'?m.players.a:m.players.b).map(p=>fn(p.name)).join(' & ');
+  const serveEvent = draft && (draft.outcome==='Ace' || draft.outcome==='Erro de saque');
+  const upd = (k,v)=> setDraft(d=>({...d,[k]:v}));
+  const Choice = ({ k, v, label }) => <div className="bf-tap" onClick={()=>upd(k,v)}
+    style={{ padding:'9px 4px', borderRadius:9, textAlign:'center', fontSize:11.5, lineHeight:1.15,
+      border:`1px solid ${draft[k]===v?C.turq:C.line2}`, background:draft[k]===v?'rgba(22,194,163,.14)':'transparent',
+      color:draft[k]===v?C.turq:C.inkDim }}>{label}</div>;
+  const grid = (cols)=>({ display:'grid', gridTemplateColumns:`repeat(${cols},1fr)`, gap:7, marginTop:7 });
+  const lbl = { fontFamily:'var(--ff-m)', fontSize:9.5, letterSpacing:'.06em', textTransform:'uppercase', color:C.n500, marginTop:13, display:'block' };
+
+  const salvar = async ()=>{
+    if(!draft.server||!draft.winner||!draft.outcome) return;
+    if(!serveEvent && !draft.technique) return;
+    setBusy(true);
+    const after = await salvarPonto(m, draft, score, pts.length+1);
+    setBusy(false);
+    setScore(after);
+    setPts(p=>[...p,{ outcome:draft.outcome, shot: serveEvent?'Saque':draft.technique, winner:draft.winner, score_after: scoutScoreText(after) }]);
+    setDraft(null);
+  };
+  const encerrar = async ()=>{ await encerrarPartida(m.id); nav.go('partida',{ id:m.id }); };
+
+  return (
+    <Screen>
+      <Header onBack={nav.back} kicker={modeLabel(m.mode)} title={m.titulo}/>
+      <Body top={14} bottom={draft?12:90}>
+        {/* placar */}
+        <Card glow>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <div style={{ flex:1, fontSize:13, color:C.ink }}>{teamName('a')}</div>
+            <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:26, color:C.turq }}>{score.games.a} × {score.games.b}</div>
+            <div style={{ flex:1, fontSize:13, color:C.ink, textAlign:'right' }}>{teamName('b')}</div>
+          </div>
+          <div style={{ textAlign:'center', marginTop:8 }}>
+            <span style={{ fontFamily:'var(--ff-d)', fontWeight:700, fontSize:18, color:'#fff' }}>{scoutScoreText(score)}</span>
+            <div style={{ marginTop:4 }}><Mini>{m.mode==='pro3'?`Sets ${score.sets.a}-${score.sets.b} · `:''}{score.superTie?'Super tiebreak':score.tie?'Tiebreak':`Set ${score.set_number}`}{scoutDeciding(score)?' · ponto decisivo':''}</Mini></div>
+          </div>
+          {score.finished && <div style={{ marginTop:10, textAlign:'center' }}>
+            <Badge tone="ok">Partida encerrada</Badge></div>}
+        </Card>
+
+        {/* form de ponto */}
+        {draft ? <Card style={{ marginTop:12 }}>
+          <span style={{ ...lbl, marginTop:0 }}>Sacador</span>
+          <div style={grid(2)}>{players.map(p=><Choice key={p.id} k="server" v={p.id} label={fn(p.name)}/>)}</div>
+          <span style={lbl}>Posição do saque</span>
+          <div style={grid(3)}>{SERVE_SIDES.map(x=><Choice key={x} k="serve_side" v={x} label={x}/>)}</div>
+          <span style={lbl}>Quem venceu o ponto?</span>
+          <div style={grid(2)}>
+            <Choice k="winner" v="a" label={teamName('a')}/><Choice k="winner" v="b" label={teamName('b')}/></div>
+          <span style={lbl}>Como terminou?</span>
+          <div style={grid(2)}>{OUTCOMES.map(x=><Choice key={x} k="outcome" v={x} label={x}/>)}</div>
+          {!serveEvent && <>
+            <span style={lbl}>Técnica principal</span>
+            <div style={grid(3)}>{TECHNIQUES.map(x=><Choice key={x} k="technique" v={x} label={x}/>)}</div>
+            <span style={lbl}>Zona <span style={{textTransform:'none',color:C.n500}}>(opcional)</span></span>
+            <div style={grid(3)}>{ZONES.map(x=><Choice key={x} k="zone" v={x} label={x}/>)}</div>
+          </>}
+          <div style={{ display:'flex', gap:10, marginTop:16 }}>
+            <Btn kind="ghost" style={{ flex:1 }} onClick={()=>setDraft(null)}>Cancelar</Btn>
+            <Btn kind="secondary" style={{ flex:2 }} icon="check" onClick={salvar}>{busy?'…':'Salvar ponto'}</Btn>
+          </div>
+        </Card> : <>
+          {pts.length>0 && <Card style={{ marginTop:12 }}>
+            <Mini>Pontos ({pts.length})</Mini>
+            <div style={{ marginTop:8 }}>
+              {pts.slice(-8).reverse().map((p,i)=>
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, padding:'7px 0', borderBottom:`1px solid ${C.line}` }}>
+                  <span style={{ fontFamily:'var(--ff-m)', color:C.turq, width:54 }}>{p.score_after}</span>
+                  <span style={{ flex:1, color:C.ink }}>{p.outcome}</span>
+                  <span style={{ color:C.inkDim }}>{p.shot} · {teamName(p.winner)}</span>
+                </div>)}
+            </div>
+          </Card>}
+        </>}
+      </Body>
+      {!draft && <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'12px 20px 30px',
+        background:'linear-gradient(transparent,'+C.navy900+' 30%)', display:'flex', gap:10 }}>
+        <Btn kind="ghost" style={{ flex:1 }} onClick={encerrar}>Encerrar</Btn>
+        {!score.finished
+          ? <Btn kind="primary" style={{ flex:2 }} icon="plus" onClick={()=>setDraft({ server:players[0]?.id||'', serve_side:'Direita', winner:'a', outcome:'Winner', technique:'', zone:'' })}>Novo ponto</Btn>
+          : <Btn kind="secondary" style={{ flex:2 }} onClick={()=>nav.go('partida',{id:m.id})}>Ver resumo</Btn>}
+      </div>}
+    </Screen>
+  );
 }
 
 // ---------- DIAGNÓSTICO ----------
@@ -1605,6 +1776,7 @@ const REG = {
   scout: ScreenScout, financeiro: ScreenFinanceiro, aluno: ScreenAluno, plano: ScreenPlano,
   diagnostico: ScreenDiagnostico, avaliacao: ScreenAvaliacao, autoavaliacao: ScreenAutoaval,
   evolucao: ScreenEvolucao, historico: ScreenHistorico, partida: ScreenPartida,
+  scoutNovo: ScreenScoutNovo, scoutAoVivo: ScreenScoutAoVivo,
 };
 const TAB_ROUTES = ['hoje', 'alunos', 'aulas', 'scout', 'financeiro'];
 
