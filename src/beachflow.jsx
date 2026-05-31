@@ -865,21 +865,35 @@ function ScreenAluno({ nav, params }) {
               <div style={{ fontSize:11.5, color:C.inkDim, marginTop:5 }}>Avalie este aluno (ícone ✎ acima) ou peça uma autoavaliação para gerar o radar.</div>
             </Card>)}
 
-        {tab==='auto' && <Card style={{ marginTop:12 }}>
-          <Mini>Autoavaliação do aluno · como ele se sente</Mini>
-          <div style={{ marginTop:12, display:'flex', flexDirection:'column', gap:12 }}>
-            {[['Confiança no saque',a.auto[0]],['Leitura de jogo',a.auto[1]],['Constância',a.auto[2]],['Recepção',a.auto[3]]].map(([l,v])=>
-              <div key={l}><div style={{ display:'flex', justifyContent:'space-between', fontSize:12.5, marginBottom:6 }}>
-                <span style={{color:C.ink}}>{l}</span><span style={{color:C.inkDim,fontFamily:'var(--ff-m)',fontSize:11}}>{Math.round(v*100)}%</span></div>
-                <Progress value={v*100}/></div>)}
-          </div>
-          <div style={{ marginTop:13, padding:11, borderRadius:11, background:'rgba(76,155,255,.08)',
-            border:'1px solid rgba(76,155,255,.2)', fontSize:12, color:C.inkDim }}>
-            <b style={{color:C.info}}>Gap percebido:</b> o aluno se sente bem na recepção, mas os dados mostram o oposto. Use isso na conversa.</div>
-          <div className="bf-tap" onClick={()=>nav.go('autoavaliacao',{aluno:a})} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:11, paddingTop:11, borderTop:`1px solid ${C.line}` }}>
-            <span style={{ fontSize:12.5, color:C.turq }}>Abrir autoavaliação completa</span>
-            <Icon name="chevR" size={15} color={C.turq}/></div>
-        </Card>}
+        {tab==='auto' && (()=>{
+          // autoavaliação real completa (todos os fundamentos respondidos), ordenada do mais fraco
+          const autoEntries = a.notasAuto ? Object.entries(a.notasAuto).sort((x,y)=>x[1]-y[1])
+            : (a.auto||[]).map((v,i)=>[['Confiança no saque','Leitura de jogo','Constância','Recepção'][i], v*5]);
+          if(!autoEntries.length) return <Card style={{ marginTop:12, textAlign:'center', padding:'26px 16px' }}>
+            <div style={{ fontSize:13, color:C.ink }}>Sem autoavaliação ainda</div>
+            <div style={{ fontSize:11.5, color:C.inkDim, marginTop:5 }}>Quando o aluno responder a autoavaliação, ela aparece aqui.</div></Card>;
+          // gap real: maior divergência onde há professor + autoavaliação
+          let gap=null;
+          if(a.notasProf){ let maxd=0;
+            for(const [f,va] of autoEntries){ const vp=a.notasProf[f]; if(vp!=null){ const d=va-vp; if(Math.abs(d)>Math.abs(maxd)){ maxd=d; gap={f,va,vp,d}; } } }
+            if(gap && Math.abs(gap.d)<1.2) gap=null;
+          }
+          return <Card style={{ marginTop:12 }}>
+            <Mini>Autoavaliação do aluno · {autoEntries.length} fundamentos (escala 0–5)</Mini>
+            <div style={{ marginTop:12, display:'flex', flexDirection:'column', gap:11 }}>
+              {autoEntries.map(([f,v])=>
+                <div key={f}><div style={{ display:'flex', justifyContent:'space-between', fontSize:12.5, marginBottom:6 }}>
+                  <span style={{color:C.ink}}>{f}</span><span style={{color:C.inkDim,fontFamily:'var(--ff-m)',fontSize:11}}>{(+v).toFixed(1)}/5</span></div>
+                  <Progress value={(+v)/5*100} tone={v<2.5?C.coral:C.turq}/></div>)}
+            </div>
+            {gap && <div style={{ marginTop:13, padding:11, borderRadius:11, background:'rgba(76,155,255,.08)',
+              border:'1px solid rgba(76,155,255,.2)', fontSize:12, color:C.inkDim }}>
+              <b style={{color:C.info}}>Gap percebido em {gap.f}:</b> o aluno se deu {gap.va.toFixed(1)}, mas você avaliou {gap.vp.toFixed(1)}. {gap.d>0?'Pode estar superestimando — use na conversa.':'Pode estar inseguro além do real.'}</div>}
+            <div className="bf-tap" onClick={()=>nav.go('autoavaliacao',{aluno:a})} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:11, paddingTop:11, borderTop:`1px solid ${C.line}` }}>
+              <span style={{ fontSize:12.5, color:C.turq }}>Abrir autoavaliação completa</span>
+              <Icon name="chevR" size={15} color={C.turq}/></div>
+          </Card>;
+        })()}
 
         {tab==='evo' && (a.evo ? <Card style={{ marginTop:12 }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
