@@ -17,9 +17,11 @@ function initials(name = '') {
 }
 const avg = (a) => (a && a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
 
+let _cacheAlunos = null;
 // Lista os alunos do professor logado, já com radar real e notas para a IA.
-export async function listAlunos() {
+export async function listAlunos(force) {
   if (!supabase) return [];
+  if (_cacheAlunos && !force) return _cacheAlunos;
   const [stu, enr, cls, ev] = await Promise.all([
     supabase.from('students').select('id,name,level').order('name'),
     supabase.from('class_enrollments').select('student_id,class_id'),
@@ -41,7 +43,7 @@ export async function listAlunos() {
     (slot[r.fundamental] = slot[r.fundamental] || []).push(Number(r.score));
   }
 
-  return (stu.data || []).map((s, i) => {
+  const out = (stu.data || []).map((s, i) => {
     const a = agg.get(s.id) || { teacher: {}, blind: {} };
     const cls = classByStudent.get(s.id);
     // notas 0-5 (dict) para a IA — todos os fundamentos avaliados
@@ -73,6 +75,31 @@ export async function listAlunos() {
       notasProf, notasAuto, hasProf: nProf > 0,
     };
   });
+  _cacheAlunos = out;
+  return out;
+}
+
+// Resumo para o dashboard (Hoje): contagens reais + aluno com maior gap.
+export async function getResumo() {
+  if (!supabase) return null;
+  const [alunos, turmas, partidas] = await Promise.all([
+    listAlunos(),
+    listTurmas(),
+    supabase.from('scout_matches').select('id', { count: 'exact', head: true }),
+  ]);
+  let foco = null, min = Infinity;
+  for (const a of alunos) {
+    if (a.radar && a.radar.length && a.foco && a.foco !== '—') {
+      const m = avg(a.radar);
+      if (m != null && m < min) { min = m; foco = a; }
+    }
+  }
+  return {
+    nAlunos: alunos.length,
+    nTurmas: turmas.length,
+    nPartidas: partidas.count || 0,
+    foco,
+  };
 }
 
 // Lista as turmas reais do professor (com nº de alunos matriculados).

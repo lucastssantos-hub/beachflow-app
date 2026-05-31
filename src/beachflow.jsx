@@ -1,7 +1,8 @@
 import React from 'react';
 import { gerarPlano, contextFromParams, salvarEdicao, salvarAvaliacao, listarPlanos } from './ia/gerarPlano.js';
 import { supabase, authEnabled } from './supabaseClient.js';
-import { listAlunos, listTurmas } from './data/alunos.js';
+import { listAlunos, listTurmas, getResumo } from './data/alunos.js';
+import { listPartidas, getPartida } from './data/scout.js';
 
 
 /* ===== app/ios-frame.jsx ===== */
@@ -697,59 +698,62 @@ function ScreenLogin({ nav }) {
 
 // ---------- HOJE (dashboard) ----------
 function ScreenHoje({ nav }) {
+  const [nome,setNome] = React.useState('');
+  const [r,setR] = React.useState(null);
+  React.useEffect(()=>{
+    let alive=true;
+    if(authEnabled){
+      supabase.auth.getUser().then(({data})=>{ if(alive&&data?.user?.email){ const p=data.user.email.split('@')[0].split(/[._]/)[0]; setNome(p.charAt(0).toUpperCase()+p.slice(1)); } });
+      getResumo().then(x=>{ if(alive) setR(x); });
+    } else { setR({ nAlunos:ALUNOS.length, nTurmas:0, nPartidas:0, foco:ALUNOS[0] }); }
+    return ()=>{ alive=false; };
+  },[]);
+  const Stat = ({ n, l, onClick }) => (
+    <Card onClick={onClick} style={{ flex:1, padding:'13px 12px', textAlign:'center' }}>
+      <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:24, color:'#fff' }}>{n}</div>
+      <Mini style={{ marginTop:3 }}>{l}</Mini></Card>
+  );
+  const foco = r && r.foco;
   return (
     <Screen>
       <Body top={50} bottom={12}>
-        <Mini>Terça · 18 turmas na semana</Mini>
+        <Mini>{r ? `${r.nTurmas} turmas · ${r.nAlunos} alunos` : 'Carregando…'}</Mini>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginTop:2 }}>
-          <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:26, letterSpacing:'-.02em', color:'#fff' }}>Olá, Rafa.</div>
-          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:26, letterSpacing:'-.02em', color:'#fff' }}>Olá{nome?`, ${nome}`:''}.</div>
           <div className="bf-tap" onClick={()=>nav.logout&&nav.logout()} style={{ fontFamily:'var(--ff-m)', fontSize:10.5,
             color:C.inkDim, border:`1px solid ${C.line2}`, borderRadius:9, padding:'7px 10px' }}>Sair</div>
-          <div className="bf-tap" style={{ width:38, height:38, borderRadius:'50%', border:`1px solid ${C.line2}`,
-            display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
-            <Icon name="bell" size={19} color={C.ink}/>
-            <div style={{ position:'absolute', top:8, right:9, width:7, height:7, borderRadius:'50%', background:C.coral }}/>
-          </div>
-          </div>
         </div>
 
-        {/* cartão de foco */}
-        <div className="bf-tap" onClick={()=>nav.go('diagnostico',{aluno:ALUNOS[0]})} style={{ marginTop:14, borderRadius:18, padding:16,
+        {/* números reais */}
+        <div style={{ display:'flex', gap:10, marginTop:14 }}>
+          <Stat n={r?r.nAlunos:'—'} l="Alunos" onClick={()=>nav.tab('alunos')}/>
+          <Stat n={r?r.nTurmas:'—'} l="Turmas" onClick={()=>nav.tab('aulas')}/>
+          <Stat n={r?r.nPartidas:'—'} l="Scouts" onClick={()=>nav.tab('scout')}/>
+        </div>
+
+        {/* cartão de foco real (aluno com maior gap) */}
+        {foco && <div className="bf-tap" onClick={()=>nav.go('diagnostico',{aluno:foco})} style={{ marginTop:14, borderRadius:18, padding:16,
           background:'linear-gradient(150deg,rgba(255,106,69,.22),rgba(255,106,69,.05))',
           border:'1px solid rgba(255,106,69,.32)' }}>
-          <Mini color={C.coral}>● Cartão de foco · hoje</Mini>
+          <Mini color={C.coral}>● Cartão de foco</Mini>
           <div style={{ fontFamily:'var(--ff-d)', fontWeight:700, fontSize:17, color:'#fff', marginTop:8, lineHeight:1.18 }}>
-            Turma B trava na devolução de saque. Treine recepção cruzada.</div>
+            {foco.nome} precisa reforçar {foco.foco}.</div>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:11 }}>
-            <span style={{ fontSize:11.5, color:C.inkDim }}>Gap em 3 das últimas 4 aulas</span>
+            <span style={{ fontSize:11.5, color:C.inkDim }}>{foco.turma}</span>
             <span style={{ display:'flex', alignItems:'center', gap:5, fontFamily:'var(--ff-m)', fontSize:11, color:C.coral }}>
               ver diagnóstico <Icon name="chevR" size={13} color={C.coral}/></span>
           </div>
-        </div>
+        </div>}
 
         {/* atalhos */}
         <div style={{ display:'flex', gap:10, marginTop:14 }}>
           <Card onClick={()=>nav.go('scout')} style={{ flex:1, display:'flex', flexDirection:'column', gap:8, padding:13 }}>
-            <Icon name="scout" size={22} color={C.turq}/><span style={{ fontSize:13, fontWeight:600 }}>Iniciar scout</span>
-            <Mini>1 toque por ponto</Mini></Card>
-          <Card onClick={()=>nav.go('aulas')} style={{ flex:1, display:'flex', flexDirection:'column', gap:8, padding:13 }}>
-            <Icon name="clip" size={22} color={C.turq}/><span style={{ fontSize:13, fontWeight:600 }}>Planos do dia</span>
-            <Mini>2 aulas hoje</Mini></Card>
+            <Icon name="scout" size={22} color={C.turq}/><span style={{ fontSize:13, fontWeight:600 }}>Scout</span>
+            <Mini>partidas e análise</Mini></Card>
+          <Card onClick={()=>nav.go('historico')} style={{ flex:1, display:'flex', flexDirection:'column', gap:8, padding:13 }}>
+            <Icon name="clip" size={22} color={C.turq}/><span style={{ fontSize:13, fontWeight:600 }}>Planos salvos</span>
+            <Mini>treinos gerados</Mini></Card>
         </div>
-
-        <Card onClick={()=>nav.go('historico')} style={{ marginTop:10, display:'flex', alignItems:'center', gap:11, padding:'12px 14px' }}>
-          <Icon name="clock" size={20} color={C.turq}/>
-          <div style={{ flex:1 }}><span style={{ fontSize:13.5, fontWeight:600, color:C.ink }}>Planos salvos</span>
-            <Mini style={{ marginTop:2 }}>seu histórico de treinos gerados</Mini></div>
-          <Icon name="chevR" size={16} color={C.inkDim}/>
-        </Card>
-
-        <Mini style={{ marginTop:18 }}>Próximas aulas</Mini>
-        <AulaRow hora="17h" titulo="Turma B · Intermediário" sub="Plano pronto · recepção" tone="ok" tag="PLANO OK"
-          onClick={()=>nav.go('plano')} />
-        <AulaRow hora="19h" titulo="João & Léo · Particular" sub="Revisar diagnóstico" tone="warn" tag="MONTAR"
-          onClick={()=>nav.go('plano')} />
       </Body>
       <TabBar active="hoje" onTab={nav.tab}/>
     </Screen>
@@ -1191,41 +1195,101 @@ function ScreenPlano({ nav, params }) {
 
 // ---------- SCOUT (ao vivo) ----------
 function ScreenScout({ nav }) {
-  const [pts,setPts] = React.useState([{x:24,y:30,c:C.coral},{x:62,y:62,c:C.turq},{x:72,y:24,c:C.turq}]);
-  const [count,setCount] = React.useState({ w:5, ef:4, enf:3 });
-  const total = count.w+count.ef+count.enf;
-  const reg = (k,c)=>{ setCount(s=>({...s,[k]:s[k]+1}));
-    setPts(p=>[...p,{x:18+Math.random()*64,y:18+Math.random()*60,c}]); };
+  const [partidas,setPartidas] = React.useState(null);
+  React.useEffect(()=>{ let alive=true;
+    if(authEnabled){ listPartidas().then(r=>{ if(alive) setPartidas(r); }); } else { setPartidas([]); }
+    return ()=>{ alive=false; }; },[]);
+  const base = partidas||[];
+  const fmtData = d => { try{ return new Date(d).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}); }catch{ return ''; } };
   return (
     <Screen>
       <Body top={50} bottom={12}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div><Mini>Scout · Turma B · set 1</Mini>
-            <div style={{ display:'flex', alignItems:'baseline', gap:8, marginTop:3 }}>
-              <span style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:26, color:'#fff' }}>{total}</span>
-              <span style={{ fontSize:13, color:C.n500 }}>pontos</span></div></div>
-          <Badge tone="info">● AO VIVO</Badge>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+          <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:26, letterSpacing:'-.02em', color:'#fff' }}>Scout</div>
+          {partidas && <span style={{ fontFamily:'var(--ff-m)', fontSize:11, color:C.inkDim }}>{base.length} partidas</span>}
         </div>
-        {/* court */}
-        <div style={{ aspectRatio:'1.45', border:`1px solid ${C.line2}`, borderRadius:14, marginTop:12,
-          position:'relative', background:'rgba(22,194,163,.04)', overflow:'hidden' }}>
-          <div style={{ position:'absolute', left:'50%', top:'8%', bottom:'8%', width:1, background:C.line2 }}/>
-          <div style={{ position:'absolute', left:'8%', right:'8%', top:'50%', height:1, background:'rgba(255,255,255,.06)' }}/>
-          {pts.map((pt,i)=><div key={i} style={{ position:'absolute', left:pt.x+'%', top:pt.y+'%',
-            width:9, height:9, borderRadius:'50%', background:pt.c, transform:'translate(-50%,-50%)',
-            animation:'bf-in .3s ease' }}/>) }
-          <div style={{ position:'absolute', top:8, left:10 }}><Mini>recepção 42%</Mini></div>
+        <div style={{ marginTop:10 }}>
+          {partidas===null && <div style={{ textAlign:'center', color:C.inkDim, fontSize:13, marginTop:30 }}>Carregando partidas…</div>}
+          {partidas && base.length===0 && <div style={{ textAlign:'center', color:C.inkDim, fontSize:13, marginTop:30 }}>Nenhuma partida de scout ainda.</div>}
+          {base.map(p=>
+            <Card key={p.id} onClick={()=>nav.go('partida',{id:p.id})} style={{ marginTop:8, padding:'13px 14px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+                <Mini>{fmtData(p.data)} · {p.pontos} pontos</Mini>
+                {p.aoVivo ? <Badge tone="info">● AO VIVO</Badge> : <Badge tone="neutral">encerrada</Badge>}
+              </div>
+              <div style={{ fontSize:13.5, color:C.ink, fontWeight:600, marginTop:6 }}>{p.titulo}</div>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:8 }}>
+                <span style={{ flex:1, fontSize:12, color:C.inkDim, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{p.timeA}</span>
+                <span style={{ fontFamily:'var(--ff-m)', fontSize:13, color:C.turq }}>{p.gamesA} × {p.gamesB}</span>
+                <span style={{ flex:1, fontSize:12, color:C.inkDim, textAlign:'right', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{p.timeB}</span>
+              </div>
+            </Card>)}
         </div>
-        <Mini style={{ marginTop:14 }}>Registrar ponto</Mini>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginTop:8 }}>
-          <ScoutBtn label="Winner" big="+" c={C.ok} onClick={()=>reg('w',C.ok)} n={count.w}/>
-          <ScoutBtn label="Erro forç." big="!" c={C.warn} onClick={()=>reg('ef',C.warn)} n={count.ef}/>
-          <ScoutBtn label="Não forç." big="✕" c={C.err} onClick={()=>reg('enf',C.err)} n={count.enf}/>
-        </div>
-        <Btn kind="secondary" style={{ width:'100%', marginTop:12 }} onClick={()=>nav.go('diagnostico',{aluno:ALUNOS[0]})}>
-          Fechar set & ver diagnóstico</Btn>
+        {partidas && base.length>0 && <div style={{ textAlign:'center', fontSize:11, color:C.n500, marginTop:16 }}>Registro de partida ao vivo chega em breve.</div>}
       </Body>
       <TabBar active="scout" onTab={nav.tab}/>
+    </Screen>
+  );
+}
+function ScreenPartida({ nav, params }) {
+  const [d,setD] = React.useState(null);
+  React.useEffect(()=>{ let alive=true; getPartida(params.id).then(r=>{ if(alive) setD(r); }); return ()=>{ alive=false; }; }, [params.id]);
+  const fmtData = x => { try{ return new Date(x).toLocaleDateString('pt-BR',{day:'2-digit',month:'long'}); }catch{ return ''; } };
+  if(!d) return <Screen><Header onBack={nav.back} kicker="Carregando" title="Partida"/>
+    <Body top={20}><div style={{ textAlign:'center', color:C.inkDim, fontSize:13 }}>Carregando…</div></Body></Screen>;
+  const s = d.stats;
+  const maxG = Math.max(1, ...s.topGolpes.map(g=>g[1]));
+  return (
+    <Screen>
+      <Header onBack={nav.back} kicker={`Scout · ${fmtData(d.data)}`} title={d.titulo}/>
+      <Body top={16} bottom={26}>
+        <Card glow>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ flex:1, fontSize:13.5, color:C.ink }}>{d.timeA}</div>
+            <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:22, color:C.turq }}>{d.gamesA} × {d.gamesB}</div>
+            <div style={{ flex:1, fontSize:13.5, color:C.ink, textAlign:'right' }}>{d.timeB}</div>
+          </div>
+          <div style={{ textAlign:'center', marginTop:9 }}><Mini>{s.total} pontos · {d.encerrada?'encerrada':'em andamento'}</Mini></div>
+        </Card>
+
+        <div style={{ display:'flex', gap:10, marginTop:10 }}>
+          <Card style={{ flex:1, padding:13, textAlign:'center' }}><Mini>Pontos</Mini>
+            <div style={{ fontFamily:'var(--ff-d)', fontWeight:700, fontSize:17, color:'#fff', marginTop:4 }}>{s.pontosA}<span style={{color:C.n500}}> × </span>{s.pontosB}</div></Card>
+          <Card style={{ flex:1, padding:13, textAlign:'center' }}><Mini>Winners</Mini>
+            <div style={{ fontFamily:'var(--ff-d)', fontWeight:700, fontSize:17, color:C.ok, marginTop:4 }}>{s.winners}</div></Card>
+          <Card style={{ flex:1, padding:13, textAlign:'center' }}><Mini>Erros</Mini>
+            <div style={{ fontFamily:'var(--ff-d)', fontWeight:700, fontSize:17, color:C.warn, marginTop:4 }}>{s.erros}</div></Card>
+        </div>
+
+        {s.topGolpes.length>0 && <Card style={{ marginTop:10 }}>
+          <Mini>Pontos por golpe</Mini>
+          <div style={{ marginTop:10, display:'flex', flexDirection:'column', gap:9 }}>
+            {s.topGolpes.map(([g,n])=>
+              <div key={g}><div style={{ display:'flex', justifyContent:'space-between', fontSize:12.5, marginBottom:5 }}>
+                <span style={{color:C.ink}}>{g}</span><span style={{color:C.inkDim,fontFamily:'var(--ff-m)',fontSize:11}}>{n}</span></div>
+                <Progress value={n/maxG*100}/></div>)}
+          </div>
+        </Card>}
+
+        {s.topOutcomes.length>0 && <Card style={{ marginTop:10 }}>
+          <Mini>Desfechos</Mini>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginTop:10 }}>
+            {s.topOutcomes.map(([o,n])=><Badge key={o} tone={/winner/i.test(o)?'ok':/erro/i.test(o)?'warn':'neutral'}>{o} · {n}</Badge>)}
+          </div>
+        </Card>}
+
+        {d.pts.length>0 && <Card style={{ marginTop:10 }}>
+          <Mini>Últimos pontos</Mini>
+          <div style={{ marginTop:8 }}>
+            {d.pts.slice(-12).reverse().map((pt,i)=>
+              <div key={i} style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, padding:'7px 0', borderBottom:`1px solid ${C.line}` }}>
+                <span style={{ fontFamily:'var(--ff-m)', color:C.turq, width:54 }}>{pt.score_after||'—'}</span>
+                <span style={{ flex:1, color:C.ink }}>{pt.outcome||'—'}</span>
+                <span style={{ color:C.inkDim }}>{pt.shot||''}</span>
+              </div>)}
+          </div>
+        </Card>}
+      </Body>
     </Screen>
   );
 }
@@ -1540,7 +1604,7 @@ const REG = {
   login: ScreenLogin, hoje: ScreenHoje, alunos: ScreenAlunos, aulas: ScreenAulas,
   scout: ScreenScout, financeiro: ScreenFinanceiro, aluno: ScreenAluno, plano: ScreenPlano,
   diagnostico: ScreenDiagnostico, avaliacao: ScreenAvaliacao, autoavaliacao: ScreenAutoaval,
-  evolucao: ScreenEvolucao, historico: ScreenHistorico,
+  evolucao: ScreenEvolucao, historico: ScreenHistorico, partida: ScreenPartida,
 };
 const TAB_ROUTES = ['hoje', 'alunos', 'aulas', 'scout', 'financeiro'];
 
