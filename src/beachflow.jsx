@@ -686,15 +686,33 @@ function ScreenLogin({ nav }) {
 }
 
 // ---------- HOJE (dashboard) ----------
+const WEEKDAY_KEYS = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+const cleanDayText = (s = '') => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+function turmasHojeEAmanha(turmas = [], date = new Date()) {
+  const hoje = date.getDay();
+  const dias = [
+    { key: WEEKDAY_KEYS[hoje], label: 'Hoje', order: 0 },
+    { key: WEEKDAY_KEYS[(hoje + 1) % 7], label: 'Amanhã', order: 1 },
+  ];
+  return turmas
+    .flatMap((t) => {
+      const nome = cleanDayText(t.nome);
+      const dia = dias.find((d) => nome.includes(d.key));
+      return dia ? [{ ...t, diaLabel: dia.label, diaOrder: dia.order }] : [];
+    })
+    .sort((a, b) => a.diaOrder - b.diaOrder || (a.hora || '').localeCompare(b.hora || ''));
+}
+
 function ScreenHoje({ nav }) {
   const [nome,setNome] = React.useState('');
   const [r,setR] = React.useState(null);
+  const [turmasAgenda,setTurmasAgenda] = React.useState(null);
   React.useEffect(()=>{
     let alive=true;
     if(authEnabled){
       supabase.auth.getUser().then(({data})=>{ if(alive&&data?.user?.email){ const p=data.user.email.split('@')[0].split(/[._]/)[0]; setNome(p.charAt(0).toUpperCase()+p.slice(1)); } });
-      getResumo().then(x=>{ if(alive) setR(x); });
-    } else { setR({ nAlunos:ALUNOS.length, nTurmas:DEMO_TURMAS.length, nPartidas:0, foco:ALUNOS[0] }); }
+      Promise.all([getResumo(), listTurmas()]).then(([x,t])=>{ if(alive){ setR(x); setTurmasAgenda(turmasHojeEAmanha(t)); } });
+    } else { setR({ nAlunos:ALUNOS.length, nTurmas:DEMO_TURMAS.length, nPartidas:0, foco:ALUNOS[0] }); setTurmasAgenda(turmasHojeEAmanha(DEMO_TURMAS)); }
     return ()=>{ alive=false; };
   },[]);
   const Stat = ({ n, l, onClick }) => (
@@ -705,7 +723,7 @@ function ScreenHoje({ nav }) {
   const foco = r && r.foco;
   return (
     <Screen>
-      <Body top={50} bottom={12}>
+      <Body top={50} bottom={92}>
         <Mini>{r ? `${r.nTurmas} turmas · ${r.nAlunos} alunos` : 'Carregando…'}</Mini>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginTop:2 }}>
           <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:26, letterSpacing:'-.02em', color:'#fff' }}>Olá{nome?`, ${nome}`:''}.</div>
@@ -743,6 +761,28 @@ function ScreenHoje({ nav }) {
             <Icon name="clip" size={22} color={C.turq}/><span style={{ fontSize:13, fontWeight:600 }}>Planos salvos</span>
             <Mini>treinos gerados</Mini></Card>
         </div>
+
+        <div style={{ marginTop:16, display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+          <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:18, color:'#fff' }}>Turmas próximas</div>
+          {turmasAgenda && <span style={{ fontFamily:'var(--ff-m)', fontSize:10.5, color:C.inkDim }}>hoje + amanhã</span>}
+        </div>
+        {turmasAgenda===null && <Card style={{ marginTop:8, textAlign:'center', padding:'18px 14px' }}>
+          <div style={{ fontSize:12.5, color:C.inkDim }}>Carregando agenda…</div>
+        </Card>}
+        {turmasAgenda && turmasAgenda.length===0 && <Card style={{ marginTop:8, textAlign:'center', padding:'18px 14px' }}>
+          <div style={{ fontSize:12.5, color:C.inkDim }}>Nenhuma turma hoje ou amanhã.</div>
+        </Card>}
+        {turmasAgenda && turmasAgenda.map(t=>
+          <Card key={t.id} onClick={()=>nav.go('plano',{ turma:t.nome, nivel:t.nivel })} style={{ marginTop:8, padding:'12px 13px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <div style={{ width:44, fontFamily:'var(--ff-m)', fontSize:12, color:C.turq }}>{t.hora || '--:--'}</div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:13.5, color:C.ink, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{t.nome}</div>
+                <div style={{ fontSize:11.5, color:C.inkDim, marginTop:2 }}>{t.foco ? `Foco: ${t.foco}` : `${t.alunos || 0}${t.capacidade?`/${t.capacidade}`:''} alunos`}</div>
+              </div>
+              <Badge tone={t.diaOrder===0?'turq':'info'}>{t.diaLabel}</Badge>
+            </div>
+          </Card>)}
       </Body>
       <TabBar active="hoje" onTab={nav.tab}/>
     </Screen>
