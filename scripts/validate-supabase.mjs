@@ -59,6 +59,7 @@ const tables = [
   'evaluations',
   'scout_matches',
   'scout_points',
+  'scout_events',
   'planos',
   'avaliacoes',
 ];

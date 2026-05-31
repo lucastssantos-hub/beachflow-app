@@ -960,6 +960,22 @@ function ScreenAluno({ nav, params }) {
               <div style={{ fontSize:13, color:C.ink }}>Sem avaliação ainda</div>
               <div style={{ fontSize:11.5, color:C.inkDim, marginTop:5 }}>Avalie este aluno (ícone ✎ acima) ou peça uma autoavaliação para gerar o radar.</div>
             </Card>)}
+        {tab==='tecnico' && a.scoutResumo && <Card style={{ marginTop:12 }}>
+          <Mini>Scout individual · {a.scoutResumo.fonte}</Mini>
+          <div style={{ display:'flex', gap:8, marginTop:10, flexWrap:'wrap' }}>
+            <Badge tone="turq">{a.scoutResumo.totalEventos} ações</Badge>
+            <Badge tone="coral">{a.scoutResumo.erros} erros</Badge>
+            <Badge tone="info">{a.scoutResumo.winners} winners</Badge>
+            {!!a.scoutResumo.partidas && <Badge tone="neutral">{a.scoutResumo.partidas} partida(s)</Badge>}
+          </div>
+          <div style={{ fontSize:12.5, color:C.ink, lineHeight:1.45, marginTop:11 }}>{a.scoutResumo.leitura}</div>
+          {!!a.scoutResumo.problemasTaticos?.length && <div style={{ marginTop:10, display:'flex', flexDirection:'column', gap:6 }}>
+            {a.scoutResumo.problemasTaticos.slice(0,3).map((p)=>
+              <div key={p.texto} style={{ display:'flex', justifyContent:'space-between', gap:12, fontSize:12, color:C.inkDim }}>
+                <span>{p.texto}</span><span style={{ fontFamily:'var(--ff-m)', color:C.info }}>{p.total}</span>
+              </div>)}
+          </div>}
+        </Card>}
 
         {tab==='auto' && (()=>{
           // autoavaliação real completa (todos os fundamentos respondidos), ordenada do mais fraco

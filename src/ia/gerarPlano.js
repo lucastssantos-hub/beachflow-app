@@ -103,6 +103,16 @@ export function contextFromParams(params = {}) {
       alvo: 'aluno', nome: a.nome, nivel: a.nivel || nivelFromTurma(a.turma), foco: a.foco,
       ...(avaliacaoProfessor && Object.keys(avaliacaoProfessor).length ? { avaliacaoProfessor } : {}),
       ...(autoavaliacao && Object.keys(autoavaliacao).length ? { autoavaliacao } : {}),
+      ...(a.scoutResumo ? {
+        scout: a.scoutResumo,
+        scoutEventosRecentes: a.scoutResumo.eventosRecentes || [],
+        evidenciasScout: [
+          `${a.scoutResumo.totalEventos} evento(s) individuais do Scout`,
+          a.scoutResumo.erroPrincipal ? `erro principal: ${a.scoutResumo.erroPrincipal.fundamento} (${a.scoutResumo.erroPrincipal.total})` : '',
+          a.scoutResumo.zonaCritica ? `zona crítica: ${a.scoutResumo.zonaCritica.zona}` : '',
+          a.scoutResumo.leitura || '',
+        ].filter(Boolean),
+      } : {}),
       ...(av && av.notaLivre ? { observacoes: av.notaLivre } : {}),
       duracaoMin: 60,
     };
