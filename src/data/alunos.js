@@ -37,7 +37,7 @@ export async function listAlunos(force) {
   if (!supabase) return [];
   if (_cacheAlunos && !force) return _cacheAlunos;
   const [stu, enr, cls, ev] = await Promise.all([
-    supabase.from('students').select('id,name,level').order('name'),
+    supabase.from('students').select('id,name,level,phone').order('name'),
     supabase.from('class_enrollments').select('student_id,class_id'),
     supabase.from('classes').select('id,name,level'),
     supabase.from('evaluations').select('student_id,fundamental,score,evaluator'),
@@ -79,7 +79,7 @@ export async function listAlunos(force) {
     let foco = '—', min = Infinity;
     for (const f of radarFunds) { if (hyb[f] < min) { min = hyb[f]; foco = f; } }
     return {
-      id: s.id, nome: s.name, ini: initials(s.name), cor: PALETTE[i % PALETTE.length],
+      id: s.id, nome: s.name, phone: s.phone || '', ini: initials(s.name), cor: PALETTE[i % PALETTE.length],
       nivel: NIVEL[s.level] || s.level || '—',
       turma: cls ? `${cls.name} · ${NIVEL[cls.level] || cls.level}` : (NIVEL[s.level] || s.level || 'Sem turma'),
       foco, radarFonte,
@@ -93,10 +93,10 @@ export async function listAlunos(force) {
   return out;
 }
 
-export async function salvarAlunoCadastro({ id, nome, nivel }) {
+export async function salvarAlunoCadastro({ id, nome, nivel, phone }) {
   if (!supabase) return { ok: false, error: 'Supabase não configurado' };
   const teacher_id = await uid();
-  const row = { name: nome.trim(), level: dbLevel(nivel) };
+  const row = { name: nome.trim(), level: dbLevel(nivel), phone: phone?.trim() || null };
   if (!id) row.teacher_id = teacher_id;
   const q = id
     ? supabase.from('students').update(row).eq('id', id).select('id').single()

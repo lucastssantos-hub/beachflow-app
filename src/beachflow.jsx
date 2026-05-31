@@ -5,6 +5,7 @@ import { listAlunos, listTurmas, getResumo, salvarAlunoCadastro, salvarTurmaCada
 import { listPartidas, getPartida, criarPartida, salvarPonto, encerrarPartida, scoutContext } from './data/scout.js';
 import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutDeciding, tennis, modeLabel, nextScoutServe } from './data/scoutScore.js';
 import { DEMO_ALUNOS as ALUNOS, DEMO_TURMAS, DEMO_RADAR_LABELS as RLAB } from './data/demo.js';
+import { prepararConfirmacoesTurma, getConfirmacao, responderConfirmacao, confirmationUrl, whatsappUrl, statusLabel, statusTone } from './data/confirmacoes.js';
 
 
 /* ===== app/ios-frame.jsx ===== */
@@ -773,7 +774,7 @@ function ScreenHoje({ nav }) {
           <div style={{ fontSize:12.5, color:C.inkDim }}>Nenhuma turma hoje ou amanhã.</div>
         </Card>}
         {turmasAgenda && turmasAgenda.map(t=>
-          <Card key={t.id} onClick={()=>nav.go('plano',{ turma:t.nome, nivel:t.nivel })} style={{ marginTop:8, padding:'12px 13px' }}>
+          <Card key={t.id} onClick={()=>nav.go('turma',{ turma:t })} style={{ marginTop:8, padding:'12px 13px' }}>
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <div style={{ width:44, fontFamily:'var(--ff-m)', fontSize:12, color:C.turq }}>{t.hora || '--:--'}</div>
               <div style={{ flex:1, minWidth:0 }}>
@@ -814,6 +815,7 @@ function ScreenAlunoForm({ nav, params }) {
   const aluno = params.aluno || null;
   const [nome,setNome] = React.useState(aluno?.nome || '');
   const [nivel,setNivel] = React.useState(aluno?.nivel || 'Intermediário');
+  const [phone,setPhone] = React.useState(aluno?.phone || '');
   const [erro,setErro] = React.useState('');
   const [saving,setSaving] = React.useState(false);
   const salvar = async ()=>{
@@ -821,7 +823,7 @@ function ScreenAlunoForm({ nav, params }) {
     if(!nome.trim()){ setErro('Informe o nome do aluno.'); return; }
     if(!authEnabled){ setErro('Cadastro real exige Supabase conectado.'); return; }
     setSaving(true);
-    const r = await salvarAlunoCadastro({ id:aluno?.id, nome, nivel });
+    const r = await salvarAlunoCadastro({ id:aluno?.id, nome, nivel, phone });
     setSaving(false);
     if(!r.ok){ setErro(r.error || 'Não foi possível salvar.'); return; }
     nav.tab('alunos');
@@ -837,6 +839,9 @@ function ScreenAlunoForm({ nav, params }) {
           <select value={nivel} onChange={e=>setNivel(e.target.value)} style={cadastroInputStyle}>
             {NIVEL_OPTIONS.map(n=><option key={n} value={n}>{n}</option>)}
           </select>
+        </CadastroField>
+        <CadastroField label="WhatsApp">
+          <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Ex.: 44999998888" style={cadastroInputStyle}/>
         </CadastroField>
         {erro && <div style={{ marginTop:12, color:C.err, fontSize:12 }}>{erro}</div>}
       </Card>
@@ -1045,7 +1050,7 @@ function ScreenAulas({ nav }) {
           {turmas && list.length===0 && <div style={{ textAlign:'center', color:C.inkDim, fontSize:13, marginTop:30 }}>
             {base.length===0 ? 'Nenhuma turma nesta conta.' : 'Nenhuma turma encontrada.'}</div>}
           {list.map(t=>
-            <Card key={t.id} onClick={()=>nav.go('plano',{ turma:t.nome, nivel:t.nivel })} style={{ marginTop:8, padding:'13px 14px' }}>
+            <Card key={t.id} onClick={()=>nav.go('turma',{ turma:t })} style={{ marginTop:8, padding:'13px 14px' }}>
               <div style={{ display:'flex', alignItems:'center', gap:11 }}>
                 {t.hora && <div style={{ fontFamily:'var(--ff-m)', fontSize:12.5, color:C.turq, width:40 }}>{t.hora}</div>}
                 <div style={{ flex:1, minWidth:0 }}>
@@ -1115,6 +1120,81 @@ function ScreenTurmaForm({ nav, params }) {
     <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'12px 20px 30px',
       background:'linear-gradient(transparent,'+C.navy900+' 30%)' }}>
       <Btn kind="primary" style={{ width:'100%' }} icon="check" onClick={salvar}>{saving?'Salvando…':'Salvar turma'}</Btn>
+    </div>
+  </Screen>;
+}
+
+function ScreenTurma({ nav, params }) {
+  const turma = params.turma || DEMO_TURMAS[0];
+  const [st,setSt] = React.useState({ loading:false, sessionId:null, alunos:null, error:'' });
+  const preparar = async ()=>{
+    setSt({ loading:true, sessionId:null, alunos:null, error:'' });
+    try {
+      const r = await prepararConfirmacoesTurma({ turma });
+      setSt({ loading:false, sessionId:r.sessionId, alunos:r.alunos, error:'' });
+    } catch(e) {
+      setSt({ loading:false, sessionId:null, alunos:null, error:e.message || 'Não foi possível preparar confirmações.' });
+    }
+  };
+  const msg = (item)=>{
+    const link = confirmationUrl(item.token);
+    return `Oi, ${item.aluno.name}! Confirma sua presença na aula ${turma.nome}${turma.hora?` (${turma.hora})`:''}? ${link}`;
+  };
+  return <Screen>
+    <Header onBack={nav.back} kicker="Turma" title={turma.nome}/>
+    <Body top={16} bottom={96}>
+      <Card glow>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:10 }}>
+          <div>
+            <Mini>{turma.hora || '--:--'} · {turma.nivel}</Mini>
+            <div style={{ fontSize:13.5, color:C.ink, marginTop:6 }}>{turma.alunos || 0}{turma.capacidade?`/${turma.capacidade}`:''} alunos</div>
+          </div>
+          {turma.foco && <Badge tone="turq">{turma.foco}</Badge>}
+        </div>
+      </Card>
+
+      <div style={{ display:'flex', gap:10, marginTop:12 }}>
+        <Btn kind="secondary" style={{ flex:1 }} icon="check" onClick={preparar}>{st.loading?'Preparando…':'Confirmar alunos'}</Btn>
+        <Btn kind="primary" style={{ flex:1 }} icon="clip" onClick={()=>nav.go('plano',{ turma:turma.nome, nivel:turma.nivel })}>Gerar plano</Btn>
+      </div>
+      <Mini style={{ marginTop:10 }}>Confirmação é para liberar vaga de reposição. Scout continua sendo periódico.</Mini>
+
+      {st.error && <Card style={{ marginTop:12, borderColor:'rgba(242,84,91,.35)' }}>
+        <div style={{ fontSize:12.5, color:C.err }}>{st.error}</div>
+      </Card>}
+      {st.alunos && st.alunos.length===0 && <Card style={{ marginTop:12, textAlign:'center', padding:'22px 16px' }}>
+        <div style={{ fontSize:13, color:C.ink }}>Nenhum aluno matriculado nesta turma.</div>
+      </Card>}
+      {st.alunos && st.alunos.length>0 && <Card style={{ marginTop:12 }}>
+        <Mini>Links de confirmação · {st.alunos.length} alunos</Mini>
+        <div style={{ marginTop:10 }}>
+          {st.alunos.map((item)=>
+            <div key={item.aluno.id} style={{ padding:'10px 0', borderBottom:`1px solid ${C.line}` }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:13, color:C.ink, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{item.aluno.name}</div>
+                  <div style={{ fontSize:11.5, color:item.aluno.phone?C.inkDim:C.warn, marginTop:2 }}>
+                    {item.aluno.phone ? item.aluno.phone : 'Sem telefone no cadastro'}
+                  </div>
+                </div>
+                <Badge tone={statusTone(item.status)}>{statusLabel(item.status)}</Badge>
+              </div>
+              {item.error && <div style={{ fontSize:11.5, color:C.err, marginTop:6 }}>{item.error}</div>}
+              {item.token && <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                {item.aluno.phone && <a href={whatsappUrl(item.aluno.phone, msg(item))} target="_blank" rel="noreferrer"
+                  style={{ flex:1, textAlign:'center', textDecoration:'none', borderRadius:9, padding:'8px 10px',
+                    background:'rgba(22,194,163,.14)', color:C.turq, fontSize:12.5, fontWeight:700 }}>WhatsApp</a>}
+                <button className="bf-tap" onClick={()=>navigator.clipboard?.writeText(msg(item))}
+                  style={{ flex:1, borderRadius:9, padding:'8px 10px', border:`1px solid ${C.line2}`,
+                    background:'transparent', color:C.inkDim, fontSize:12.5, fontWeight:700 }}>Copiar</button>
+              </div>}
+            </div>)}
+        </div>
+      </Card>}
+    </Body>
+    <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'12px 20px 30px',
+      background:'linear-gradient(transparent,'+C.navy900+' 30%)' }}>
+      <Btn kind="primary" style={{ width:'100%' }} icon="clip" onClick={()=>nav.go('plano',{ turma:turma.nome, nivel:turma.nivel })}>Gerar plano da turma</Btn>
     </div>
   </Screen>;
 }
@@ -1941,10 +2021,54 @@ function ScreenHistorico({ nav }) {
   );
 }
 
+function ScreenConfirmacao({ token }) {
+  const [st,setSt] = React.useState({ loading:true, data:null, error:'', done:'' });
+  React.useEffect(()=>{
+    let alive=true;
+    getConfirmacao(token)
+      .then(data=>{ if(alive) setSt({ loading:false, data, error:data?'':'Confirmação não encontrada.', done:'' }); })
+      .catch(e=>{ if(alive) setSt({ loading:false, data:null, error:e.message || 'Não foi possível abrir a confirmação.', done:'' }); });
+    return ()=>{ alive=false; };
+  }, [token]);
+  const responder = async (status)=>{
+    setSt(s=>({ ...s, loading:true, error:'' }));
+    try {
+      await responderConfirmacao(token, status);
+      setSt(s=>({ ...s, loading:false, done:status }));
+    } catch(e) {
+      setSt(s=>({ ...s, loading:false, error:e.message || 'Não foi possível responder.' }));
+    }
+  };
+  const d = st.data || {};
+  const studentName = d.student_name || d.nome_aluno || d.name || 'Aluno';
+  const className = d.class_name || d.nome_turma || d.turma || 'aula';
+  return <Screen>
+    <div className="bf-scroll" style={{ flex:1, overflowY:'auto', padding:'70px 26px 34px', display:'flex', flexDirection:'column', justifyContent:'center' }}>
+      <div style={{ display:'flex', justifyContent:'center' }}><BFMark w={56}/></div>
+      <div style={{ textAlign:'center', fontFamily:'var(--ff-d)', fontWeight:800, fontSize:25, color:'#fff', marginTop:18 }}>Confirmar presença</div>
+      <Card glow style={{ marginTop:22, textAlign:'center', padding:'24px 18px' }}>
+        {st.loading && <div style={{ fontSize:13, color:C.inkDim }}>Carregando…</div>}
+        {!st.loading && st.error && <div style={{ fontSize:13, color:C.err, lineHeight:1.4 }}>{st.error}</div>}
+        {!st.loading && !st.error && <>
+          <div style={{ fontSize:14, color:C.ink }}>Oi, <b>{studentName}</b>.</div>
+          <div style={{ fontSize:13, color:C.inkDim, marginTop:8, lineHeight:1.4 }}>Você vai participar da aula <b style={{color:C.ink}}>{className}</b>?</div>
+          {st.done ? <div style={{ marginTop:18 }}>
+            <Badge tone={st.done==='confirmed'?'ok':'coral'}>{st.done==='confirmed'?'Presença confirmada':'Vaga liberada'}</Badge>
+            <div style={{ fontSize:12.5, color:C.inkDim, marginTop:10 }}>Obrigado pela resposta.</div>
+          </div> : <div style={{ display:'flex', flexDirection:'column', gap:10, marginTop:20 }}>
+            <Btn kind="primary" style={{ width:'100%' }} icon="check" onClick={()=>responder('confirmed')}>Vou participar</Btn>
+            <Btn kind="ghost" style={{ width:'100%' }} icon="x" onClick={()=>responder('declined')}>Não irei</Btn>
+          </div>}
+        </>}
+      </Card>
+    </div>
+  </Screen>;
+}
+
 /* ===== BeachFlow — App shell (mobile / PWA real) ===== */
 const REG = {
   login: ScreenLogin, hoje: ScreenHoje, alunos: ScreenAlunos, aulas: ScreenAulas,
-  scout: ScreenScout, financeiro: ScreenFinanceiro, aluno: ScreenAluno, alunoForm: ScreenAlunoForm, turmaForm: ScreenTurmaForm, plano: ScreenPlano,
+  scout: ScreenScout, financeiro: ScreenFinanceiro, aluno: ScreenAluno, alunoForm: ScreenAlunoForm, turma: ScreenTurma, turmaForm: ScreenTurmaForm, plano: ScreenPlano,
   diagnostico: ScreenDiagnostico, avaliacao: ScreenAvaliacao, autoavaliacao: ScreenAutoaval,
   evolucao: ScreenEvolucao, historico: ScreenHistorico, partida: ScreenPartida,
   scoutNovo: ScreenScoutNovo, scoutAoVivo: ScreenScoutAoVivo,
@@ -1952,14 +2076,16 @@ const REG = {
 const TAB_ROUTES = ['hoje', 'alunos', 'aulas', 'scout', 'financeiro'];
 
 export function App() {
+  const confirmToken = new URLSearchParams(window.location.search).get('confirm');
   const [stack, setStack] = React.useState([{ r: 'login' }]);
   const top = stack[stack.length - 1];
 
   // pula o login se já houver sessão ativa
   React.useEffect(()=>{
+    if(confirmToken) return;
     if(!authEnabled) return;
     supabase.auth.getSession().then(({ data })=>{ if(data?.session) setStack([{ r:'hoje' }]); });
-  },[]);
+  },[confirmToken]);
 
   const nav = {
     go: (r, params) => {
@@ -1972,6 +2098,7 @@ export function App() {
   };
 
   const Comp = REG[top.r] || ScreenHoje;
+  if(confirmToken) return <div className="bf-app"><ScreenConfirmacao token={confirmToken}/></div>;
   return (
     <div className="bf-app">
       <Comp nav={nav} params={top.params || {}} />
