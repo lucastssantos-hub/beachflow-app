@@ -18,6 +18,20 @@ function initials(name = '') {
 const avg = (a) => (a && a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
 
 let _cacheAlunos = null;
+async function uid() { const { data } = await supabase.auth.getUser(); return data?.user?.id || null; }
+function dbLevel(n = '') {
+  const v = String(n).toLowerCase();
+  if (v.includes('inicia')) return 'iniciante';
+  if (v.includes('avanç') || v.includes('avanc')) return 'avancado';
+  return 'intermediario';
+}
+function dbTime(hora = '') {
+  const v = String(hora).trim();
+  if (!v) return null;
+  const [h = '00', m = '00'] = v.split(':');
+  return `${h.padStart(2, '0')}:${m.padStart(2, '0')}:00`;
+}
+
 // Lista os alunos do professor logado, já com radar real e notas para a IA.
 export async function listAlunos(force) {
   if (!supabase) return [];
@@ -79,6 +93,20 @@ export async function listAlunos(force) {
   return out;
 }
 
+export async function salvarAlunoCadastro({ id, nome, nivel }) {
+  if (!supabase) return { ok: false, error: 'Supabase não configurado' };
+  const teacher_id = await uid();
+  const row = { name: nome.trim(), level: dbLevel(nivel) };
+  if (!id) row.teacher_id = teacher_id;
+  const q = id
+    ? supabase.from('students').update(row).eq('id', id).select('id').single()
+    : supabase.from('students').insert(row).select('id').single();
+  const { data, error } = await q;
+  if (error) return { ok: false, error: error.message };
+  _cacheAlunos = null;
+  return { ok: true, id: data?.id || id };
+}
+
 // Resumo para o dashboard (Hoje): contagens reais + aluno com maior gap.
 export async function getResumo() {
   if (!supabase) return null;
@@ -119,4 +147,23 @@ export async function listTurmas() {
     capacidade: c.capacity, foco: c.focus_fundamental || null,
     alunos: counts[c.id] || 0,
   })).sort((a, b) => b.alunos - a.alunos); // mais cheias primeiro
+}
+
+export async function salvarTurmaCadastro({ id, nome, nivel, hora, capacidade, foco }) {
+  if (!supabase) return { ok: false, error: 'Supabase não configurado' };
+  const teacher_id = await uid();
+  const row = {
+    name: nome.trim(),
+    level: dbLevel(nivel),
+    start_time: dbTime(hora),
+    capacity: capacidade ? Number(capacidade) : null,
+    focus_fundamental: foco?.trim() || null,
+  };
+  if (!id) row.teacher_id = teacher_id;
+  const q = id
+    ? supabase.from('classes').update(row).eq('id', id).select('id').single()
+    : supabase.from('classes').insert(row).select('id').single();
+  const { data, error } = await q;
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, id: data?.id || id };
 }

@@ -22,6 +22,18 @@ export function initialScoutScore(mode) {
 export const scoutScoreText = (s) => (s.tie || s.superTie ? `${s.tiePoints.a}x${s.tiePoints.b}` : `${tennis(s.points.a)}x${tennis(s.points.b)}`);
 export const scoutDeciding = (s) => !s.tie && !s.superTie && s.points.a === 3 && s.points.b === 3;
 export const modeLabel = (m) => (MODES.find((x) => x[0] === m) || [, 'Aula até 4 games'])[1];
+export function nextScoutServe(score) {
+  const sidePoints = score.tie || score.superTie
+    ? score.tiePoints.a + score.tiePoints.b
+    : score.points.a + score.points.b;
+  const serve_side = sidePoints % 2 === 0 ? 'Direita' : 'Esquerda';
+  if (score.tie || score.superTie) {
+    const turn = sidePoints === 0 ? 0 : Math.floor((sidePoints + 1) / 2);
+    return { team: turn % 2 === 0 ? 'a' : 'b', playerIndex: Math.floor(turn / 2), serve_side };
+  }
+  const games = score.games.a + score.games.b;
+  return { team: games % 2 === 0 ? 'a' : 'b', playerIndex: Math.floor(games / 2), serve_side };
+}
 
 function winScoutSet(s, t) {
   s.sets[t]++; s.set_number++; s.games = { a: 0, b: 0 }; s.points = { a: 0, b: 0 }; s.tie = false; s.tiePoints = { a: 0, b: 0 };

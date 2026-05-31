@@ -5,6 +5,7 @@
 
 const ENDPOINT = import.meta.env.VITE_GERAR_PLANO_ENDPOINT || '';
 const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const FORCE_DEMO = import.meta.env.VITE_FORCE_DEMO === 'true';
 
 // Plano de exemplo no contrato JSON aninhado (espelha a Edge Function).
 export const SAMPLE_PLAN = {
@@ -139,7 +140,7 @@ const _cache = new Map();
 
 // Gera o plano. Retorna { plano, id, fonte: 'ia' | 'exemplo' | 'cache', erro? }.
 export async function gerarPlano(ctx) {
-  if (!ENDPOINT) return { plano: SAMPLE_PLAN, id: null, fonte: 'exemplo' };
+  if (FORCE_DEMO || !ENDPOINT) return { plano: SAMPLE_PLAN, id: null, fonte: 'exemplo' };
   const key = JSON.stringify(ctx);
   if (_cache.has(key)) return { ..._cache.get(key), fonte: 'cache' };
   try {
@@ -181,7 +182,7 @@ export async function listarPlanos() {
 // Salva a avaliação técnica do professor: atualiza o store (IA passa a usar) + persiste.
 export async function salvarAvaliacao(alunoId, notas, notaLivre) {
   setAvaliacao(alunoId, { notas, notaLivre });
-  if (!ENDPOINT) return false;
+  if (FORCE_DEMO || !ENDPOINT) return false;
   try {
     const res = await fetch(ENDPOINT, {
       method: 'POST',
@@ -198,7 +199,7 @@ export async function salvarAvaliacao(alunoId, notas, notaLivre) {
 
 // Persiste a edição do professor (base do aprendizado coletivo).
 export async function salvarEdicao(id, planoEditado) {
-  if (!ENDPOINT || !id) return false;
+  if (FORCE_DEMO || !ENDPOINT || !id) return false;
   try {
     const res = await fetch(ENDPOINT, {
       method: 'POST',

@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:demo": "VITE_FORCE_DEMO=true vite",
     "build": "vite build",
+    "check:supabase": "node scripts/validate-supabase.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -3,7 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const URL = import.meta.env.VITE_SUPABASE_URL || '';
 const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const FORCE_DEMO = import.meta.env.VITE_FORCE_DEMO === 'true';
 
 // Se não houver config, exporta null e o app cai no modo demo (sem auth real).
-export const supabase = (URL && ANON) ? createClient(URL, ANON) : null;
+export const supabase = (!FORCE_DEMO && URL && ANON) ? createClient(URL, ANON) : null;
 export const authEnabled = !!supabase;

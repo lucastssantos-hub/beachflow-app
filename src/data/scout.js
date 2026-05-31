@@ -21,7 +21,7 @@ export async function criarPartida({ titulo, mode, singles, a1, a2, b1, b2, clas
   };
   const { data, error } = await supabase.from('scout_matches').insert(row).select('id').single();
   if (error) { console.warn('[criarPartida]', error.message); return null; }
-  return { id: data.id, titulo: row.title, mode, singles, players: { a: teamA, b: teamB }, score: row.score_state };
+  return { id: data.id, titulo: row.title, mode, singles, classId: classId || null, players: { a: teamA, b: teamB }, score: row.score_state };
 }
 
 // Salva um ponto: aplica a pontuação, grava o ponto e atualiza a partida. Retorna o novo placar.
@@ -76,7 +76,8 @@ export function scoutContext(d) {
   return {
     alvo: 'turma',
     nome: d.titulo || 'Partida',
-    nivel: 'Intermediário',
+    nivel: d.classLevel || 'Intermediário',
+    ...(d.className ? { turma: d.className } : {}),
     duracaoMin: 60,
     scout: {
       pontosAnalisados: d.stats ? d.stats.total : (d.pts || []).length,
@@ -126,6 +127,15 @@ export async function getPartida(id) {
   if (m.error) { console.warn('[getPartida]', m.error.message); return null; }
   const match = m.data;
   const pts = p.data || [];
+  let classInfo = null;
+  if (match.class_id) {
+    const { data: cls } = await supabase
+      .from('classes')
+      .select('id,name,level')
+      .eq('id', match.class_id)
+      .maybeSingle();
+    classInfo = cls || null;
+  }
 
   const stats = {
     total: pts.length,
@@ -146,6 +156,9 @@ export async function getPartida(id) {
 
   return {
     id, titulo: match.title || 'Partida',
+    classId: match.class_id || null,
+    className: classInfo?.name || null,
+    classLevel: classInfo?.level ? ({ iniciante: 'Iniciante', intermediario: 'Intermediário', avancado: 'Avançado' }[classInfo.level] || classInfo.level) : null,
     timeA: (match.team_a_names || []).filter(Boolean).join(' & ') || 'Time A',
     timeB: (match.team_b_names || []).filter(Boolean).join(' & ') || 'Time B',
     gamesA: match.games_a || 0, gamesB: match.games_b || 0,

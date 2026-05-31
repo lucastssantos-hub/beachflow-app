@@ -35,6 +35,15 @@ VITE_SUPABASE_ANON_KEY=<sua anon key>
 Sem essas variáveis, a tela Plano usa um **plano de exemplo** (não chama a IA).
 
 ## Testar
+Diagnóstico rápido do app, tabelas REST e Edge Function:
+```bash
+npm run check:supabase
+```
+
+Esse comando lê o `.env`, mascara a anon key no terminal, testa as tabelas esperadas e chama
+`gerar-plano` com `action: "listar"` para não gastar chamada de IA.
+
+Teste manual de geração real:
 ```bash
 curl -X POST https://btjsweysefmbceqqlyxx.supabase.co/functions/v1/gerar-plano \
   -H "Authorization: Bearer <ANON_KEY>" \

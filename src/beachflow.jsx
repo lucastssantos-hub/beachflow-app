@@ -1,9 +1,10 @@
 import React from 'react';
 import { gerarPlano, contextFromParams, salvarEdicao, salvarAvaliacao, listarPlanos } from './ia/gerarPlano.js';
 import { supabase, authEnabled } from './supabaseClient.js';
-import { listAlunos, listTurmas, getResumo } from './data/alunos.js';
+import { listAlunos, listTurmas, getResumo, salvarAlunoCadastro, salvarTurmaCadastro } from './data/alunos.js';
 import { listPartidas, getPartida, criarPartida, salvarPonto, encerrarPartida, scoutContext } from './data/scout.js';
-import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutDeciding, tennis, modeLabel } from './data/scoutScore.js';
+import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutDeciding, tennis, modeLabel, nextScoutServe } from './data/scoutScore.js';
+import { DEMO_ALUNOS as ALUNOS, DEMO_TURMAS, DEMO_RADAR_LABELS as RLAB } from './data/demo.js';
 
 
 /* ===== app/ios-frame.jsx ===== */
@@ -610,20 +611,7 @@ Object.assign(window, { C, Icon, Screen, Body, Header, TabBar, TABS, Card, Mini,
 /* ===== app/ScreensA.jsx ===== */
 /* BeachFlow — Screens A: Login, Hoje, Alunos, AlunoDetalhe */
 
-const ALUNOS = [
-  { id:'julia', ini:'JM', cor:C.turq, nome:'Júlia Mendes', turma:'Turma B · Intermediário', foco:'Recepção', delta:'+18%', tone:'ok',
-    radar:[0.55,0.8,0.7,0.45,0.6,0.75], auto:[0.5,0.7,0.65,0.4], evo:[40,42,48,46,55,60,64] },
-  { id:'leo', ini:'LR', cor:C.ocean, nome:'Léo Rocha', turma:'Particular', foco:'Ataque', delta:'Platô', tone:'warn',
-    radar:[0.7,0.5,0.85,0.6,0.5,0.55], auto:[0.7,0.55,0.8,0.5], evo:[52,55,58,57,58,57,58] },
-  { id:'ana', ini:'AS', cor:C.coral, nome:'Ana Souza', turma:'Turma B · Intermediário', foco:'Saque', delta:'+9%', tone:'ok',
-    radar:[0.4,0.6,0.55,0.7,0.65,0.6], auto:[0.45,0.6,0.5,0.65], evo:[38,40,42,45,47,49,51] },
-  { id:'pedro', ini:'PL', cor:C.turq, nome:'Pedro Lima', turma:'Iniciante', foco:'Base', delta:'Novo', tone:'info',
-    radar:[0.3,0.35,0.4,0.3,0.45,0.5], auto:[0.35,0.4,0.3,0.45], evo:[20,24,28,30,33,36,40] },
-  { id:'carla', ini:'CF', cor:C.ocean, nome:'Carla Freitas', turma:'Turma A · Avançado', foco:'Defesa', delta:'+22%', tone:'ok',
-    radar:[0.75,0.7,0.65,0.85,0.8,0.7], auto:[0.7,0.7,0.6,0.85], evo:[55,58,62,66,70,74,78] },
-];
-const RLAB = ['SAQUE','DEVOL.','FOREH.','BACKH.','POSIC.','CONST.'];
-window.ALUNOS = ALUNOS; window.RLAB = RLAB;
+window.ALUNOS = ALUNOS; window.DEMO_TURMAS = DEMO_TURMAS; window.RLAB = RLAB;
 
 function BFMark({ w = 52, stroke = C.turq }) {
   return <svg viewBox="0 0 46 40" width={w} fill="none" style={{display:'block'}}>
@@ -706,7 +694,7 @@ function ScreenHoje({ nav }) {
     if(authEnabled){
       supabase.auth.getUser().then(({data})=>{ if(alive&&data?.user?.email){ const p=data.user.email.split('@')[0].split(/[._]/)[0]; setNome(p.charAt(0).toUpperCase()+p.slice(1)); } });
       getResumo().then(x=>{ if(alive) setR(x); });
-    } else { setR({ nAlunos:ALUNOS.length, nTurmas:0, nPartidas:0, foco:ALUNOS[0] }); }
+    } else { setR({ nAlunos:ALUNOS.length, nTurmas:DEMO_TURMAS.length, nPartidas:0, foco:ALUNOS[0] }); }
     return ()=>{ alive=false; };
   },[]);
   const Stat = ({ n, l, onClick }) => (
@@ -770,6 +758,56 @@ function AulaRow({ hora, titulo, sub, tone, tag, onClick }) {
   </Card>;
 }
 
+const NIVEL_OPTIONS = ['Iniciante', 'Intermediário', 'Avançado'];
+const cadastroInputStyle = {
+  width:'100%', marginTop:4, background:'rgba(255,255,255,.05)', color:C.ink,
+  border:`1px solid ${C.line2}`, borderRadius:10, padding:'10px 11px',
+  fontFamily:'var(--ff-u)', fontSize:13.5, outline:'none',
+};
+function CadastroField({ label, children }) {
+  return <div style={{ marginTop:12 }}>
+    <span style={{ fontFamily:'var(--ff-m)', fontSize:9, letterSpacing:'.08em', textTransform:'uppercase', color:C.n500 }}>{label}</span>
+    {children}
+  </div>;
+}
+function ScreenAlunoForm({ nav, params }) {
+  const aluno = params.aluno || null;
+  const [nome,setNome] = React.useState(aluno?.nome || '');
+  const [nivel,setNivel] = React.useState(aluno?.nivel || 'Intermediário');
+  const [erro,setErro] = React.useState('');
+  const [saving,setSaving] = React.useState(false);
+  const salvar = async ()=>{
+    setErro('');
+    if(!nome.trim()){ setErro('Informe o nome do aluno.'); return; }
+    if(!authEnabled){ setErro('Cadastro real exige Supabase conectado.'); return; }
+    setSaving(true);
+    const r = await salvarAlunoCadastro({ id:aluno?.id, nome, nivel });
+    setSaving(false);
+    if(!r.ok){ setErro(r.error || 'Não foi possível salvar.'); return; }
+    nav.tab('alunos');
+  };
+  return <Screen>
+    <Header onBack={nav.back} kicker="Cadastro" title={aluno?'Editar aluno':'Novo aluno'}/>
+    <Body top={16} bottom={96}>
+      <Card>
+        <CadastroField label="Nome">
+          <input value={nome} onChange={e=>setNome(e.target.value)} placeholder="Nome do aluno" style={cadastroInputStyle}/>
+        </CadastroField>
+        <CadastroField label="Nível">
+          <select value={nivel} onChange={e=>setNivel(e.target.value)} style={cadastroInputStyle}>
+            {NIVEL_OPTIONS.map(n=><option key={n} value={n}>{n}</option>)}
+          </select>
+        </CadastroField>
+        {erro && <div style={{ marginTop:12, color:C.err, fontSize:12 }}>{erro}</div>}
+      </Card>
+    </Body>
+    <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'12px 20px 30px',
+      background:'linear-gradient(transparent,'+C.navy900+' 30%)' }}>
+      <Btn kind="primary" style={{ width:'100%' }} icon="check" onClick={salvar}>{saving?'Salvando…':'Salvar aluno'}</Btn>
+    </div>
+  </Screen>;
+}
+
 // ---------- ALUNOS ----------
 function ScreenAlunos({ nav }) {
   const [q,setQ] = React.useState('');
@@ -793,9 +831,13 @@ function ScreenAlunos({ nav }) {
   return (
     <Screen>
       <Body top={50} bottom={12}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:26, letterSpacing:'-.02em', color:'#fff' }}>Alunos</div>
-          {alunos && <span style={{ fontFamily:'var(--ff-m)', fontSize:11, color:C.inkDim }}>{base.length} no total</span>}
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            {alunos && <span style={{ fontFamily:'var(--ff-m)', fontSize:11, color:C.inkDim }}>{base.length} no total</span>}
+            <div className="bf-tap" onClick={()=>nav.go('alunoForm')} style={{ width:34,height:34,borderRadius:11, border:`1px solid ${C.line2}`,
+              display:'flex',alignItems:'center',justifyContent:'center' }}><Icon name="plus" size={18} color={C.turq}/></div>
+          </div>
         </div>
         <Card style={{ marginTop:12, display:'flex', alignItems:'center', gap:9, padding:'10px 13px' }}>
           <Icon name="search" size={18} color={C.n500}/>
@@ -804,8 +846,9 @@ function ScreenAlunos({ nav }) {
               fontFamily:'var(--ff-u)', fontSize:14 }}/>
         </Card>
         <div style={{ display:'flex', gap:7, marginTop:11, overflowX:'auto' }} className="bf-scroll">
-          {FILTROS.map(f=>{ const on=filtro===f; return
-            <span key={f} className="bf-tap" onClick={()=>setFiltro(f)}
+          {FILTROS.map(f=>{
+            const on=filtro===f;
+            return <span key={f} className="bf-tap" onClick={()=>setFiltro(f)}
               style={{ fontFamily:'var(--ff-m)', fontSize:11, padding:'6px 12px', borderRadius:8,
               whiteSpace:'nowrap', border:`1px solid ${on?C.turq:C.line2}`, color:on?C.turq:C.inkDim,
               background:on?'rgba(22,194,163,.1)':'transparent' }}>{f}</span>; })}
@@ -919,6 +962,7 @@ function ScreenAluno({ nav, params }) {
         </Card>)}
 
         <Btn kind="secondary" style={{ width:'100%', marginTop:14 }} icon="clip" onClick={()=>nav.go('plano',{aluno:a})}>Gerar plano para {a.nome.split(' ')[0]}</Btn>
+        <Btn kind="ghost" style={{ width:'100%', marginTop:10 }} icon="edit" onClick={()=>nav.go('alunoForm',{aluno:a})}>Editar cadastro</Btn>
       </Body>
     </Screen>
   );
@@ -935,7 +979,7 @@ function ScreenAulas({ nav }) {
   const [turmas,setTurmas] = React.useState(null);
   const [q,setQ] = React.useState('');
   React.useEffect(()=>{ let alive=true;
-    if(authEnabled){ listTurmas().then(r=>{ if(alive) setTurmas(r); }); } else { setTurmas([]); }
+    if(authEnabled){ listTurmas().then(r=>{ if(alive) setTurmas(r); }); } else { setTurmas(DEMO_TURMAS); }
     return ()=>{ alive=false; }; },[]);
   const base = turmas||[];
   const list = base.filter(t=> t.nome.toLowerCase().includes(q.toLowerCase()));
@@ -943,9 +987,13 @@ function ScreenAulas({ nav }) {
   return (
     <Screen>
       <Body top={50} bottom={12}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:26, letterSpacing:'-.02em', color:'#fff' }}>Turmas</div>
-          {turmas && <span style={{ fontFamily:'var(--ff-m)', fontSize:11, color:C.inkDim }}>{base.length} turmas</span>}
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            {turmas && <span style={{ fontFamily:'var(--ff-m)', fontSize:11, color:C.inkDim }}>{base.length} turmas</span>}
+            <div className="bf-tap" onClick={()=>nav.go('turmaForm')} style={{ width:34,height:34,borderRadius:11, border:`1px solid ${C.line2}`,
+              display:'flex',alignItems:'center',justifyContent:'center' }}><Icon name="plus" size={18} color={C.turq}/></div>
+          </div>
         </div>
         <Card style={{ marginTop:12, display:'flex', alignItems:'center', gap:9, padding:'10px 13px' }}>
           <Icon name="search" size={18} color={C.n500}/>
@@ -968,6 +1016,8 @@ function ScreenAulas({ nav }) {
               <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:10, paddingLeft:t.hora?51:0 }}>
                 <Icon name="users" size={13} color={C.n500}/>
                 <span style={{ fontFamily:'var(--ff-m)', fontSize:10.5, color:C.n500 }}>{t.alunos}{t.capacidade?`/${t.capacidade}`:''} alunos</span>
+                <span className="bf-tap" onClick={e=>{ e.stopPropagation(); nav.go('turmaForm',{turma:t}); }}
+                  style={{ marginLeft:'auto', fontSize:11.5, color:C.turq }}>Editar</span>
               </div>
             </Card>)}
         </div>
@@ -975,6 +1025,58 @@ function ScreenAulas({ nav }) {
       <TabBar active="aulas" onTab={nav.tab}/>
     </Screen>
   );
+}
+
+function ScreenTurmaForm({ nav, params }) {
+  const turma = params.turma || null;
+  const [nome,setNome] = React.useState(turma?.nome || '');
+  const [nivel,setNivel] = React.useState(turma?.nivel || 'Intermediário');
+  const [hora,setHora] = React.useState(turma?.hora || '');
+  const [capacidade,setCapacidade] = React.useState(turma?.capacidade || '');
+  const [foco,setFoco] = React.useState(turma?.foco || '');
+  const [erro,setErro] = React.useState('');
+  const [saving,setSaving] = React.useState(false);
+  const salvar = async ()=>{
+    setErro('');
+    if(!nome.trim()){ setErro('Informe o nome da turma.'); return; }
+    if(!authEnabled){ setErro('Cadastro real exige Supabase conectado.'); return; }
+    setSaving(true);
+    const r = await salvarTurmaCadastro({ id:turma?.id, nome, nivel, hora, capacidade, foco });
+    setSaving(false);
+    if(!r.ok){ setErro(r.error || 'Não foi possível salvar.'); return; }
+    nav.tab('aulas');
+  };
+  return <Screen>
+    <Header onBack={nav.back} kicker="Cadastro" title={turma?'Editar turma':'Nova turma'}/>
+    <Body top={16} bottom={96}>
+      <Card>
+        <CadastroField label="Nome">
+          <input value={nome} onChange={e=>setNome(e.target.value)} placeholder="Ex.: Segunda 20H" style={cadastroInputStyle}/>
+        </CadastroField>
+        <div style={{ display:'flex', gap:10 }}>
+          <CadastroField label="Nível">
+            <select value={nivel} onChange={e=>setNivel(e.target.value)} style={cadastroInputStyle}>
+              {NIVEL_OPTIONS.map(n=><option key={n} value={n}>{n}</option>)}
+            </select>
+          </CadastroField>
+          <CadastroField label="Hora">
+            <input value={hora} onChange={e=>setHora(e.target.value)} placeholder="18:00" style={cadastroInputStyle}/>
+          </CadastroField>
+        </div>
+        <CadastroField label="Capacidade">
+          <input type="number" min="1" value={capacidade} onChange={e=>setCapacidade(e.target.value)} placeholder="6" style={cadastroInputStyle}/>
+        </CadastroField>
+        <CadastroField label="Foco padrão">
+          <input value={foco} onChange={e=>setFoco(e.target.value)} placeholder="Ex.: Devolução" style={cadastroInputStyle}/>
+        </CadastroField>
+        {erro && <div style={{ marginTop:12, color:C.err, fontSize:12 }}>{erro}</div>}
+      </Card>
+    </Body>
+    <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'12px 20px 30px',
+      background:'linear-gradient(transparent,'+C.navy900+' 30%)' }}>
+      <Btn kind="primary" style={{ width:'100%' }} icon="check" onClick={salvar}>{saving?'Salvando…':'Salvar turma'}</Btn>
+    </div>
+  </Screen>;
 }
 
 // ---------- PLANO DE AULA ----------
@@ -1313,14 +1415,24 @@ function ScoutBtn({ label, big, c, onClick, n }) {
 // ---------- SCOUT: NOVA PARTIDA (setup) ----------
 function ScreenScoutNovo({ nav }) {
   const [alunos,setAlunos] = React.useState(null);
+  const [turmas,setTurmas] = React.useState(null);
   const [titulo,setTitulo] = React.useState('Partida ao vivo');
   const [singles,setSingles] = React.useState(false);
   const [mode,setMode] = React.useState('lesson4');
+  const [classId,setClassId] = React.useState('');
   const [sel,setSel] = React.useState({ a1:'', a2:'', b1:'', b2:'' });
   const [busy,setBusy] = React.useState(false);
-  React.useEffect(()=>{ let alive=true; listAlunos().then(r=>{ if(!alive) return; setAlunos(r);
-    if(r.length>=2) setSel({ a1:r[0].id, a2:(r[1]||r[0]).id, b1:(r[2]||r[1]||r[0]).id, b2:(r[3]||r[2]||r[1]||r[0]).id }); }); return ()=>{alive=false;}; },[]);
+  React.useEffect(()=>{ let alive=true;
+    const alunosPromise = authEnabled ? listAlunos() : Promise.resolve(ALUNOS);
+    const turmasPromise = authEnabled ? listTurmas() : Promise.resolve(DEMO_TURMAS);
+    Promise.all([alunosPromise, turmasPromise]).then(([r,t])=>{ if(!alive) return; setAlunos(r); setTurmas(t);
+      if(t.length){ setClassId(t[0].id); setTitulo(`Scout · ${t[0].nome}`); }
+      if(r.length>=2) setSel({ a1:r[0].id, a2:(r[1]||r[0]).id, b1:(r[2]||r[1]||r[0]).id, b2:(r[3]||r[2]||r[1]||r[0]).id });
+    });
+    return ()=>{alive=false;};
+  },[]);
   const byId = (id)=> (alunos||[]).find(a=>a.id===id);
+  const turmaById = (id)=> (turmas||[]).find(t=>t.id===id);
   const selStyle = { width:'100%', marginTop:4, background:'rgba(255,255,255,.05)', color:C.ink,
     border:`1px solid ${C.line2}`, borderRadius:10, padding:'9px 11px', fontFamily:'var(--ff-u)', fontSize:13.5, outline:'none' };
   const Sel = ({ k, label }) => <div style={{ flex:1 }}>
@@ -1335,9 +1447,10 @@ function ScreenScoutNovo({ nav }) {
     setBusy(true);
     const m = await criarPartida({ titulo, mode, singles,
       a1:{id:a1.id,name:a1.nome}, a2: singles?null:{id:sel.a2,name:byId(sel.a2).nome},
-      b1:{id:b1.id,name:b1.nome}, b2: singles?null:{id:sel.b2,name:byId(sel.b2).nome} });
+      b1:{id:b1.id,name:b1.nome}, b2: singles?null:{id:sel.b2,name:byId(sel.b2).nome},
+      classId: classId || null });
     setBusy(false);
-    if(m) nav.go('scoutAoVivo',{ match:m }); else alert('Não foi possível criar a partida.');
+    if(m) nav.go('scoutAoVivo',{ match:{ ...m, className: turmaById(classId)?.nome || null, classLevel: turmaById(classId)?.nivel || null } }); else alert('Não foi possível criar a partida.');
   };
   return (
     <Screen>
@@ -1349,6 +1462,13 @@ function ScreenScoutNovo({ nav }) {
         {alunos && alunos.length>=2 && <>
           <span style={{ fontFamily:'var(--ff-m)', fontSize:9, letterSpacing:'.08em', textTransform:'uppercase', color:C.n500 }}>Título</span>
           <input value={titulo} onChange={e=>setTitulo(e.target.value)} style={selStyle}/>
+          <div style={{ marginTop:14 }}>
+            <span style={{ fontFamily:'var(--ff-m)', fontSize:9, letterSpacing:'.08em', textTransform:'uppercase', color:C.n500 }}>Turma vinculada</span>
+            <select value={classId} onChange={e=>{ const id=e.target.value; setClassId(id); const t=turmaById(id); if(t && titulo==='Partida ao vivo') setTitulo(`Scout · ${t.nome}`); }} style={selStyle}>
+              <option value="">Sem turma</option>
+              {(turmas||[]).map(t=><option key={t.id} value={t.id}>{t.nome} · {t.nivel}</option>)}
+            </select>
+          </div>
           <div style={{ display:'flex', gap:8, marginTop:14 }}>
             {[['Duplas',false],['Simples',true]].map(([l,v])=>
               <div key={l} className="bf-tap" onClick={()=>setSingles(v)} style={{ flex:1, textAlign:'center', padding:'10px 0',
@@ -1394,6 +1514,12 @@ function ScreenScoutAoVivo({ nav, params }) {
   const fn = (nm='')=> nm.split(' ')[0];
   const teamName = (t)=> (t==='a'?m.players.a:m.players.b).map(p=>fn(p.name)).join(' & ');
   const serveEvent = draft && (draft.outcome==='Ace' || draft.outcome==='Erro de saque');
+  const nextServeDraft = ()=>{
+    const next = nextScoutServe(score);
+    const team = m.players[next.team] || [];
+    const server = team.length ? team[next.playerIndex % team.length].id : players[0]?.id || '';
+    return { server, serve_side:next.serve_side, winner:'a', outcome:'Winner', technique:'', zone:'' };
+  };
   const upd = (k,v)=> setDraft(d=>({...d,[k]:v}));
   const Choice = ({ k, v, label }) => <div className="bf-tap" onClick={()=>upd(k,v)}
     style={{ padding:'9px 4px', borderRadius:9, textAlign:'center', fontSize:11.5, lineHeight:1.15,
@@ -1427,7 +1553,7 @@ function ScreenScoutAoVivo({ nav, params }) {
           </div>
           <div style={{ textAlign:'center', marginTop:8 }}>
             <span style={{ fontFamily:'var(--ff-d)', fontWeight:700, fontSize:18, color:'#fff' }}>{scoutScoreText(score)}</span>
-            <div style={{ marginTop:4 }}><Mini>{m.mode==='pro3'?`Sets ${score.sets.a}-${score.sets.b} · `:''}{score.superTie?'Super tiebreak':score.tie?'Tiebreak':`Set ${score.set_number}`}{scoutDeciding(score)?' · ponto decisivo':''}</Mini></div>
+            <div style={{ marginTop:4 }}><Mini>{m.className?`${m.className} · `:''}{m.mode==='pro3'?`Sets ${score.sets.a}-${score.sets.b} · `:''}{score.superTie?'Super tiebreak':score.tie?'Tiebreak':`Set ${score.set_number}`}{scoutDeciding(score)?' · ponto decisivo':''}</Mini></div>
           </div>
           {score.finished && <div style={{ marginTop:10, textAlign:'center' }}>
             <Badge tone="ok">Partida encerrada</Badge></div>}
@@ -1472,7 +1598,7 @@ function ScreenScoutAoVivo({ nav, params }) {
         background:'linear-gradient(transparent,'+C.navy900+' 30%)', display:'flex', gap:10 }}>
         <Btn kind="ghost" style={{ flex:1 }} onClick={encerrar}>Encerrar</Btn>
         {!score.finished
-          ? <Btn kind="primary" style={{ flex:2 }} icon="plus" onClick={()=>setDraft({ server:players[0]?.id||'', serve_side:'Direita', winner:'a', outcome:'Winner', technique:'', zone:'' })}>Novo ponto</Btn>
+          ? <Btn kind="primary" style={{ flex:2 }} icon="plus" onClick={()=>setDraft(nextServeDraft())}>Novo ponto</Btn>
           : <Btn kind="secondary" style={{ flex:2 }} onClick={()=>nav.go('partida',{id:m.id})}>Ver resumo</Btn>}
       </div>}
     </Screen>
@@ -1778,7 +1904,7 @@ function ScreenHistorico({ nav }) {
 /* ===== BeachFlow — App shell (mobile / PWA real) ===== */
 const REG = {
   login: ScreenLogin, hoje: ScreenHoje, alunos: ScreenAlunos, aulas: ScreenAulas,
-  scout: ScreenScout, financeiro: ScreenFinanceiro, aluno: ScreenAluno, plano: ScreenPlano,
+  scout: ScreenScout, financeiro: ScreenFinanceiro, aluno: ScreenAluno, alunoForm: ScreenAlunoForm, turmaForm: ScreenTurmaForm, plano: ScreenPlano,
   diagnostico: ScreenDiagnostico, avaliacao: ScreenAvaliacao, autoavaliacao: ScreenAutoaval,
   evolucao: ScreenEvolucao, historico: ScreenHistorico, partida: ScreenPartida,
   scoutNovo: ScreenScoutNovo, scoutAoVivo: ScreenScoutAoVivo,
