@@ -179,6 +179,32 @@ function exemplosBlock(rows: any[]): string {
   return `\n\nEXEMPLOS DE PLANOS REFINADOS POR PROFESSORES REAIS (referência de estilo e profundidade — NÃO copie; adapte ao diagnóstico atual):\n${ex}`;
 }
 
+// Conhecimento do professor (roteiros por fundamento) — RAG a partir da metodologia dele.
+async function dbKnowledge(teacherId: string): Promise<any[]> {
+  if (!SB_URL || !SB_SERVICE) return [];
+  const q = `teacher_id=eq.${teacherId}&approved=eq.true&select=fundamental,lesson_summary&limit=40`;
+  const res = await fetch(`${SB_URL}/rest/v1/ai_training_knowledge?${q}`, { headers: sbHeaders });
+  return res.ok ? await res.json() : [];
+}
+// fundamentos prováveis do gap, a partir do contexto (scout + avaliação + foco)
+function pickFundamentos(ctx: any): string[] {
+  const score: Record<string, number> = {};
+  for (const p of (ctx.scout?.padroes || [])) score[p.fundamento] = (score[p.fundamento] || 0) + (p.frequencia || 1) * 2;
+  for (const [f, v] of Object.entries(ctx.avaliacaoProfessor || {})) score[f] = (score[f] || 0) + Math.max(0, 5 - Number(v));
+  if (ctx.foco) score[ctx.foco] = (score[ctx.foco] || 0) + 3;
+  return Object.entries(score).sort((a, b) => b[1] - a[1]).map(([f]) => f).slice(0, 3);
+}
+const FUND_ALIAS: Record<string, string> = { tapa: 'acelerada', espetada: 'acelerada', 'bolas curtas': 'curta', bandeja: 'aproximação', recepção: 'devolução' };
+function knowledgeBlock(rows: any[], fundamentos: string[]): string {
+  if (!rows.length || !fundamentos.length) return "";
+  const norm = (s: string) => (s || '').toLowerCase();
+  const wanted = fundamentos.flatMap((f) => { const n = norm(f); return [n, FUND_ALIAS[n], ...n.split('/').map((x) => x.trim())].filter(Boolean); });
+  const sel = rows.filter((r) => { const rf = norm(r.fundamental); return wanted.some((w) => rf.includes(w) || w.includes(rf)); }).slice(0, 2);
+  if (!sel.length) return "";
+  const txt = sel.map((r) => `### ${r.fundamental}\n${(r.lesson_summary || '').replace(/^\[Master_V1\]\s*/, '')}`).join("\n\n");
+  return `\n\nROTEIRO METODOLÓGICO DO PROFESSOR (base técnica oficial da metodologia dele — fundamente os blocos, sobretudo as correções e a organização, neste roteiro; NÃO copie cru, adapte ao diagnóstico e ao nível):\n${txt}`;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -205,6 +231,13 @@ Deno.serve(async (req: Request) => {
     const ALLOWED = ["claude-opus-4-8", "claude-sonnet-4-6"];
     const chosen = ALLOWED.includes(model) ? model : MODEL;
 
+    // monta a mensagem: dados + exemplos aprovados + roteiro metodológico (RAG)
+    const fundamentos = pickFundamentos(context || {});
+    const conhecimento = await dbKnowledge(uid);
+    const userContent = buildUserMessage(context || {})
+      + exemplosBlock(await dbRecentEdicoes(3))
+      + knowledgeBlock(conhecimento, fundamentos);
+
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -216,7 +249,7 @@ Deno.serve(async (req: Request) => {
         model: chosen,
         max_tokens: 2000,
         system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-        messages: [{ role: "user", content: buildUserMessage(context || {}) + exemplosBlock(await dbRecentEdicoes(3)) }],
+        messages: [{ role: "user", content: userContent }],
       }),
     });
 
