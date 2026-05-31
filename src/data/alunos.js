@@ -5,11 +5,9 @@ import { supabase } from '../supabaseClient.js';
 const PALETTE = ['#16C2A3', '#FF6A45', '#1E72E0'];
 const NIVEL = { iniciante: 'Iniciante', intermediario: 'Intermediário', avancado: 'Avançado' };
 
-// 6 eixos do radar (fundamentos reais das evaluations)
-export const RADAR_FUND = ['Saque', 'Devolução', 'Forehand', 'Backhand', 'Posicionamento', 'Consistência'];
-export const RADAR_LABELS = ['SAQUE', 'DEVOL.', 'FOREH.', 'BACKH.', 'POSIC.', 'CONST.'];
-// 4 dimensões da autoavaliação (student_blind) -> rótulos da UI
-const AUTO_MAP = [['Saque', 'Confiança no saque'], ['Decisão', 'Leitura de jogo'], ['Consistência', 'Constância'], ['Devolução', 'Recepção']];
+// Ordem canônica dos fundamentos (taxonomia do spec) + abreviações pro radar.
+const FUND_ORDER = ['Saque', 'Devolução', 'Forehand', 'Backhand', 'Lob', 'Smash', 'Bandeja', 'Gancho', 'Tapa', 'Curta', 'Posicionamento', 'Consistência', 'Decisão'];
+const ABBR = { 'Saque': 'SAQUE', 'Devolução': 'DEVOL', 'Forehand': 'FH', 'Backhand': 'BH', 'Lob': 'LOB', 'Smash': 'SMASH', 'Bandeja': 'BAND', 'Gancho': 'GANCHO', 'Tapa': 'TAPA', 'Curta': 'CURTA', 'Posicionamento': 'POSIC', 'Consistência': 'CONST', 'Decisão': 'DECIS' };
 
 function initials(name = '') {
   const clean = name.replace(/\(.*?\)/g, ' ').trim();
@@ -51,17 +49,19 @@ export async function listAlunos() {
     const notasAuto = {}; for (const [f, arr] of Object.entries(a.blind)) { const m = avg(arr); if (m != null) notasAuto[f] = Math.round((m / 2) * 10) / 10; }
     const nProf = Object.keys(notasProf).length;
     const nAuto = Object.keys(notasAuto).length;
-    // radar HÍBRIDO (igual ao app antigo / spec): nota do professor; se não houver, autoavaliação como base provisória
-    const radar = RADAR_FUND.map((f) => {
-      const t = avg(a.teacher[f]); if (t != null) return t / 10;
-      const s2 = avg(a.blind[f]); return s2 != null ? s2 / 10 : 0;
-    });
-    const auto = AUTO_MAP.map(([f]) => { const m = avg(a.blind[f]); return m != null ? m / 10 : 0; });
+    // radar HÍBRIDO sobre TODOS os fundamentos avaliados (professor; se não houver, autoavaliação provisória)
+    const hyb = {}; // fundamento -> valor 0-1
+    for (const f of FUND_ORDER) {
+      const t = avg(a.teacher[f]); if (t != null) { hyb[f] = t / 10; continue; }
+      const s2 = avg(a.blind[f]); if (s2 != null) hyb[f] = s2 / 10;
+    }
+    const radarFunds = FUND_ORDER.filter((f) => hyb[f] != null);
+    const radar = radarFunds.map((f) => hyb[f]);
+    const radarLabels = radarFunds.map((f) => ABBR[f] || f.toUpperCase().slice(0, 6));
     const radarFonte = nProf ? 'avaliação do professor' : (nAuto ? 'autoavaliação (provisória)' : 'sem dados');
-    // foco = fundamento mais fraco (professor; se não houver, autoavaliação)
+    // foco = fundamento mais fraco (na fonte vigente)
     let foco = '—', min = Infinity;
-    const fonteFoco = nProf ? a.teacher : (nAuto ? a.blind : {});
-    for (const [f, arr] of Object.entries(fonteFoco)) { const m = avg(arr); if (m != null && m < min) { min = m; foco = f; } }
+    for (const f of radarFunds) { if (hyb[f] < min) { min = hyb[f]; foco = f; } }
     return {
       id: s.id, nome: s.name, ini: initials(s.name), cor: PALETTE[i % PALETTE.length],
       nivel: NIVEL[s.level] || s.level || '—',
@@ -69,8 +69,27 @@ export async function listAlunos() {
       foco, radarFonte,
       delta: nProf ? `${nProf} fund.` : (nAuto ? 'autoaval.' : 'sem aval.'),
       tone: nProf ? 'info' : (nAuto ? 'turq' : 'neutral'),
-      radar, auto, evo: null,
+      radar, radarLabels, evo: null,
       notasProf, notasAuto, hasProf: nProf > 0,
     };
   });
+}
+
+// Lista as turmas reais do professor (com nº de alunos matriculados).
+// O nome da turma já traz dia+hora (o campo weekday no banco não é confiável).
+export async function listTurmas() {
+  if (!supabase) return [];
+  const [cls, enr] = await Promise.all([
+    supabase.from('classes').select('id,name,level,start_time,capacity,focus_fundamental'),
+    supabase.from('class_enrollments').select('class_id'),
+  ]);
+  if (cls.error) { console.warn('[listTurmas]', cls.error.message); return []; }
+  const counts = {};
+  for (const e of (enr.data || [])) counts[e.class_id] = (counts[e.class_id] || 0) + 1;
+  return (cls.data || []).map((c) => ({
+    id: c.id, nome: c.name, nivel: NIVEL[c.level] || c.level || '—',
+    hora: (c.start_time || '').slice(0, 5),
+    capacidade: c.capacity, foco: c.focus_fundamental || null,
+    alunos: counts[c.id] || 0,
+  })).sort((a, b) => b.alunos - a.alunos); // mais cheias primeiro
 }

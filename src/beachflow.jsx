@@ -1,7 +1,7 @@
 import React from 'react';
 import { gerarPlano, contextFromParams, salvarEdicao, salvarAvaliacao, listarPlanos } from './ia/gerarPlano.js';
 import { supabase, authEnabled } from './supabaseClient.js';
-import { listAlunos } from './data/alunos.js';
+import { listAlunos, listTurmas } from './data/alunos.js';
 
 
 /* ===== app/ios-frame.jsx ===== */
@@ -541,20 +541,23 @@ function Avatar({ initials, color = C.turq, size = 36 }) {
 
 // ---- radar chart (6 axes) ----
 function Radar({ data, size = 200, labels }) {
-  // data: array of 6 values 0..1
-  const cx = size/2, cy = size/2, r = size*0.38;
-  const ang = i => (Math.PI/2) - (i*2*Math.PI/6); // start top, clockwise
+  // data: array de N valores 0..1 (N eixos dinâmicos)
+  const n = Math.max(data.length, 3);
+  const cx = size/2, cy = size/2, r = size*0.34;
+  const ang = i => (Math.PI/2) - (i*2*Math.PI/n); // começa no topo, horário
   const pt = (i, v) => [cx + Math.cos(ang(i))*r*v, cy - Math.sin(ang(i))*r*v];
   const ring = v => data.map((_,i)=>pt(i,v).join(',')).join(' ');
   const poly = data.map((d,i)=>pt(i,d).join(',')).join(' ');
+  const fs = n > 8 ? 7.5 : 9; // fonte menor quando há muitos eixos
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{display:'block'}}>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{display:'block', overflow:'visible'}}>
       {[1,0.66,0.33].map((v,k)=><polygon key={k} points={ring(v)} fill="none" stroke={C.line2} strokeWidth="1"/>)}
       {data.map((_,i)=>{const[x,y]=pt(i,1);return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke={C.line} strokeWidth="1"/>;})}
       <polygon points={poly} fill="rgba(22,194,163,.22)" stroke={C.turq} strokeWidth="2"/>
-      {data.map((d,i)=>{const[x,y]=pt(i,d);return <circle key={i} cx={x} cy={y} r="3.2" fill={C.coral}/>;})}
-      {labels && labels.map((l,i)=>{const[x,y]=pt(i,1.2);return <text key={i} x={x} y={y} fill={C.inkDim}
-        fontFamily="IBM Plex Mono" fontSize="9" textAnchor="middle" dominantBaseline="middle">{l}</text>;})}
+      {data.map((d,i)=>{const[x,y]=pt(i,d);return <circle key={i} cx={x} cy={y} r="3" fill={C.coral}/>;})}
+      {labels && labels.map((l,i)=>{const[x,y]=pt(i,1.18);const a=ang(i);
+        return <text key={i} x={x} y={y} fill={C.inkDim} fontFamily="IBM Plex Mono" fontSize={fs}
+          textAnchor={Math.abs(Math.cos(a))<0.3?'middle':(Math.cos(a)>0?'start':'end')} dominantBaseline="middle">{l}</text>;})}
     </svg>
   );
 }
@@ -854,8 +857,8 @@ function ScreenAluno({ nav, params }) {
 
         {tab==='tecnico' && ((a.radarFonte && a.radarFonte!=='sem dados') || !a.radarFonte
           ? <Card style={{ marginTop:12, alignItems:'center', display:'flex', flexDirection:'column' }}>
-              <Mini style={{ alignSelf:'flex-start' }}>Radar técnico · {a.radarFonte || 'avaliação do professor'}</Mini>
-              <Radar data={a.radar} labels={RLAB} size={210}/>
+              <Mini style={{ alignSelf:'flex-start' }}>Radar técnico · {a.radarFonte || 'avaliação do professor'} · {a.radar.length} critérios</Mini>
+              <Radar data={a.radar} labels={a.radarLabels || RLAB} size={224}/>
               <div style={{ display:'flex', alignItems:'center', gap:7, marginTop:2 }}>
                 <span style={{ width:9,height:9,borderRadius:'50%',background:C.coral }}/>
                 <span style={{ fontSize:11.5, color:C.inkDim }}>Ponto fraco: <b style={{color:C.coral}}>{a.foco}</b></span>
@@ -924,46 +927,45 @@ Object.assign(window, { ScreenLogin, ScreenHoje, ScreenAlunos, ScreenAluno });
 
 // ---------- AULAS ----------
 function ScreenAulas({ nav }) {
-  const dias = [['SEG','12'],['TER','13'],['QUA','14'],['QUI','15'],['SEX','16'],['SÁB','17']];
-  const aulas = [
-    { h:'07h', t:'Turma A · Avançado', s:'Defesa sob pressão', tone:'ok', tag:'PLANO OK', n:5 },
-    { h:'17h', t:'Turma B · Intermediário', s:'Recepção cruzada', tone:'ok', tag:'PLANO OK', n:6 },
-    { h:'19h', t:'João & Léo · Particular', s:'Sem plano ainda', tone:'warn', tag:'MONTAR', n:2 },
-    { h:'20h', t:'Carla · Particular', s:'Revisar diagnóstico', tone:'info', tag:'REVISAR', n:1 },
-  ];
+  const [turmas,setTurmas] = React.useState(null);
+  const [q,setQ] = React.useState('');
+  React.useEffect(()=>{ let alive=true;
+    if(authEnabled){ listTurmas().then(r=>{ if(alive) setTurmas(r); }); } else { setTurmas([]); }
+    return ()=>{ alive=false; }; },[]);
+  const base = turmas||[];
+  const list = base.filter(t=> t.nome.toLowerCase().includes(q.toLowerCase()));
+  const nivelTone = n => /avan/i.test(n)?'coral' : /inter/i.test(n)?'turq' : 'info';
   return (
     <Screen>
       <Body top={50} bottom={12}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:26, letterSpacing:'-.02em', color:'#fff' }}>Aulas</div>
-          <div className="bf-tap" style={{ width:38,height:38,borderRadius:'50%', background:C.coral,
-            display:'flex',alignItems:'center',justifyContent:'center', boxShadow:'0 6px 16px rgba(255,106,69,.3)' }}>
-            <Icon name="plus" size={20} color="#fff"/></div>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
+          <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:26, letterSpacing:'-.02em', color:'#fff' }}>Turmas</div>
+          {turmas && <span style={{ fontFamily:'var(--ff-m)', fontSize:11, color:C.inkDim }}>{base.length} turmas</span>}
         </div>
-        {/* calendar strip */}
-        <div style={{ display:'flex', gap:7, marginTop:14 }}>
-          {dias.map(([d,n],i)=>{const on=i===1;return <div key={d} className="bf-tap" style={{ flex:1, textAlign:'center',
-            padding:'9px 0', borderRadius:12, background:on?C.turq:'rgba(255,255,255,.04)',
-            border:`1px solid ${on?'transparent':C.line}` }}>
-            <div style={{ fontFamily:'var(--ff-m)', fontSize:9, color:on?'#04261f':C.n500 }}>{d}</div>
-            <div style={{ fontFamily:'var(--ff-d)', fontWeight:700, fontSize:16, color:on?'#04261f':C.ink, marginTop:2 }}>{n}</div>
-          </div>;})}
+        <Card style={{ marginTop:12, display:'flex', alignItems:'center', gap:9, padding:'10px 13px' }}>
+          <Icon name="search" size={18} color={C.n500}/>
+          <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar turma…"
+            style={{ flex:1, background:'transparent', border:'none', outline:'none', color:C.ink, fontFamily:'var(--ff-u)', fontSize:14 }}/>
+        </Card>
+        <div style={{ marginTop:8 }}>
+          {turmas===null && <div style={{ textAlign:'center', color:C.inkDim, fontSize:13, marginTop:30 }}>Carregando turmas…</div>}
+          {turmas && list.length===0 && <div style={{ textAlign:'center', color:C.inkDim, fontSize:13, marginTop:30 }}>
+            {base.length===0 ? 'Nenhuma turma nesta conta.' : 'Nenhuma turma encontrada.'}</div>}
+          {list.map(t=>
+            <Card key={t.id} onClick={()=>nav.go('plano',{ turma:t.nome, nivel:t.nivel })} style={{ marginTop:8, padding:'13px 14px' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:11 }}>
+                {t.hora && <div style={{ fontFamily:'var(--ff-m)', fontSize:12.5, color:C.turq, width:40 }}>{t.hora}</div>}
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:14, color:C.ink, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{t.nome}</div>
+                  <div style={{ fontSize:11.5, color:C.inkDim, marginTop:2 }}>{t.foco ? `Foco: ${t.foco}` : (t.alunos? 'Toque para gerar plano' : 'Turma vazia')}</div></div>
+                <Badge tone={nivelTone(t.nivel)}>{t.nivel}</Badge>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:10, paddingLeft:t.hora?51:0 }}>
+                <Icon name="users" size={13} color={C.n500}/>
+                <span style={{ fontFamily:'var(--ff-m)', fontSize:10.5, color:C.n500 }}>{t.alunos}{t.capacidade?`/${t.capacidade}`:''} alunos</span>
+              </div>
+            </Card>)}
         </div>
-        <Mini style={{ marginTop:18 }}>Terça · 4 aulas</Mini>
-        {aulas.map((a,i)=>
-          <Card key={i} onClick={()=>nav.go('plano')} style={{ marginTop:8, padding:'12px 13px' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:11 }}>
-              <div style={{ fontFamily:'var(--ff-m)', fontSize:12.5, color:C.turq, width:32 }}>{a.h}</div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:14, color:C.ink }}>{a.t}</div>
-                <div style={{ fontSize:11.5, color:C.inkDim }}>{a.s}</div></div>
-              <Badge tone={a.tone}>● {a.tag}</Badge>
-            </div>
-            <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:10, paddingLeft:43 }}>
-              <Icon name="users" size={13} color={C.n500}/>
-              <span style={{ fontFamily:'var(--ff-m)', fontSize:10.5, color:C.n500 }}>{a.n} alunos</span>
-            </div>
-          </Card>)}
       </Body>
       <TabBar active="aulas" onTab={nav.tab}/>
     </Screen>
