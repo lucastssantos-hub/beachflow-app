@@ -1440,7 +1440,7 @@ function ScreenScout({ nav }) {
             <Card key={p.id} onClick={()=>nav.go('partida',{id:p.id})} style={{ marginTop:8, padding:'13px 14px' }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
                 <Mini>{fmtData(p.data)} · {p.pontos} pontos</Mini>
-                {p.aoVivo ? <Badge tone="info">● AO VIVO</Badge> : <Badge tone="neutral">encerrada</Badge>}
+                {p.origem==='bt-tracker' ? <Badge tone="turq">BT Tracker</Badge> : (p.aoVivo ? <Badge tone="info">● AO VIVO</Badge> : <Badge tone="neutral">encerrada</Badge>)}
               </div>
               <div style={{ fontSize:13.5, color:C.ink, fontWeight:600, marginTop:6 }}>{p.titulo}</div>
               <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:8 }}>
@@ -1473,7 +1473,7 @@ function ScreenPartida({ nav, params }) {
             <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:22, color:C.turq }}>{d.gamesA} × {d.gamesB}</div>
             <div style={{ flex:1, fontSize:13.5, color:C.ink, textAlign:'right' }}>{d.timeB}</div>
           </div>
-          <div style={{ textAlign:'center', marginTop:9 }}><Mini>{s.total} pontos · {d.encerrada?'encerrada':'em andamento'}</Mini></div>
+          <div style={{ textAlign:'center', marginTop:9 }}><Mini>{s.total} pontos · {d.origem==='bt-tracker'?'BT Tracker':(d.encerrada?'encerrada':'em andamento')}</Mini></div>
         </Card>
 
         <div style={{ display:'flex', gap:10, marginTop:10 }}>

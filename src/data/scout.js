@@ -89,44 +89,135 @@ export function scoutContext(d) {
   };
 }
 
+const isWinner = (o = '') => /winner/i.test(o);
+const isErro = (o = '') => /erro/i.test(o);
+const legacyId = (id) => `legacy:${id}`;
+const isLegacyId = (id = '') => String(id).startsWith('legacy:');
+const rawLegacyId = (id = '') => String(id).replace(/^legacy:/, '');
+
+function normalizeLegacyPoint(x, i = 0) {
+  return {
+    outcome: x.outcome || '',
+    shot: x.technique || '',
+    technique: x.technique || '',
+    winner_team: '',
+    score_after: typeof x.score === 'string' ? x.score : '',
+    point_number: i + 1,
+    set_number: 1,
+    created_at: x.created_at,
+    zone: x.zone || '',
+  };
+}
+
+function statsFromPoints(pts) {
+  const stats = {
+    total: pts.length,
+    pontosA: pts.filter((x) => x.winner_team === 'a').length,
+    pontosB: pts.filter((x) => x.winner_team === 'b').length,
+    winners: pts.filter((x) => isWinner(x.outcome)).length,
+    erros: pts.filter((x) => isErro(x.outcome)).length,
+    porGolpe: {},
+    porOutcome: {},
+  };
+  for (const x of pts) {
+    const g = x.shot || x.technique;
+    if (g) stats.porGolpe[g] = (stats.porGolpe[g] || 0) + 1;
+    if (x.outcome) stats.porOutcome[x.outcome] = (stats.porOutcome[x.outcome] || 0) + 1;
+  }
+  stats.topGolpes = Object.entries(stats.porGolpe).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  stats.topOutcomes = Object.entries(stats.porOutcome).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  return stats;
+}
+
 // Lista as partidas de scout do professor (mais recentes primeiro), com nº de pontos.
 export async function listPartidas() {
   if (!supabase) return [];
-  const [m, p] = await Promise.all([
+  const [m, p, ev] = await Promise.all([
     supabase.from('scout_matches')
       .select('id,title,team_a_names,team_b_names,games_a,games_b,ended,active,created_at,mode')
       .order('created_at', { ascending: false }),
     supabase.from('scout_points').select('match_id'),
+    supabase.from('scout_events').select('match_id,class_id,created_at'),
   ]);
   if (m.error) { console.warn('[listPartidas]', m.error.message); return []; }
+  if (ev.error) console.warn('[listPartidas scout_events]', ev.error.message);
   const counts = {};
   for (const x of (p.data || [])) counts[x.match_id] = (counts[x.match_id] || 0) + 1;
-  return (m.data || []).map((x) => ({
+  for (const x of (ev.data || [])) if (x.match_id) counts[x.match_id] = (counts[x.match_id] || 0) + 1;
+  const known = new Set((m.data || []).map((x) => x.id));
+  const legacyGroups = new Map();
+  for (const x of (ev.data || [])) {
+    if (!x.match_id || known.has(x.match_id)) continue;
+    const g = legacyGroups.get(x.match_id) || { id: x.match_id, classId: x.class_id, data: x.created_at, pontos: 0 };
+    g.pontos++;
+    if (x.created_at && (!g.data || x.created_at < g.data)) g.data = x.created_at;
+    legacyGroups.set(x.match_id, g);
+  }
+  const modernas = (m.data || []).map((x) => ({
     id: x.id,
     titulo: x.title || 'Partida',
     timeA: (x.team_a_names || []).filter(Boolean).join(' & ') || 'Time A',
     timeB: (x.team_b_names || []).filter(Boolean).join(' & ') || 'Time B',
     gamesA: x.games_a || 0, gamesB: x.games_b || 0,
     encerrada: !!x.ended, aoVivo: !!x.active && !x.ended,
-    data: x.created_at, pontos: counts[x.id] || 0, mode: x.mode,
+    data: x.created_at, pontos: counts[x.id] || 0, mode: x.mode, origem: 'novo',
   }));
+  const antigas = Array.from(legacyGroups.values()).map((x) => ({
+    id: legacyId(x.id),
+    titulo: 'Scout BT Tracker',
+    timeA: 'Dados do scout',
+    timeB: 'BT Tracker',
+    gamesA: 0, gamesB: 0,
+    encerrada: true, aoVivo: false,
+    data: x.data, pontos: x.pontos, mode: 'lesson4', origem: 'bt-tracker', classId: x.classId,
+  }));
+  return [...modernas, ...antigas].sort((a, b) => new Date(b.data || 0) - new Date(a.data || 0));
 }
-
-const isWinner = (o = '') => /winner/i.test(o);
-const isErro = (o = '') => /erro/i.test(o);
 
 // Detalhe de uma partida: dados + pontos + estatísticas agregadas.
 export async function getPartida(id) {
   if (!supabase) return null;
-  const [m, p] = await Promise.all([
+  if (isLegacyId(id)) {
+    const matchId = rawLegacyId(id);
+    const { data, error } = await supabase.from('scout_events')
+      .select('match_id,class_id,student_id,outcome,technique,zone,score,created_at')
+      .eq('match_id', matchId)
+      .order('created_at', { ascending: true });
+    if (error) { console.warn('[getPartida scout_events]', error.message); return null; }
+    const events = data || [];
+    const classId = events[0]?.class_id || null;
+    let classInfo = null;
+    if (classId) {
+      const { data: cls } = await supabase.from('classes').select('id,name,level').eq('id', classId).maybeSingle();
+      classInfo = cls || null;
+    }
+    const pts = events.map(normalizeLegacyPoint);
+    return {
+      id, titulo: classInfo?.name ? `Scout · ${classInfo.name}` : 'Scout BT Tracker',
+      classId,
+      className: classInfo?.name || null,
+      classLevel: classInfo?.level ? ({ iniciante: 'Iniciante', intermediario: 'Intermediário', avancado: 'Avançado' }[classInfo.level] || classInfo.level) : null,
+      timeA: 'Dados do scout', timeB: 'BT Tracker',
+      gamesA: 0, gamesB: 0,
+      encerrada: true, data: events[0]?.created_at || null, mode: 'lesson4',
+      pts, stats: statsFromPoints(pts), origem: 'bt-tracker',
+    };
+  }
+  const [m, p, ev] = await Promise.all([
     supabase.from('scout_matches').select('*').eq('id', id).single(),
     supabase.from('scout_points')
       .select('outcome,shot,technique,winner_team,server_name,final_player_name,score_after,point_number,set_number,created_at')
       .eq('match_id', id).order('point_number', { ascending: true }),
+    supabase.from('scout_events')
+      .select('outcome,technique,zone,score,created_at')
+      .eq('match_id', id).order('created_at', { ascending: true }),
   ]);
   if (m.error) { console.warn('[getPartida]', m.error.message); return null; }
   const match = m.data;
-  const pts = p.data || [];
+  if (ev.error) console.warn('[getPartida scout_events]', ev.error.message);
+  const basePts = p.data || [];
+  const pts = [...basePts, ...(ev.data || []).map((x, i) => normalizeLegacyPoint(x, basePts.length + i))]
+    .sort((a, b) => (a.point_number || 0) - (b.point_number || 0) || new Date(a.created_at || 0) - new Date(b.created_at || 0));
   let classInfo = null;
   if (match.class_id) {
     const { data: cls } = await supabase
@@ -137,22 +228,7 @@ export async function getPartida(id) {
     classInfo = cls || null;
   }
 
-  const stats = {
-    total: pts.length,
-    pontosA: pts.filter((x) => x.winner_team === 'a').length,
-    pontosB: pts.filter((x) => x.winner_team === 'b').length,
-    winners: pts.filter((x) => isWinner(x.outcome)).length,
-    erros: pts.filter((x) => isErro(x.outcome)).length,
-    porGolpe: {},   // golpe -> nº de pontos
-    porOutcome: {}, // tipo de desfecho -> nº
-  };
-  for (const x of pts) {
-    const g = x.shot || x.technique;
-    if (g) stats.porGolpe[g] = (stats.porGolpe[g] || 0) + 1;
-    if (x.outcome) stats.porOutcome[x.outcome] = (stats.porOutcome[x.outcome] || 0) + 1;
-  }
-  stats.topGolpes = Object.entries(stats.porGolpe).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  stats.topOutcomes = Object.entries(stats.porOutcome).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const stats = statsFromPoints(pts);
 
   return {
     id, titulo: match.title || 'Partida',

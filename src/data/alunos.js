@@ -110,10 +110,11 @@ export async function salvarAlunoCadastro({ id, nome, nivel, phone }) {
 // Resumo para o dashboard (Hoje): contagens reais + aluno com maior gap.
 export async function getResumo() {
   if (!supabase) return null;
-  const [alunos, turmas, partidas] = await Promise.all([
+  const [alunos, turmas, partidas, eventosScout] = await Promise.all([
     listAlunos(),
     listTurmas(),
-    supabase.from('scout_matches').select('id', { count: 'exact', head: true }),
+    supabase.from('scout_matches').select('id'),
+    supabase.from('scout_events').select('match_id'),
   ]);
   let foco = null, min = Infinity;
   for (const a of alunos) {
@@ -125,7 +126,11 @@ export async function getResumo() {
   return {
     nAlunos: alunos.length,
     nTurmas: turmas.length,
-    nPartidas: partidas.count || 0,
+    nPartidas: (() => {
+      const ids = new Set((partidas.data || []).map((x) => x.id).filter(Boolean));
+      for (const x of (eventosScout.data || [])) if (x.match_id) ids.add(x.match_id);
+      return ids.size;
+    })(),
     foco,
   };
 }
