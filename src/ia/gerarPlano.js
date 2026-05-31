@@ -79,26 +79,29 @@ export function contextFromParams(params = {}) {
   const a = params.aluno;
   if (a) {
     const av = _avaliacoes.get(a.id); // avaliação manual feita na tela (override mais recente)
+    const isReal = a.notasProf !== undefined || a.notasAuto !== undefined; // aluno vindo do banco
     let avaliacaoProfessor, autoavaliacao;
-    if (av && av.notas) {
+    if (av && av.notas && Object.keys(av.notas).length) {
       avaliacaoProfessor = { ...av.notas };
     } else if (a.notasProf && Object.keys(a.notasProf).length) {
-      avaliacaoProfessor = { ...a.notasProf }; // notas reais do banco (todos os fundamentos)
-    } else {
+      avaliacaoProfessor = { ...a.notasProf }; // notas reais do professor (todos os fundamentos)
+    } else if (!isReal) {
+      // aluno mock: deriva do radar
       const labels = ['Saque', 'Ataque', 'Defesa', 'Posicionamento', 'Constância', 'Devolução'];
       avaliacaoProfessor = {};
       (a.radar || []).forEach((v, i) => { avaliacaoProfessor[labels[i]] = Math.round(v * 5 * 10) / 10; });
-    }
+    } // aluno real sem avaliação do professor: avaliacaoProfessor fica indefinido (IA usa autoaval com menor confiança)
     if (a.notasAuto && Object.keys(a.notasAuto).length) {
       autoavaliacao = { ...a.notasAuto };
-    } else {
+    } else if (!isReal) {
       const autoLabels = ['Confiança no saque', 'Leitura de jogo', 'Constância', 'Recepção'];
       autoavaliacao = {};
       (a.auto || []).forEach((v, i) => { autoavaliacao[autoLabels[i]] = Math.round(v * 100) + '%'; });
     }
     return {
-      alvo: 'aluno', nome: a.nome, nivel: a.nivel || nivelFromTurma(a.turma),
-      foco: a.foco, avaliacaoProfessor, autoavaliacao,
+      alvo: 'aluno', nome: a.nome, nivel: a.nivel || nivelFromTurma(a.turma), foco: a.foco,
+      ...(avaliacaoProfessor && Object.keys(avaliacaoProfessor).length ? { avaliacaoProfessor } : {}),
+      ...(autoavaliacao && Object.keys(autoavaliacao).length ? { autoavaliacao } : {}),
       ...(av && av.notaLivre ? { observacoes: av.notaLivre } : {}),
       duracaoMin: 60,
     };

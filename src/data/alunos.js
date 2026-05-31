@@ -49,18 +49,26 @@ export async function listAlunos() {
     // notas 0-5 (dict) para a IA — todos os fundamentos avaliados
     const notasProf = {}; for (const [f, arr] of Object.entries(a.teacher)) { const m = avg(arr); if (m != null) notasProf[f] = Math.round((m / 2) * 10) / 10; }
     const notasAuto = {}; for (const [f, arr] of Object.entries(a.blind)) { const m = avg(arr); if (m != null) notasAuto[f] = Math.round((m / 2) * 10) / 10; }
-    // radar 0-1 (6 eixos)
-    const radar = RADAR_FUND.map((f) => { const m = avg(a.teacher[f]); return m != null ? m / 10 : 0; });
-    const auto = AUTO_MAP.map(([f]) => { const m = avg(a.blind[f]); return m != null ? m / 10 : 0; });
-    // foco = fundamento mais fraco (professor)
-    let foco = '—', min = Infinity;
-    for (const [f, arr] of Object.entries(a.teacher)) { const m = avg(arr); if (m != null && m < min) { min = m; foco = f; } }
     const nProf = Object.keys(notasProf).length;
+    const nAuto = Object.keys(notasAuto).length;
+    // radar HÍBRIDO (igual ao app antigo / spec): nota do professor; se não houver, autoavaliação como base provisória
+    const radar = RADAR_FUND.map((f) => {
+      const t = avg(a.teacher[f]); if (t != null) return t / 10;
+      const s2 = avg(a.blind[f]); return s2 != null ? s2 / 10 : 0;
+    });
+    const auto = AUTO_MAP.map(([f]) => { const m = avg(a.blind[f]); return m != null ? m / 10 : 0; });
+    const radarFonte = nProf ? 'avaliação do professor' : (nAuto ? 'autoavaliação (provisória)' : 'sem dados');
+    // foco = fundamento mais fraco (professor; se não houver, autoavaliação)
+    let foco = '—', min = Infinity;
+    const fonteFoco = nProf ? a.teacher : (nAuto ? a.blind : {});
+    for (const [f, arr] of Object.entries(fonteFoco)) { const m = avg(arr); if (m != null && m < min) { min = m; foco = f; } }
     return {
       id: s.id, nome: s.name, ini: initials(s.name), cor: PALETTE[i % PALETTE.length],
       nivel: NIVEL[s.level] || s.level || '—',
       turma: cls ? `${cls.name} · ${NIVEL[cls.level] || cls.level}` : (NIVEL[s.level] || s.level || 'Sem turma'),
-      foco, delta: nProf ? `${nProf} fund.` : 'sem aval.', tone: nProf ? 'info' : 'neutral',
+      foco, radarFonte,
+      delta: nProf ? `${nProf} fund.` : (nAuto ? 'autoaval.' : 'sem aval.'),
+      tone: nProf ? 'info' : (nAuto ? 'turq' : 'neutral'),
       radar, auto, evo: null,
       notasProf, notasAuto, hasProf: nProf > 0,
     };

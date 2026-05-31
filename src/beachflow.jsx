@@ -852,13 +852,18 @@ function ScreenAluno({ nav, params }) {
               background:tab===k?C.turq:'transparent' }}>{l}</div>)}
         </div>
 
-        {tab==='tecnico' && <Card style={{ marginTop:12, alignItems:'center', display:'flex', flexDirection:'column' }}>
-          <Mini style={{ alignSelf:'flex-start' }}>Radar técnico · avaliação do professor</Mini>
-          <Radar data={a.radar} labels={RLAB} size={210}/>
-          <div style={{ display:'flex', alignItems:'center', gap:7, marginTop:2 }}>
-            <span style={{ width:9,height:9,borderRadius:'50%',background:C.coral }}/>
-            <span style={{ fontSize:11.5, color:C.inkDim }}>Ponto fraco: <b style={{color:C.coral}}>{a.foco}</b></span>
-          </div></Card>}
+        {tab==='tecnico' && ((a.radarFonte && a.radarFonte!=='sem dados') || !a.radarFonte
+          ? <Card style={{ marginTop:12, alignItems:'center', display:'flex', flexDirection:'column' }}>
+              <Mini style={{ alignSelf:'flex-start' }}>Radar técnico · {a.radarFonte || 'avaliação do professor'}</Mini>
+              <Radar data={a.radar} labels={RLAB} size={210}/>
+              <div style={{ display:'flex', alignItems:'center', gap:7, marginTop:2 }}>
+                <span style={{ width:9,height:9,borderRadius:'50%',background:C.coral }}/>
+                <span style={{ fontSize:11.5, color:C.inkDim }}>Ponto fraco: <b style={{color:C.coral}}>{a.foco}</b></span>
+              </div></Card>
+          : <Card style={{ marginTop:12, textAlign:'center', padding:'26px 16px' }}>
+              <div style={{ fontSize:13, color:C.ink }}>Sem avaliação ainda</div>
+              <div style={{ fontSize:11.5, color:C.inkDim, marginTop:5 }}>Avalie este aluno (ícone ✎ acima) ou peça uma autoavaliação para gerar o radar.</div>
+            </Card>)}
 
         {tab==='auto' && <Card style={{ marginTop:12 }}>
           <Mini>Autoavaliação do aluno · como ele se sente</Mini>
