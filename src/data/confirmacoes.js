@@ -1,7 +1,38 @@
 import { supabase } from '../supabaseClient.js';
 
+const WEEKDAY_KEYS = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+
 function digits(v = '') {
   return String(v).replace(/\D/g, '');
+}
+
+function cleanDayText(s = '') {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function isoDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function sessionDateForTurma(turma) {
+  const name = cleanDayText(turma?.nome || '');
+  const target = WEEKDAY_KEYS.findIndex((day) => name.includes(day));
+  const date = new Date();
+  if (target >= 0) {
+    const delta = (target - date.getDay() + 7) % 7;
+    date.setDate(date.getDate() + delta);
+  }
+  return isoDate(date);
+}
+
+function dbTime(hora = '') {
+  const v = String(hora || '').trim();
+  if (!v) return '00:00:00';
+  const [h = '00', m = '00'] = v.split(':');
+  return `${h.padStart(2, '0')}:${m.padStart(2, '0')}:00`;
 }
 
 export function whatsappUrl(phone, message) {
@@ -36,6 +67,23 @@ async function currentTeacherId() {
   return data?.user?.id || null;
 }
 
+async function ensureClassSession(turma, teacherId) {
+  const row = {
+    teacher_id: teacherId,
+    class_id: turma.id,
+    session_date: sessionDateForTurma(turma),
+    start_time: dbTime(turma.hora),
+    focus_fundamental: turma.foco || null,
+  };
+  const { data, error } = await supabase
+    .from('class_sessions')
+    .upsert(row, { onConflict: 'class_id,session_date' })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
 export async function listAlunosDaTurma(classId) {
   if (!supabase || !classId) return [];
   const { data: enr, error: enrError } = await supabase
@@ -58,7 +106,7 @@ export async function prepararConfirmacoesTurma({ turma }) {
   if (!supabase || !turma?.id) return { sessionId: null, alunos: [] };
   const teacherId = await currentTeacherId();
   const alunos = await listAlunosDaTurma(turma.id);
-  const sessionId = crypto.randomUUID();
+  const sessionId = await ensureClassSession(turma, teacherId);
   const out = [];
   for (const aluno of alunos) {
     const { data, error } = await supabase.rpc('ensure_class_confirmation', {
@@ -72,10 +120,16 @@ export async function prepararConfirmacoesTurma({ turma }) {
       continue;
     }
     const row = Array.isArray(data) ? data[0] : data;
+    const { data: confirmation } = await supabase
+      .from('class_confirmations')
+      .select('token,status')
+      .eq('session_id', sessionId)
+      .eq('student_id', aluno.id)
+      .maybeSingle();
     out.push({
       aluno,
-      token: row?.token || row?.p_token || row || null,
-      status: row?.status || 'pending',
+      token: confirmation?.token || row?.token || row?.p_token || row || null,
+      status: confirmation?.status || row?.status || 'pending',
       error: null,
     });
   }
