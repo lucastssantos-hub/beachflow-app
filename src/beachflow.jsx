@@ -5,7 +5,7 @@ import { listAlunos, listTurmas, getResumo, salvarAlunoCadastro, salvarTurmaCada
 import { listPartidas, getPartida, criarPartida, salvarPonto, encerrarPartida, scoutContext } from './data/scout.js';
 import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutDeciding, tennis, modeLabel, nextScoutServe } from './data/scoutScore.js';
 import { DEMO_ALUNOS as ALUNOS, DEMO_TURMAS, DEMO_RADAR_LABELS as RLAB } from './data/demo.js';
-import { prepararConfirmacoesTurma, getConfirmacao, responderConfirmacao, confirmationUrl, whatsappUrl, statusLabel, statusTone } from './data/confirmacoes.js';
+import { prepararConfirmacoesTurma, atualizarStatusConfirmacoes, getConfirmacao, responderConfirmacao, confirmationUrl, whatsappUrl, statusLabel, statusTone } from './data/confirmacoes.js';
 
 
 /* ===== app/ios-frame.jsx ===== */
@@ -717,14 +717,28 @@ function ScreenHoje({ nav }) {
     } else { setR({ nAlunos:ALUNOS.length, nTurmas:DEMO_TURMAS.length, nPartidas:0, foco:ALUNOS[0] }); setTurmasAgenda(turmasHojeEAmanha(DEMO_TURMAS)); }
     return ()=>{ alive=false; };
   },[]);
+  React.useEffect(()=>{
+    if(!confirmAgenda.sessionId || !confirmAgenda.alunos?.length) return undefined;
+    let alive = true;
+    const refresh = async ()=>{
+      try {
+        const alunos = await atualizarStatusConfirmacoes(confirmAgenda.sessionId, confirmAgenda.alunos);
+        if(alive) setConfirmAgenda(s=>({ ...s, alunos, error:'' }));
+      } catch(err) {
+        if(alive) setConfirmAgenda(s=>({ ...s, error:err.message || 'Não foi possível atualizar confirmações.' }));
+      }
+    };
+    const id = setInterval(refresh, 10000);
+    return ()=>{ alive=false; clearInterval(id); };
+  },[confirmAgenda.sessionId, confirmAgenda.alunos?.length]);
   const prepararAgenda = async (e,turma)=>{
     e.stopPropagation();
     setConfirmAgenda({ loadingId:turma.id, turma, alunos:null, error:'' });
     try {
       const r = await prepararConfirmacoesTurma({ turma });
-      setConfirmAgenda({ loadingId:null, turma, alunos:r.alunos, error:'' });
+      setConfirmAgenda({ loadingId:null, turma, sessionId:r.sessionId, alunos:r.alunos, error:'' });
     } catch(err) {
-      setConfirmAgenda({ loadingId:null, turma, alunos:null, error:err.message || 'Não foi possível preparar as mensagens.' });
+      setConfirmAgenda({ loadingId:null, turma, sessionId:null, alunos:null, error:err.message || 'Não foi possível preparar as mensagens.' });
     }
   };
   const msgConfirmacao = (turma,item)=>{
@@ -1200,6 +1214,20 @@ function ScreenTurmaForm({ nav, params }) {
 function ScreenTurma({ nav, params }) {
   const turma = params.turma || DEMO_TURMAS[0];
   const [st,setSt] = React.useState({ loading:false, sessionId:null, alunos:null, error:'' });
+  React.useEffect(()=>{
+    if(!st.sessionId || !st.alunos?.length) return undefined;
+    let alive = true;
+    const refresh = async ()=>{
+      try {
+        const alunos = await atualizarStatusConfirmacoes(st.sessionId, st.alunos);
+        if(alive) setSt(s=>({ ...s, alunos, error:'' }));
+      } catch(err) {
+        if(alive) setSt(s=>({ ...s, error:err.message || 'Não foi possível atualizar confirmações.' }));
+      }
+    };
+    const id = setInterval(refresh, 10000);
+    return ()=>{ alive=false; clearInterval(id); };
+  },[st.sessionId, st.alunos?.length]);
   const preparar = async ()=>{
     setSt({ loading:true, sessionId:null, alunos:null, error:'' });
     try {

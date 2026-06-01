@@ -136,6 +136,26 @@ export async function prepararConfirmacoesTurma({ turma }) {
   return { sessionId, alunos: out };
 }
 
+export async function atualizarStatusConfirmacoes(sessionId, alunos = []) {
+  if (!supabase || !sessionId || !alunos.length) return alunos;
+  const { data, error } = await supabase
+    .from('class_confirmations')
+    .select('student_id,token,status,responded_at')
+    .eq('session_id', sessionId);
+  if (error) throw error;
+  const byStudent = new Map((data || []).map((row) => [row.student_id, row]));
+  return alunos.map((item) => {
+    const row = byStudent.get(item.aluno?.id);
+    if (!row) return item;
+    return {
+      ...item,
+      token: row.token || item.token,
+      status: row.status || item.status,
+      respondedAt: row.responded_at || item.respondedAt || null,
+    };
+  });
+}
+
 export async function getConfirmacao(token) {
   if (!supabase || !token) return null;
   const { data, error } = await supabase.rpc('get_class_confirmation', { p_token: token });
