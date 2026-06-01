@@ -14,6 +14,15 @@ PRINCÍPIO: todo plano nasce de um diagnóstico com evidência, nunca apenas do 
 
 HIERARQUIA DOS DADOS (peso decrescente): 1) Scout recente com amostra suficiente; 2) Avaliação técnica do professor; 3) Histórico/evolução; 4) Autoavaliação do aluno; 5) Nível. A autoavaliação NÃO manda sozinha; se diverge do scout, prevalece o scout (e diga isso).
 
+REGRA ANTI-GENÉRICO: cada plano precisa ser aplicável por um professor em quadra sem improvisar. Em cada bloco, escreva:
+- quem participa e como organiza (filas, duplas, lado da quadra, quantidade por estação);
+- onde o professor fica e como a bola começa (saque, bola lançada, feed da cesta, troca iniciada, ponto real);
+- qual alvo/setor específico (cruzada, paralela, centro, fundo, zona entre a dupla, corpo, diagonal curta etc.);
+- como os alunos rodam;
+- qual métrica simples define sucesso/falha.
+Se não houver dado suficiente, não preencha com treino padrão: gere uma aula diagnóstica específica para coletar o dado que falta.
+PROIBIDO usar frases vagas como "melhorar consistência", "trabalhar posicionamento", "exercício de fundamentos", "manter a bola em jogo" sem contexto, setor, bola inicial e critério.
+
 CONFIANÇA — calibre pela amostra do scout (pontosAnalisados) e convergência das fontes. Use 4 níveis:
 - "muito baixa": scout < 10 pontos OU fontes divergentes sem confirmação.
 - "baixa": evidência fraca/parcial (~10-20 pontos sem padrão nítido).
@@ -73,10 +82,10 @@ SAÍDA: responda SOMENTE com JSON válido (sem markdown, sem texto fora do JSON)
   },
   "objetivo": "o que a aula precisa melhorar",
   "blocos": [
-    { "nome": "Bloco 1 — Aquecimento específico", "tempo": "10'", "organizacao": "string", "comando": "string", "criterio_qualidade": "string" },
-    { "nome": "Bloco 2 — Exercício principal", "tempo": "25'", "organizacao": "string", "regra": "string", "correcao_principal": "string", "erro_a_observar": "string" },
-    { "nome": "Bloco 3 — Jogo condicionado", "tempo": "15'", "regra": "string", "pontuacao_especial": "string", "observar": "string" },
-    { "nome": "Bloco 4 — Fechamento", "tempo": "10'", "pergunta_final": "string", "registro_professor": "string", "proximo_passo": "string" }
+    { "nome": "Bloco 1 — Aquecimento específico", "tempo": "10'", "organizacao": "inclua posições/duplas/filas", "bola_inicial": "como começa", "alvo_setor": "setor/alvo", "rotacao": "como roda", "comando": "string", "criterio_qualidade": "métrica observável" },
+    { "nome": "Bloco 2 — Exercício principal", "tempo": "25'", "organizacao": "inclua posição do professor", "bola_inicial": "como começa", "alvo_setor": "setor/alvo", "rotacao": "como roda", "regra": "string", "correcao_principal": "string", "erro_a_observar": "string" },
+    { "nome": "Bloco 3 — Jogo condicionado", "tempo": "15'", "organizacao": "duplas/lados/entrada e saída", "bola_inicial": "como começa", "alvo_setor": "setor/alvo", "rotacao": "como roda", "regra": "string", "pontuacao_especial": "string", "observar": "string" },
+    { "nome": "Bloco 4 — Fechamento", "tempo": "10'", "organizacao": "como reunir/validar", "bola_inicial": "se houver bola, como começa; senão diga sem bola", "alvo_setor": "o que validar", "rotacao": "quem executa/observa", "pergunta_final": "string", "registro_professor": "string", "proximo_passo": "string" }
   ],
   "progressao": "quando aumentar a complexidade",
   "regressao": "quando simplificar",
@@ -89,11 +98,42 @@ function buildUserMessage(ctx: Record<string, unknown> = {}): string {
     "Dados disponíveis (JSON):",
     JSON.stringify(ctx, null, 2),
     "",
+    "Resumo crítico extraído:",
+    summarizeContext(ctx),
+    "",
     "Instruções:",
     "- Siga a hierarquia de dados e calibre a confiança pela amostra do scout (pontosAnalisados).",
+    "- Se houver alunos/avaliações/scout no JSON, use esses dados no diagnóstico; não gere plano apenas pelo nível.",
+    "- Cada bloco precisa trazer bola inicial, alvo/setor, rotação e critério mensurável.",
     "- Respeite as técnicas permitidas/bloqueadas para o nível da turma.",
     "- Gere o diagnóstico e o plano SOMENTE no formato JSON exigido.",
   ].join("\n");
+}
+
+function summarizeContext(ctx: Record<string, any> = {}): string {
+  const parts: string[] = [];
+  if (ctx.alvo || ctx.nome || ctx.nivel) parts.push(`Alvo: ${ctx.alvo || "turma"} ${ctx.nome || ""} · nível ${ctx.nivel || "não informado"}.`);
+  if (ctx.alunosMatriculados != null) parts.push(`Turma com ${ctx.alunosMatriculados} aluno(s) matriculado(s).`);
+  const prof = Object.entries(ctx.avaliacaoProfessor || {}).sort((a, b) => Number(a[1]) - Number(b[1])).slice(0, 3);
+  if (prof.length) parts.push(`Menores notas do professor: ${prof.map(([f, v]) => `${f} ${v}/5`).join(", ")}.`);
+  const auto = Object.entries(ctx.autoavaliacao || {}).sort((a, b) => Number(a[1]) - Number(b[1])).slice(0, 3);
+  if (auto.length) parts.push(`Menores autoavaliações: ${auto.map(([f, v]) => `${f} ${v}/5`).join(", ")}.`);
+  const scout = ctx.scout || {};
+  if (scout.totalEventos || scout.pontosAnalisados) parts.push(`Scout: ${scout.totalEventos || scout.pontosAnalisados} evento(s)/ponto(s), ${scout.erros ?? "?"} erro(s), ${scout.winners ?? "?"} winner(s).`);
+  if (scout.erroPrincipal) parts.push(`Erro principal no scout: ${scout.erroPrincipal.fundamento} (${scout.erroPrincipal.total}).`);
+  if (scout.zonaCritica) parts.push(`Zona crítica: ${scout.zonaCritica.zona}.`);
+  if (Array.isArray(ctx.evidenciasScout) && ctx.evidenciasScout.length) parts.push(`Evidências do scout: ${ctx.evidenciasScout.join(" | ")}.`);
+  if (Array.isArray(ctx.alunos) && ctx.alunos.length) {
+    const individual = ctx.alunos
+      .map((a: any) => {
+        const bits = [a.nome, a.foco ? `foco ${a.foco}` : "", a.scout?.leitura ? `scout: ${a.scout.leitura}` : ""].filter(Boolean);
+        return bits.join(" · ");
+      })
+      .slice(0, 6);
+    parts.push(`Alunos considerados: ${individual.join("; ")}.`);
+  }
+  if (ctx.observacoes) parts.push(`Observações do professor/app: ${ctx.observacoes}`);
+  return parts.length ? parts.join("\n") : "Poucos dados reais. Gere plano diagnóstico e declare baixa confiança.";
 }
 
 const cors = {
@@ -104,6 +144,46 @@ const cors = {
 
 function stripFences(s: string): string {
   return s.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+}
+
+function extractJsonObject(s: string): string {
+  const cleaned = stripFences(s);
+  const start = cleaned.indexOf("{");
+  if (start < 0) return cleaned;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === "\\") { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") depth++;
+    if (ch === "}") {
+      depth--;
+      if (depth === 0) return cleaned.slice(start, i + 1);
+    }
+  }
+  return cleaned.slice(start);
+}
+
+function normalizePlano(plano: any): any {
+  const metodo = String(plano?.decisaoPedagogica?.metodo || "").toLowerCase();
+  if (metodo) {
+    let normalized = plano.decisaoPedagogica.metodo;
+    if (metodo.includes("aberto") && !metodo.includes("semi")) normalized = "aberto";
+    else if (metodo.includes("semi")) normalized = "semiaberto";
+    else if (metodo.includes("fechado")) normalized = "fechado";
+    plano.decisaoPedagogica.metodo = normalized;
+  }
+  plano.blocos = (plano.blocos || []).map((b: any) => ({
+    bola_inicial: "Definir claramente como a bola começa neste bloco.",
+    alvo_setor: "Definir setor/alvo antes de iniciar.",
+    rotacao: "Rodar após a sequência para todos passarem pela função principal.",
+    ...b,
+  }));
+  return plano;
 }
 
 // Deriva o id do professor do JWT (o gateway do Supabase já valida o token).
@@ -190,6 +270,8 @@ async function dbKnowledge(teacherId: string): Promise<any[]> {
 function pickFundamentos(ctx: any): string[] {
   const score: Record<string, number> = {};
   for (const p of (ctx.scout?.padroes || [])) score[p.fundamento] = (score[p.fundamento] || 0) + (p.frequencia || 1) * 2;
+  if (ctx.scout?.erroPrincipal?.fundamento) score[ctx.scout.erroPrincipal.fundamento] = (score[ctx.scout.erroPrincipal.fundamento] || 0) + (ctx.scout.erroPrincipal.total || 3) * 2;
+  for (const [f, v] of Object.entries(ctx.scout?.errosPorFundamento || {})) score[f] = (score[f] || 0) + Number(v) * 2;
   for (const [f, v] of Object.entries(ctx.avaliacaoProfessor || {})) score[f] = (score[f] || 0) + Math.max(0, 5 - Number(v));
   if (ctx.foco) score[ctx.foco] = (score[ctx.foco] || 0) + 3;
   return Object.entries(score).sort((a, b) => b[1] - a[1]).map(([f]) => f).slice(0, 3);
@@ -247,7 +329,8 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: chosen,
-        max_tokens: 2000,
+        max_tokens: 2600,
+        temperature: 0.35,
         system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: userContent }],
       }),
@@ -267,7 +350,7 @@ Deno.serve(async (req: Request) => {
     let plano: any;
     let parseOk = true;
     try {
-      plano = JSON.parse(stripFences(text));
+      plano = normalizePlano(JSON.parse(extractJsonObject(text)));
     } catch {
       plano = { _raw: text, _parseError: true };
       parseOk = false;

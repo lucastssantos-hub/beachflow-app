@@ -1,7 +1,7 @@
 import React from 'react';
 import { gerarPlano, contextFromParams, salvarEdicao, salvarAvaliacao, listarPlanos } from './ia/gerarPlano.js';
 import { supabase, authEnabled } from './supabaseClient.js';
-import { listAlunos, listTurmas, getResumo, salvarAlunoCadastro, salvarTurmaCadastro } from './data/alunos.js';
+import { listAlunos, listTurmas, getResumo, salvarAlunoCadastro, salvarTurmaCadastro, contextoTurmaParaIA } from './data/alunos.js';
 import { listPartidas, getPartida, criarPartida, salvarPonto, encerrarPartida, scoutContext } from './data/scout.js';
 import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutDeciding, tennis, modeLabel, nextScoutServe } from './data/scoutScore.js';
 import { DEMO_ALUNOS as ALUNOS, DEMO_TURMAS, DEMO_RADAR_LABELS as RLAB } from './data/demo.js';
@@ -1256,7 +1256,7 @@ function ScreenTurma({ nav, params }) {
 
       <div style={{ display:'flex', gap:10, marginTop:12 }}>
         <Btn kind="secondary" style={{ flex:1 }} icon="check" onClick={preparar}>{st.loading?'Preparando…':'Enviar WhatsApp'}</Btn>
-        <Btn kind="primary" style={{ flex:1 }} icon="clip" onClick={()=>nav.go('plano',{ turma:turma.nome, nivel:turma.nivel })}>Gerar plano</Btn>
+        <Btn kind="primary" style={{ flex:1 }} icon="clip" onClick={()=>nav.go('plano',{ turma:turma.nome, nivel:turma.nivel, turmaObj:turma })}>Gerar plano</Btn>
       </div>
       <Mini style={{ marginTop:10 }}>Confirmação é para liberar vaga de reposição. Scout continua sendo periódico.</Mini>
 
@@ -1295,7 +1295,7 @@ function ScreenTurma({ nav, params }) {
     </Body>
     <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'12px 20px 30px',
       background:'linear-gradient(transparent,'+C.navy900+' 30%)' }}>
-      <Btn kind="primary" style={{ width:'100%' }} icon="clip" onClick={()=>nav.go('plano',{ turma:turma.nome, nivel:turma.nivel })}>Gerar plano da turma</Btn>
+      <Btn kind="primary" style={{ width:'100%' }} icon="clip" onClick={()=>nav.go('plano',{ turma:turma.nome, nivel:turma.nivel, turmaObj:turma })}>Gerar plano da turma</Btn>
     </div>
   </Screen>;
 }
@@ -1304,6 +1304,7 @@ function ScreenTurma({ nav, params }) {
 // campos possíveis de cada bloco -> rótulo amigável
 const BLOCO_FIELDS = [
   ['organizacao','Organização'], ['comando','Comando'], ['regra','Regra'],
+  ['bola_inicial','Bola inicial'], ['alvo_setor','Alvo/setor'], ['rotacao','Rotação'],
   ['correcao_principal','Correção principal'], ['erro_a_observar','Erro a observar'],
   ['criterio_qualidade','Critério de qualidade'], ['pontuacao_especial','Pontuação especial'],
   ['observar','Observar'], ['pergunta_final','Pergunta final'],
@@ -1352,9 +1353,13 @@ function ScreenPlano({ nav, params }) {
     let alive=true;
     if(params.plano){ setSt({ loading:false, plano:params.plano, fonte:params.fonte||'ia', id:params.id||null }); return; }
     setSt({ loading:true, plano:null, fonte:null, id:null });
-    gerarPlano(params.contexto || contextFromParams(params)).then(r=>{ if(alive) setSt({ loading:false, plano:r.plano, fonte:r.fonte, id:r.id }); });
+    (async ()=>{
+      const ctx = params.contexto || (params.turmaObj?.id ? await contextoTurmaParaIA(params.turmaObj) : contextFromParams(params));
+      const r = await gerarPlano(ctx);
+      if(alive) setSt({ loading:false, plano:r.plano, fonte:r.fonte, id:r.id });
+    })().catch(e=>{ if(alive) setSt({ loading:false, plano:{ titulo:'Erro ao gerar plano', diagnostico:{ gapPrincipal:e.message, confianca:'muito baixa' }, blocos:[] }, fonte:'erro', id:null }); });
     return ()=>{ alive=false; };
-  }, [a && a.id, params.contexto]);
+  }, [a && a.id, params.contexto, params.turmaObj?.id]);
 
   const titulo = a ? a.nome.split(' ')[0] : (params.titulo || 'Turma B');
   const radarData = a && a.radar ? a.radar : [0.55,0.8,0.7,0.45,0.6,0.4];

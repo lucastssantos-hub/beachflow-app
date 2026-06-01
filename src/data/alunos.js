@@ -259,3 +259,105 @@ export async function salvarTurmaCadastro({ id, nome, nivel, hora, capacidade, f
   if (error) return { ok: false, error: error.message };
   return { ok: true, id: data?.id || id };
 }
+
+function avgNotas(rows = [], evaluator) {
+  const grouped = {};
+  for (const r of rows) {
+    if (evaluator && r.evaluator !== evaluator) continue;
+    (grouped[r.fundamental] = grouped[r.fundamental] || []).push(Number(r.score));
+  }
+  const out = {};
+  for (const [f, vals] of Object.entries(grouped)) {
+    const m = avg(vals);
+    if (m != null) out[f] = Math.round((m / 2) * 10) / 10;
+  }
+  return out;
+}
+
+function focoFromNotas(notas = {}) {
+  let foco = null, min = Infinity;
+  for (const [f, v] of Object.entries(notas)) {
+    if (Number(v) < min) { min = Number(v); foco = f; }
+  }
+  return foco;
+}
+
+export async function contextoTurmaParaIA(turma) {
+  if (!supabase || !turma?.id) {
+    return { alvo: 'turma', nome: turma?.nome || 'Turma', nivel: turma?.nivel || 'Intermediário', duracaoMin: 60 };
+  }
+  const [enr, stu, ev, scoutEvents] = await Promise.all([
+    supabase.from('class_enrollments').select('student_id').eq('class_id', turma.id),
+    supabase.from('students').select('id,name,level').order('name'),
+    supabase.from('evaluations').select('student_id,fundamental,score,evaluator,created_at'),
+    supabase
+      .from('scout_events')
+      .select('student_id,class_id,match_id,fundamental,kind,score,note,outcome,technique,inferred_intention,tactical_issue,zone,created_at')
+      .eq('class_id', turma.id)
+      .order('created_at', { ascending: false })
+      .limit(300),
+  ]);
+  if (enr.error) throw enr.error;
+  if (stu.error) throw stu.error;
+  if (ev.error) throw ev.error;
+  if (scoutEvents.error) console.warn('[contextoTurmaParaIA:scout_events]', scoutEvents.error.message);
+
+  const ids = new Set((enr.data || []).map((x) => x.student_id).filter(Boolean));
+  const alunos = (stu.data || []).filter((s) => ids.has(s.id));
+  const evalRows = (ev.data || []).filter((r) => ids.has(r.student_id));
+  const scoutRows = scoutEvents.data || [];
+  const notasProf = avgNotas(evalRows, 'teacher');
+  const notasAuto = avgNotas(evalRows, 'student_blind');
+  const scoutResumo = buildScoutResumo(scoutRows);
+  const alunosResumo = alunos.map((s) => {
+    const rows = evalRows.filter((r) => r.student_id === s.id);
+    const prof = avgNotas(rows, 'teacher');
+    const auto = avgNotas(rows, 'student_blind');
+    const scout = buildScoutResumo(scoutRows.filter((e) => e.student_id === s.id));
+    const foco = focoFromNotas(Object.keys(prof).length ? prof : auto);
+    return {
+      nome: s.name,
+      nivel: NIVEL[s.level] || s.level || turma.nivel || 'Intermediário',
+      foco,
+      avaliacaoProfessor: prof,
+      autoavaliacao: auto,
+      scout: scout ? {
+        totalEventos: scout.totalEventos,
+        erros: scout.erros,
+        winners: scout.winners,
+        erroPrincipal: scout.erroPrincipal,
+        zonaCritica: scout.zonaCritica,
+        leitura: scout.leitura,
+      } : null,
+    };
+  });
+
+  return {
+    alvo: 'turma',
+    nome: turma.nome,
+    nivel: turma.nivel || 'Intermediário',
+    duracaoMin: 60,
+    turma: {
+      id: turma.id,
+      nome: turma.nome,
+      hora: turma.hora || null,
+      capacidade: turma.capacidade || null,
+      focoPadrao: turma.foco || null,
+    },
+    alunosMatriculados: alunos.length,
+    alunos: alunosResumo,
+    ...(Object.keys(notasProf).length ? { avaliacaoProfessor: notasProf } : {}),
+    ...(Object.keys(notasAuto).length ? { autoavaliacao: notasAuto } : {}),
+    ...(scoutResumo ? {
+      scout: scoutResumo,
+      scoutEventosRecentes: scoutResumo.eventosRecentes,
+      evidenciasScout: [
+        `${scoutResumo.totalEventos} evento(s) de Scout da turma`,
+        scoutResumo.erroPrincipal ? `erro principal: ${scoutResumo.erroPrincipal.fundamento} (${scoutResumo.erroPrincipal.total})` : '',
+        scoutResumo.zonaCritica ? `zona crítica: ${scoutResumo.zonaCritica.zona}` : '',
+        scoutResumo.leitura || '',
+      ].filter(Boolean),
+    } : {}),
+    observacoes: turma.foco ? `Foco padrão cadastrado da turma: ${turma.foco}. Use apenas se convergir com radar/scout.` : '',
+  };
+}
