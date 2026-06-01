@@ -708,6 +708,7 @@ function ScreenHoje({ nav }) {
   const [nome,setNome] = React.useState('');
   const [r,setR] = React.useState(null);
   const [turmasAgenda,setTurmasAgenda] = React.useState(null);
+  const [confirmAgenda,setConfirmAgenda] = React.useState({ loadingId:null, turma:null, alunos:null, error:'' });
   React.useEffect(()=>{
     let alive=true;
     if(authEnabled){
@@ -716,6 +717,20 @@ function ScreenHoje({ nav }) {
     } else { setR({ nAlunos:ALUNOS.length, nTurmas:DEMO_TURMAS.length, nPartidas:0, foco:ALUNOS[0] }); setTurmasAgenda(turmasHojeEAmanha(DEMO_TURMAS)); }
     return ()=>{ alive=false; };
   },[]);
+  const prepararAgenda = async (e,turma)=>{
+    e.stopPropagation();
+    setConfirmAgenda({ loadingId:turma.id, turma, alunos:null, error:'' });
+    try {
+      const r = await prepararConfirmacoesTurma({ turma });
+      setConfirmAgenda({ loadingId:null, turma, alunos:r.alunos, error:'' });
+    } catch(err) {
+      setConfirmAgenda({ loadingId:null, turma, alunos:null, error:err.message || 'Não foi possível preparar as mensagens.' });
+    }
+  };
+  const msgConfirmacao = (turma,item)=>{
+    const link = confirmationUrl(item.token);
+    return `Oi, ${item.aluno.name}! Confirma sua presença na aula ${turma.nome}${turma.hora?` (${turma.hora})`:''}? ${link}`;
+  };
   const Stat = ({ n, l, onClick }) => (
     <Card onClick={onClick} style={{ flex:1, padding:'13px 12px', textAlign:'center' }}>
       <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:24, color:'#fff' }}>{n}</div>
@@ -783,7 +798,49 @@ function ScreenHoje({ nav }) {
               </div>
               <Badge tone={t.diaOrder===0?'turq':'info'}>{t.diaLabel}</Badge>
             </div>
+            {t.diaOrder===0 && <div style={{ display:'flex', gap:8, marginTop:10, paddingLeft:54 }}>
+              <button className="bf-tap" onClick={(e)=>prepararAgenda(e,t)}
+                style={{ flex:1, border:0, borderRadius:9, padding:'8px 10px',
+                  background:'rgba(22,194,163,.14)', color:C.turq, fontSize:12.5, fontWeight:700 }}>
+                {confirmAgenda.loadingId===t.id?'Preparando…':'Enviar WhatsApp'}
+              </button>
+              <button className="bf-tap" onClick={(e)=>{ e.stopPropagation(); nav.go('turma',{ turma:t }); }}
+                style={{ border:`1px solid ${C.line2}`, borderRadius:9, padding:'8px 10px',
+                  background:'transparent', color:C.inkDim, fontSize:12.5, fontWeight:700 }}>
+                Abrir
+              </button>
+            </div>}
           </Card>)}
+        {confirmAgenda.error && <Card style={{ marginTop:12, borderColor:'rgba(242,84,91,.35)' }}>
+          <div style={{ fontSize:12.5, color:C.err }}>{confirmAgenda.error}</div>
+        </Card>}
+        {confirmAgenda.alunos && <Card style={{ marginTop:12 }}>
+          <Mini>WhatsApp de confirmação · {confirmAgenda.turma?.nome}</Mini>
+          {confirmAgenda.alunos.length===0 && <div style={{ fontSize:12.5, color:C.inkDim, marginTop:10 }}>Nenhum aluno matriculado nesta turma.</div>}
+          <div style={{ marginTop:10 }}>
+            {confirmAgenda.alunos.map((item)=>
+              <div key={item.aluno.id} style={{ padding:'9px 0', borderBottom:`1px solid ${C.line}` }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:13, color:C.ink, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{item.aluno.name}</div>
+                    <div style={{ fontSize:11.5, color:item.aluno.phone?C.inkDim:C.warn, marginTop:2 }}>
+                      {item.aluno.phone || 'Sem telefone no cadastro'}
+                    </div>
+                  </div>
+                  <Badge tone={statusTone(item.status)}>{statusLabel(item.status)}</Badge>
+                </div>
+                {item.error && <div style={{ fontSize:11.5, color:C.err, marginTop:6 }}>{item.error}</div>}
+                {item.token && <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                  {item.aluno.phone && <a href={whatsappUrl(item.aluno.phone, msgConfirmacao(confirmAgenda.turma,item))} target="_blank" rel="noreferrer"
+                    style={{ flex:1, textAlign:'center', textDecoration:'none', borderRadius:9, padding:'8px 10px',
+                      background:'rgba(22,194,163,.14)', color:C.turq, fontSize:12.5, fontWeight:700 }}>WhatsApp</a>}
+                  <button className="bf-tap" onClick={()=>navigator.clipboard?.writeText(msgConfirmacao(confirmAgenda.turma,item))}
+                    style={{ flex:1, borderRadius:9, padding:'8px 10px', border:`1px solid ${C.line2}`,
+                      background:'transparent', color:C.inkDim, fontSize:12.5, fontWeight:700 }}>Copiar</button>
+                </div>}
+              </div>)}
+          </div>
+        </Card>}
       </Body>
       <TabBar active="hoje" onTab={nav.tab}/>
     </Screen>
@@ -1170,7 +1227,7 @@ function ScreenTurma({ nav, params }) {
       </Card>
 
       <div style={{ display:'flex', gap:10, marginTop:12 }}>
-        <Btn kind="secondary" style={{ flex:1 }} icon="check" onClick={preparar}>{st.loading?'Preparando…':'Confirmar alunos'}</Btn>
+        <Btn kind="secondary" style={{ flex:1 }} icon="check" onClick={preparar}>{st.loading?'Preparando…':'Enviar WhatsApp'}</Btn>
         <Btn kind="primary" style={{ flex:1 }} icon="clip" onClick={()=>nav.go('plano',{ turma:turma.nome, nivel:turma.nivel })}>Gerar plano</Btn>
       </div>
       <Mini style={{ marginTop:10 }}>Confirmação é para liberar vaga de reposição. Scout continua sendo periódico.</Mini>
