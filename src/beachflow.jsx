@@ -993,9 +993,38 @@ function ScreenAlunos({ nav }) {
 }
 
 // ---------- ALUNO (detalhe) ----------
+function firstName(name = '') {
+  return String(name || 'aluno').trim().split(/\s+/)[0] || 'aluno';
+}
+function topNota(notas = {}, asc = true) {
+  const rows = Object.entries(notas || {}).filter(([,v])=>Number.isFinite(Number(v)));
+  if(!rows.length) return null;
+  return rows.sort((a,b)=>asc ? Number(a[1])-Number(b[1]) : Number(b[1])-Number(a[1]))[0];
+}
+function feedbackAlunoTexto(a) {
+  const autoFraco = topNota(a.notasAuto, true);
+  const autoForte = topNota(a.notasAuto, false);
+  const scout = a.scoutResumo;
+  const erro = scout?.erroPrincipal;
+  const zona = scout?.zonaCritica;
+  const nome = firstName(a.nome);
+  const pontoAtencao = erro
+    ? `${erro.total} situação(ões) ligadas a ${erro.fundamento}${zona ? `, principalmente na zona ${zona.zona}` : ''}.`
+    : scout?.leitura || 'algumas situações que vamos acompanhar melhor em jogo.';
+  const foco = erro?.fundamento || autoFraco?.[0] || a.foco || 'controle da bola';
+  return `Oi, ${nome}! Aqui vai um feedback simples do seu treino.\n\nO QUE APARECEU NO JOGO\nNo scout, vimos ${pontoAtencao}\n\nCOMO VOCÊ SE PERCEBEU\nNa sua autoavaliação, seu ponto mais forte apareceu em ${autoForte ? `${autoForte[0]} (${Number(autoForte[1]).toFixed(1)}/5)` : 'alguns fundamentos'} e o ponto que merece mais atenção apareceu em ${autoFraco ? `${autoFraco[0]} (${Number(autoFraco[1]).toFixed(1)}/5)` : foco}.\n\nO QUE ISSO SIGNIFICA\nNão é que você \"não sabe\" fazer. Significa que, em situação de jogo, esse ponto ainda pede mais calma, escolha melhor da bola e repetição.\n\nFOCO DA PRÓXIMA AULA\nVamos trabalhar ${foco} de um jeito prático: reconhecer a bola certa, executar com mais controle e terminar a jogada melhor posicionado.\n\nA ideia é simples: evoluir um ajuste por vez, sem complicar.`;
+}
+
 function ScreenAluno({ nav, params }) {
   const a = params.aluno || ALUNOS[0];
   const [tab,setTab] = React.useState('tecnico');
+  const canFeedback = !!(a.scoutResumo && a.notasAuto && Object.keys(a.notasAuto).length);
+  const enviarFeedback = ()=>{
+    const text = feedbackAlunoTexto(a);
+    if(a.phone) window.open(whatsappUrl(a.phone, text), '_blank', 'noopener,noreferrer');
+    else navigator.clipboard?.writeText(text);
+  };
+  const copiarFeedback = ()=>navigator.clipboard?.writeText(feedbackAlunoTexto(a));
   return (
     <Screen>
       <Header onBack={nav.back} kicker={a.turma} title={a.nome}
@@ -1045,6 +1074,21 @@ function ScreenAluno({ nav, params }) {
               <div key={p.texto} style={{ display:'flex', justifyContent:'space-between', gap:12, fontSize:12, color:C.inkDim }}>
                 <span>{p.texto}</span><span style={{ fontFamily:'var(--ff-m)', color:C.info }}>{p.total}</span>
               </div>)}
+          </div>}
+          {canFeedback && <div style={{ display:'flex', gap:8, marginTop:12, paddingTop:12, borderTop:`1px solid ${C.line}` }}>
+            <button className="bf-tap" onClick={enviarFeedback}
+              style={{ flex:1, border:0, borderRadius:9, padding:'9px 10px',
+                background:'rgba(22,194,163,.14)', color:C.turq, fontSize:12.5, fontWeight:700 }}>
+              Enviar feedback
+            </button>
+            <button className="bf-tap" onClick={copiarFeedback}
+              style={{ border:`1px solid ${C.line2}`, borderRadius:9, padding:'9px 10px',
+                background:'transparent', color:C.inkDim, fontSize:12.5, fontWeight:700 }}>
+              Copiar
+            </button>
+          </div>}
+          {!canFeedback && <div style={{ fontSize:11.5, color:C.inkDim, lineHeight:1.35, marginTop:10, paddingTop:10, borderTop:`1px solid ${C.line}` }}>
+            O feedback para WhatsApp aparece quando este aluno tiver Scout e autoavaliação.
           </div>}
         </Card>}
 

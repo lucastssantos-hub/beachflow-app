@@ -9,6 +9,19 @@ const NIVEL = { iniciante: 'Iniciante', intermediario: 'Intermediário', avancad
 const FUND_ORDER = ['Saque', 'Devolução', 'Forehand', 'Backhand', 'Lob', 'Smash', 'Bandeja', 'Gancho', 'Tapa', 'Curta', 'Posicionamento', 'Consistência', 'Decisão'];
 const ABBR = { 'Saque': 'SAQUE', 'Devolução': 'DEVOL', 'Forehand': 'FH', 'Backhand': 'BH', 'Lob': 'LOB', 'Smash': 'SMASH', 'Bandeja': 'BAND', 'Gancho': 'GANCHO', 'Tapa': 'TAPA', 'Curta': 'CURTA', 'Posicionamento': 'POSIC', 'Consistência': 'CONST', 'Decisão': 'DECIS' };
 const KIND_LABEL = { error: 'erros', winner: 'winners', decision: 'decisões', position: 'posicionamento' };
+const FUND_ALIAS = {
+  Recepção: 'Devolução',
+  Devolucao: 'Devolução',
+  Constancia: 'Consistência',
+  Constância: 'Consistência',
+  Bandeja: 'Bandeja',
+  'Bandeja/Controle': 'Bandeja',
+  Curta: 'Curta',
+  'Bolas curtas': 'Curta',
+  Tapa: 'Tapa',
+  Acelerada: 'Tapa',
+  Espetada: 'Tapa',
+};
 
 function initials(name = '') {
   const clean = name.replace(/\(.*?\)/g, ' ').trim();
@@ -17,6 +30,13 @@ function initials(name = '') {
   return (clean.slice(0, 2) || '?').toUpperCase();
 }
 const avg = (a) => (a && a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
+const clamp = (n, min = 0, max = 10) => Math.max(min, Math.min(max, Number(n)));
+
+function canonicalFund(f = '') {
+  const raw = String(f || '').trim();
+  if (!raw) return 'Consistência';
+  return FUND_ALIAS[raw] || FUND_ORDER.find((x) => x.toLowerCase() === raw.toLowerCase()) || raw;
+}
 
 function topEntries(obj, limit = 3) {
   return Object.entries(obj || {}).sort((a, b) => b[1] - a[1]).slice(0, limit);
@@ -25,6 +45,30 @@ function topEntries(obj, limit = 3) {
 function addCount(map, key) {
   if (!key) return;
   map[key] = (map[key] || 0) + 1;
+}
+
+function scoreFromScoutEvent(e) {
+  if (Number.isFinite(Number(e.score))) return clamp(Number(e.score));
+  const kind = String(e.kind || e.outcome || '').toLowerCase();
+  if (/winner|ace/.test(kind)) return 8.8;
+  if (/erro|error/.test(kind)) return 3.0;
+  if (/decision|decis/.test(kind)) return 5.0;
+  if (/position|posic/.test(kind)) return 5.5;
+  return 6.0;
+}
+
+function buildScoutNotas(events = []) {
+  const grouped = {};
+  for (const e of events) {
+    const f = canonicalFund(e.fundamental || e.technique || 'Consistência');
+    (grouped[f] = grouped[f] || []).push(scoreFromScoutEvent(e));
+  }
+  const out = {};
+  for (const [f, vals] of Object.entries(grouped)) {
+    const m = avg(vals);
+    if (m != null) out[f] = Math.round(m * 10) / 10;
+  }
+  return out;
 }
 
 function buildScoutResumo(events = []) {
@@ -41,7 +85,7 @@ function buildScoutResumo(events = []) {
   const matches = new Set();
 
   for (const e of rows) {
-    const fund = e.fundamental || e.technique || 'Consistência';
+    const fund = canonicalFund(e.fundamental || e.technique || 'Consistência');
     const kind = e.kind || (String(e.outcome || '').toLowerCase().includes('erro') ? 'error' : '');
     addCount(byFund, fund);
     addCount(kindCount, kind);
@@ -78,7 +122,7 @@ function buildScoutResumo(events = []) {
     problemasTaticos: topEntries(issues, 4).map(([texto, total]) => ({ texto, total })),
     eventosRecentes: rows.slice(0, 12).map((e) => ({
       data: e.created_at,
-      fundamento: e.fundamental || e.technique || 'Consistência',
+      fundamento: canonicalFund(e.fundamental || e.technique || 'Consistência'),
       tipo: KIND_LABEL[e.kind] || e.kind || e.outcome || 'evento',
       desfecho: e.outcome || e.kind || '',
       tecnica: e.technique || '',
@@ -87,6 +131,7 @@ function buildScoutResumo(events = []) {
       problema: e.tactical_issue || '',
       nota: e.score ?? null,
     })),
+    notasRadar: Object.fromEntries(Object.entries(buildScoutNotas(rows)).map(([f, v]) => [f, Math.round((v / 2) * 10) / 10])),
     leitura: leitura || `${rows.length} evento(s) de Scout vinculados ao aluno.`,
   };
 }
@@ -117,7 +162,7 @@ export async function listAlunos(force) {
     supabase.from('evaluations').select('student_id,fundamental,score,evaluator'),
     supabase
       .from('scout_events')
-      .select('student_id,class_id,match_id,fundamental,kind,score,note,outcome,technique,inferred_intention,tactical_issue,zone,created_at')
+      .select('id,student_id,class_id,match_id,fundamental,kind,score,note,outcome,technique,inferred_intention,tactical_issue,zone,created_at')
       .order('created_at', { ascending: false })
       .limit(2000),
   ]);
@@ -146,34 +191,43 @@ export async function listAlunos(force) {
   const out = (stu.data || []).map((s, i) => {
     const a = agg.get(s.id) || { teacher: {}, blind: {} };
     const cls = classByStudent.get(s.id);
+    const scoutRows = scoutByStudent.get(s.id) || [];
+    const scoutScores = buildScoutNotas(scoutRows);
     // notas 0-5 (dict) para a IA — todos os fundamentos avaliados
     const notasProf = {}; for (const [f, arr] of Object.entries(a.teacher)) { const m = avg(arr); if (m != null) notasProf[f] = Math.round((m / 2) * 10) / 10; }
     const notasAuto = {}; for (const [f, arr] of Object.entries(a.blind)) { const m = avg(arr); if (m != null) notasAuto[f] = Math.round((m / 2) * 10) / 10; }
+    const notasScout = {}; for (const [f, score10] of Object.entries(scoutScores)) notasScout[f] = Math.round((Number(score10) / 2) * 10) / 10;
     const nProf = Object.keys(notasProf).length;
     const nAuto = Object.keys(notasAuto).length;
-    // radar HÍBRIDO sobre TODOS os fundamentos avaliados (professor; se não houver, autoavaliação provisória)
+    const nScout = Object.keys(notasScout).length;
+    // radar HÍBRIDO sobre TODOS os fundamentos avaliados.
+    // Prioridade: professor + scout como evidência de jogo; se não houver professor, scout; se não houver scout, autoavaliação.
     const hyb = {}; // fundamento -> valor 0-1
     for (const f of FUND_ORDER) {
-      const t = avg(a.teacher[f]); if (t != null) { hyb[f] = t / 10; continue; }
+      const t = avg(a.teacher[f]);
+      const sc = scoutScores[f];
+      if (t != null && sc != null) { hyb[f] = ((t * 0.7) + (Number(sc) * 0.3)) / 10; continue; }
+      if (t != null) { hyb[f] = t / 10; continue; }
+      if (sc != null) { hyb[f] = Number(sc) / 10; continue; }
       const s2 = avg(a.blind[f]); if (s2 != null) hyb[f] = s2 / 10;
     }
     const radarFunds = FUND_ORDER.filter((f) => hyb[f] != null);
     const radar = radarFunds.map((f) => hyb[f]);
     const radarLabels = radarFunds.map((f) => ABBR[f] || f.toUpperCase().slice(0, 6));
-    const radarFonte = nProf ? 'avaliação do professor' : (nAuto ? 'autoavaliação (provisória)' : 'sem dados');
+    const radarFonte = nProf && nScout ? 'professor + scout' : nProf ? 'avaliação do professor' : nScout ? 'scout BT Tracker' : (nAuto ? 'autoavaliação (provisória)' : 'sem dados');
     // foco = fundamento mais fraco (na fonte vigente)
     let foco = '—', min = Infinity;
     for (const f of radarFunds) { if (hyb[f] < min) { min = hyb[f]; foco = f; } }
-    const scoutResumo = buildScoutResumo(scoutByStudent.get(s.id) || []);
+    const scoutResumo = buildScoutResumo(scoutRows);
     return {
       id: s.id, nome: s.name, phone: s.phone || '', ini: initials(s.name), cor: PALETTE[i % PALETTE.length],
       nivel: NIVEL[s.level] || s.level || '—',
       turma: cls ? `${cls.name} · ${NIVEL[cls.level] || cls.level}` : (NIVEL[s.level] || s.level || 'Sem turma'),
       foco, radarFonte,
-      delta: nProf ? `${nProf} fund.` : (nAuto ? 'autoaval.' : 'sem aval.'),
-      tone: nProf ? 'info' : (nAuto ? 'turq' : 'neutral'),
+      delta: nProf ? `${nProf} fund.` : (nScout ? `${nScout} scout` : (nAuto ? 'autoaval.' : 'sem aval.')),
+      tone: nProf ? 'info' : (nScout ? 'coral' : (nAuto ? 'turq' : 'neutral')),
       radar, radarLabels, evo: null,
-      notasProf, notasAuto, hasProf: nProf > 0, scoutResumo,
+      notasProf, notasAuto, notasScout, hasProf: nProf > 0, hasScout: nScout > 0, scoutResumo,
     };
   });
   _cacheAlunos = out;
@@ -292,7 +346,7 @@ export async function contextoTurmaParaIA(turma) {
     supabase.from('evaluations').select('student_id,fundamental,score,evaluator,created_at'),
     supabase
       .from('scout_events')
-      .select('student_id,class_id,match_id,fundamental,kind,score,note,outcome,technique,inferred_intention,tactical_issue,zone,created_at')
+      .select('id,student_id,class_id,match_id,fundamental,kind,score,note,outcome,technique,inferred_intention,tactical_issue,zone,created_at')
       .eq('class_id', turma.id)
       .order('created_at', { ascending: false })
       .limit(300),
@@ -305,7 +359,19 @@ export async function contextoTurmaParaIA(turma) {
   const ids = new Set((enr.data || []).map((x) => x.student_id).filter(Boolean));
   const alunos = (stu.data || []).filter((s) => ids.has(s.id));
   const evalRows = (ev.data || []).filter((r) => ids.has(r.student_id));
-  const scoutRows = scoutEvents.data || [];
+  let scoutRows = scoutEvents.data || [];
+  if (ids.size) {
+    const { data: scoutByStudents, error: scoutByStudentsError } = await supabase
+      .from('scout_events')
+      .select('id,student_id,class_id,match_id,fundamental,kind,score,note,outcome,technique,inferred_intention,tactical_issue,zone,created_at')
+      .in('student_id', Array.from(ids))
+      .order('created_at', { ascending: false })
+      .limit(600);
+    if (scoutByStudentsError) console.warn('[contextoTurmaParaIA:scout_by_students]', scoutByStudentsError.message);
+    const byId = new Map(scoutRows.map((x, i) => [x.id || `${x.student_id}:${x.created_at}:${i}`, x]));
+    for (const x of (scoutByStudents || [])) byId.set(x.id || `${x.student_id}:${x.created_at}`, x);
+    scoutRows = Array.from(byId.values()).sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  }
   const notasProf = avgNotas(evalRows, 'teacher');
   const notasAuto = avgNotas(evalRows, 'student_blind');
   const scoutResumo = buildScoutResumo(scoutRows);

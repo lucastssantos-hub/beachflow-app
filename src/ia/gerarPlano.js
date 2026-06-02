@@ -103,6 +103,7 @@ export function contextFromParams(params = {}) {
       alvo: 'aluno', nome: a.nome, nivel: a.nivel || nivelFromTurma(a.turma), foco: a.foco,
       ...(avaliacaoProfessor && Object.keys(avaliacaoProfessor).length ? { avaliacaoProfessor } : {}),
       ...(autoavaliacao && Object.keys(autoavaliacao).length ? { autoavaliacao } : {}),
+      ...(a.notasScout && Object.keys(a.notasScout).length ? { avaliacaoScout: a.notasScout } : {}),
       ...(a.scoutResumo ? {
         scout: a.scoutResumo,
         scoutEventosRecentes: a.scoutResumo.eventosRecentes || [],
