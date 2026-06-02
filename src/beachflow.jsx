@@ -1059,11 +1059,23 @@ function feedbackAlunoTexto(a) {
     ? `${erro.total} situação(ões) ligadas a ${erro.fundamento}${zona ? `, principalmente na zona ${zona.zona}` : ''}.`
     : scout?.leitura || 'algumas situações que vamos acompanhar melhor em jogo.';
   const foco = erro?.fundamento || autoFraco?.[0] || a.foco || 'controle da bola';
+  const extrasFund = Object.entries(scout?.errosPorFundamento || {})
+    .filter(([f])=>f !== erro?.fundamento)
+    .sort((a,b)=>Number(b[1])-Number(a[1]))
+    .slice(0,2);
+  const extraTatico = (scout?.problemasTaticos || []).find(p=>p?.texto);
+  const textoTatico = extraTatico?.texto ? String(extraTatico.texto).replace(/\s+/g,' ').slice(0,160) : '';
+  const extraTexto = extrasFund.length || extraTatico
+    ? `\n\nTAMBÉM VALE OBSERVAR\n${[
+        extrasFund.length ? `Além do ponto principal, também apareceram sinais em ${extrasFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
+        textoTatico ? `Também apareceu este padrão no jogo: ${textoTatico}.` : '',
+      ].filter(Boolean).join(' ')}`
+    : '';
   const mesmaNota = autoForte && autoFraco && (autoForte[0] === autoFraco[0] || Number(autoForte[1]) === Number(autoFraco[1]));
   const autoTexto = mesmaNota
     ? `Na sua autoavaliação, suas respostas ficaram bem próximas. Isso mostra que você se percebe de forma parecida nos fundamentos, então vamos cruzar isso com o que apareceu no jogo.`
     : `Na sua autoavaliação, seu ponto mais seguro apareceu em ${autoForte ? `${autoForte[0]} (${Number(autoForte[1]).toFixed(1)}/5)` : 'alguns fundamentos'} e o ponto que pediu mais atenção apareceu em ${autoFraco ? `${autoFraco[0]} (${Number(autoFraco[1]).toFixed(1)}/5)` : foco}.`;
-  return `Oi, ${nome}! Aqui vai um feedback simples do seu treino.\n\nO QUE APARECEU NO JOGO\nNo scout, vimos ${pontoAtencao}\n\nCOMO VOCÊ SE PERCEBEU\n${autoTexto}\n\nO QUE ISSO SIGNIFICA\nNão é que você \"não sabe\" fazer. Significa que, em situação de jogo, esse ponto ainda pede mais calma, escolha melhor da bola e repetição.\n\nO QUE VAMOS TRABALHAR\nVamos trabalhar ${foco} de um jeito simples e prático, para você ganhar mais segurança nesse ponto.\n\nA ideia é evoluir um ajuste por vez, sem complicar.`;
+  return `Oi, ${nome}! Aqui vai um feedback simples do seu treino.\n\nO QUE APARECEU NO JOGO\nNo scout, vimos ${pontoAtencao}${extraTexto}\n\nCOMO VOCÊ SE PERCEBEU\n${autoTexto}\n\nO QUE ISSO SIGNIFICA\nNão é que você \"não sabe\" fazer. Significa que, em situação de jogo, esse ponto ainda pede mais calma, escolha melhor da bola e repetição.\n\nO QUE VAMOS TRABALHAR\nVamos trabalhar ${foco} de um jeito simples e prático, para você ganhar mais segurança nesse ponto.\n\nA ideia é evoluir um ajuste por vez, sem complicar.`;
 }
 
 function ScreenAluno({ nav, params }) {
