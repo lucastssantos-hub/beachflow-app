@@ -6,6 +6,7 @@ import { listPartidas, getPartida, criarPartida, salvarPonto, encerrarPartida, s
 import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutDeciding, tennis, modeLabel, nextScoutServe } from './data/scoutScore.js';
 import { DEMO_ALUNOS as ALUNOS, DEMO_TURMAS, DEMO_RADAR_LABELS as RLAB } from './data/demo.js';
 import { prepararConfirmacoesTurma, atualizarStatusConfirmacoes, getConfirmacao, responderConfirmacao, confirmationUrl, whatsappUrl, statusLabel, statusTone } from './data/confirmacoes.js';
+import { AUTO_FUNDAMENTOS, prepararAutoavaliacaoAluno, salvarAutoavaliacaoToken } from './data/autoavaliacao.js';
 
 
 /* ===== app/ios-frame.jsx ===== */
@@ -928,6 +929,8 @@ function ScreenAlunoForm({ nav, params }) {
 function ScreenAlunos({ nav }) {
   const [q,setQ] = React.useState('');
   const [filtro,setFiltro] = React.useState('Todos');
+  const [showMissingAuto,setShowMissingAuto] = React.useState(false);
+  const [autoMsg,setAutoMsg] = React.useState('');
   const [alunos,setAlunos] = React.useState(null);
   React.useEffect(()=>{
     let alive=true;
@@ -938,11 +941,25 @@ function ScreenAlunos({ nav }) {
 
   const FILTROS = ['Todos','Iniciante','Intermediário','Avançado'];
   const base = alunos||[];
+  const semAuto = base.filter(a=>!a.notasAuto || !Object.keys(a.notasAuto).length);
   const list = base.filter(a=>{
     const okBusca = a.nome.toLowerCase().includes(q.toLowerCase()) || (a.turma||'').toLowerCase().includes(q.toLowerCase());
     const okFiltro = filtro==='Todos' || a.nivel===filtro;
     return okBusca && okFiltro;
   });
+  const enviarAuto = async (aluno)=>{
+    setAutoMsg('');
+    try {
+      const r = await prepararAutoavaliacaoAluno(aluno);
+      if(aluno.phone) window.open(whatsappUrl(aluno.phone, r.message), '_blank', 'noopener,noreferrer');
+      else {
+        await navigator.clipboard?.writeText(r.message);
+        setAutoMsg(`Mensagem de ${aluno.nome} copiada. Sem WhatsApp no cadastro.`);
+      }
+    } catch(e) {
+      setAutoMsg(e.message || 'Não foi possível preparar o link.');
+    }
+  };
 
   return (
     <Screen>
@@ -969,6 +986,36 @@ function ScreenAlunos({ nav }) {
               whiteSpace:'nowrap', border:`1px solid ${on?C.turq:C.line2}`, color:on?C.turq:C.inkDim,
               background:on?'rgba(22,194,163,.1)':'transparent' }}>{f}</span>; })}
         </div>
+        {alunos && <Card style={{ marginTop:10, padding:'12px 13px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ flex:1 }}>
+              <Mini>Autoavaliação</Mini>
+              <div style={{ fontSize:12.5, color:C.inkDim, marginTop:3 }}>{semAuto.length} aluno(s) sem resposta</div>
+            </div>
+            <button className="bf-tap" onClick={()=>setShowMissingAuto(v=>!v)}
+              style={{ border:`1px solid ${C.line2}`, borderRadius:9, padding:'8px 10px',
+                background:showMissingAuto?'rgba(22,194,163,.12)':'transparent', color:showMissingAuto?C.turq:C.inkDim,
+                fontSize:12.5, fontWeight:700 }}>
+              {showMissingAuto?'Ocultar':'Reenviar'}
+            </button>
+          </div>
+          {autoMsg && <div style={{ fontSize:11.5, color:autoMsg.includes('Não foi')?C.err:C.turq, marginTop:9, lineHeight:1.35 }}>{autoMsg}</div>}
+          {showMissingAuto && <div style={{ marginTop:10, borderTop:`1px solid ${C.line}`, paddingTop:8 }}>
+            {semAuto.length===0 && <div style={{ fontSize:12.5, color:C.inkDim }}>Todos os alunos já têm autoavaliação.</div>}
+            {semAuto.map(a=>
+              <div key={a.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 0', borderBottom:`1px solid ${C.line}` }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:13, color:C.ink, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.nome}</div>
+                  <div style={{ fontSize:11.5, color:a.phone?C.inkDim:C.warn }}>{a.phone || 'Sem WhatsApp'}</div>
+                </div>
+                <button className="bf-tap" onClick={()=>enviarAuto(a)}
+                  style={{ border:0, borderRadius:9, padding:'8px 10px',
+                    background:'rgba(22,194,163,.14)', color:C.turq, fontSize:12.5, fontWeight:700 }}>
+                  Reenviar
+                </button>
+              </div>)}
+          </div>}
+        </Card>}
         <div style={{ marginTop:6 }}>
           {alunos===null &&
             <div style={{ textAlign:'center', color:C.inkDim, fontSize:13, marginTop:30 }}>Carregando alunos…</div>}
@@ -1012,7 +1059,11 @@ function feedbackAlunoTexto(a) {
     ? `${erro.total} situação(ões) ligadas a ${erro.fundamento}${zona ? `, principalmente na zona ${zona.zona}` : ''}.`
     : scout?.leitura || 'algumas situações que vamos acompanhar melhor em jogo.';
   const foco = erro?.fundamento || autoFraco?.[0] || a.foco || 'controle da bola';
-  return `Oi, ${nome}! Aqui vai um feedback simples do seu treino.\n\nO QUE APARECEU NO JOGO\nNo scout, vimos ${pontoAtencao}\n\nCOMO VOCÊ SE PERCEBEU\nNa sua autoavaliação, seu ponto mais forte apareceu em ${autoForte ? `${autoForte[0]} (${Number(autoForte[1]).toFixed(1)}/5)` : 'alguns fundamentos'} e o ponto que merece mais atenção apareceu em ${autoFraco ? `${autoFraco[0]} (${Number(autoFraco[1]).toFixed(1)}/5)` : foco}.\n\nO QUE ISSO SIGNIFICA\nNão é que você \"não sabe\" fazer. Significa que, em situação de jogo, esse ponto ainda pede mais calma, escolha melhor da bola e repetição.\n\nFOCO DA PRÓXIMA AULA\nVamos trabalhar ${foco} de um jeito prático: reconhecer a bola certa, executar com mais controle e terminar a jogada melhor posicionado.\n\nA ideia é simples: evoluir um ajuste por vez, sem complicar.`;
+  const mesmaNota = autoForte && autoFraco && (autoForte[0] === autoFraco[0] || Number(autoForte[1]) === Number(autoFraco[1]));
+  const autoTexto = mesmaNota
+    ? `Na sua autoavaliação, suas respostas ficaram bem próximas. Isso mostra que você se percebe de forma parecida nos fundamentos, então vamos cruzar isso com o que apareceu no jogo.`
+    : `Na sua autoavaliação, seu ponto mais seguro apareceu em ${autoForte ? `${autoForte[0]} (${Number(autoForte[1]).toFixed(1)}/5)` : 'alguns fundamentos'} e o ponto que pediu mais atenção apareceu em ${autoFraco ? `${autoFraco[0]} (${Number(autoFraco[1]).toFixed(1)}/5)` : foco}.`;
+  return `Oi, ${nome}! Aqui vai um feedback simples do seu treino.\n\nO QUE APARECEU NO JOGO\nNo scout, vimos ${pontoAtencao}\n\nCOMO VOCÊ SE PERCEBEU\n${autoTexto}\n\nO QUE ISSO SIGNIFICA\nNão é que você \"não sabe\" fazer. Significa que, em situação de jogo, esse ponto ainda pede mais calma, escolha melhor da bola e repetição.\n\nO QUE VAMOS TRABALHAR\nVamos trabalhar ${foco} de um jeito simples e prático, para você ganhar mais segurança nesse ponto.\n\nA ideia é evoluir um ajuste por vez, sem complicar.`;
 }
 
 function ScreenAluno({ nav, params }) {
@@ -2215,6 +2266,62 @@ function ScreenConfirmacao({ token }) {
   </Screen>;
 }
 
+function ScreenAutoavaliacaoPublica({ token }) {
+  const aluno = new URLSearchParams(window.location.search).get('aluno') || 'aluno';
+  const [scores,setScores] = React.useState(()=>Object.fromEntries(AUTO_FUNDAMENTOS.map(f=>[f,3])));
+  const [st,setSt] = React.useState({ loading:false, done:false, error:'' });
+  const set = (f,n)=>setScores(s=>({ ...s, [f]:n }));
+  const enviar = async ()=>{
+    setSt({ loading:true, done:false, error:'' });
+    try {
+      const payload = Object.fromEntries(Object.entries(scores).map(([f,v])=>[f, Number(v) * 2]));
+      await salvarAutoavaliacaoToken(token, payload);
+      setSt({ loading:false, done:true, error:'' });
+    } catch(e) {
+      const msg = String(e.message || 'Não foi possível enviar.');
+      setSt({ loading:false, done:false, error:/ja foi enviada|já foi enviada|utilizad/i.test(msg)
+        ? 'Esta autoavaliação já foi enviada. Peça um novo link ao professor se quiser responder novamente.'
+        : msg });
+    }
+  };
+  return <Screen>
+    <div className="bf-scroll" style={{ flex:1, overflowY:'auto', padding:'46px 22px 34px' }}>
+      <div style={{ display:'flex', justifyContent:'center' }}><BFMark w={52}/></div>
+      <div style={{ textAlign:'center', fontFamily:'var(--ff-d)', fontWeight:800, fontSize:24, color:'#fff', marginTop:16 }}>Autoavaliação</div>
+      <Card glow style={{ marginTop:18, textAlign:'center' }}>
+        <div style={{ fontSize:14, color:C.ink }}>Oi, <b>{aluno}</b>.</div>
+        <div style={{ fontSize:12.5, color:C.inkDim, lineHeight:1.45, marginTop:8 }}>
+          Escolha como você se sente hoje em cada fundamento. Não precisa acertar: seja sincero.
+        </div>
+      </Card>
+      {st.done ? <Card style={{ marginTop:14, textAlign:'center', padding:'28px 18px' }}>
+        <div style={{ fontSize:17, color:C.ink, fontWeight:700 }}>Avaliação enviada.</div>
+        <div style={{ fontSize:12.5, color:C.inkDim, lineHeight:1.4, marginTop:8 }}>Obrigado. Seu professor já pode usar essas respostas para ajustar os treinos.</div>
+      </Card> : <>
+        {AUTO_FUNDAMENTOS.map(f=>
+          <Card key={f} style={{ marginTop:9, padding:'12px 13px' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontSize:13.5, color:C.ink }}>{f}</span>
+              <span style={{ fontFamily:'var(--ff-m)', fontSize:11.5, color:C.turq }}>{scores[f]}/5</span>
+            </div>
+            <div style={{ display:'flex', gap:6, marginTop:10 }}>
+              {[1,2,3,4,5].map(n=><button key={n} className="bf-tap" onClick={()=>set(f,n)}
+                style={{ flex:1, height:31, borderRadius:8, border:`1px solid ${scores[f]===n?C.turq:C.line}`,
+                  background:scores[f]===n?'rgba(22,194,163,.18)':'rgba(255,255,255,.04)',
+                  color:scores[f]===n?C.turq:C.inkDim, fontFamily:'var(--ff-m)', fontSize:12 }}>{n}</button>)}
+            </div>
+          </Card>)}
+        {st.error && <Card style={{ marginTop:12, borderColor:'rgba(242,84,91,.35)' }}>
+          <div style={{ fontSize:12.5, color:C.err, lineHeight:1.4 }}>{st.error}</div>
+        </Card>}
+        <Btn kind="secondary" style={{ width:'100%', marginTop:14 }} icon="check" onClick={enviar}>
+          {st.loading?'Enviando…':'Enviar avaliação'}
+        </Btn>
+      </>}
+    </div>
+  </Screen>;
+}
+
 /* ===== BeachFlow — App shell (mobile / PWA real) ===== */
 const REG = {
   login: ScreenLogin, hoje: ScreenHoje, alunos: ScreenAlunos, aulas: ScreenAulas,
@@ -2227,15 +2334,16 @@ const TAB_ROUTES = ['hoje', 'alunos', 'aulas', 'scout', 'financeiro'];
 
 export function App() {
   const confirmToken = new URLSearchParams(window.location.search).get('confirm');
+  const autoToken = new URLSearchParams(window.location.search).get('auto');
   const [stack, setStack] = React.useState([{ r: 'login' }]);
   const top = stack[stack.length - 1];
 
   // pula o login se já houver sessão ativa
   React.useEffect(()=>{
-    if(confirmToken) return;
+    if(confirmToken || autoToken) return;
     if(!authEnabled) return;
     supabase.auth.getSession().then(({ data })=>{ if(data?.session) setStack([{ r:'hoje' }]); });
-  },[confirmToken]);
+  },[confirmToken, autoToken]);
 
   const nav = {
     go: (r, params) => {
@@ -2249,6 +2357,7 @@ export function App() {
 
   const Comp = REG[top.r] || ScreenHoje;
   if(confirmToken) return <div className="bf-app"><ScreenConfirmacao token={confirmToken}/></div>;
+  if(autoToken) return <div className="bf-app"><ScreenAutoavaliacaoPublica token={autoToken}/></div>;
   return (
     <div className="bf-app">
       <Comp nav={nav} params={top.params || {}} />
