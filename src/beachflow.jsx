@@ -1057,6 +1057,17 @@ function significantScoutEntries(obj = {}, min = 2, limit = 6) {
 function scoutCount(entries = [], fund) {
   return Number(entries.find(([f])=>f === fund)?.[1] || 0);
 }
+function clearScoutPrincipal(entries = []) {
+  const [first, second] = entries;
+  if (!first) return null;
+  if (second && Number(first[1]) === Number(second[1])) return null;
+  return { fundamento: first[0], total: Number(first[1]) };
+}
+function formatScoutList(entries = []) {
+  const parts = entries.map(([f,n])=>`${f} (${n})`);
+  if (parts.length <= 1) return parts[0] || '';
+  return `${parts.slice(0,-1).join(', ')} e ${parts.at(-1)}`;
+}
 function interpretacaoAutoScout({ notasAuto = {}, autoFraco, erroPrincipal, erros = [], positivos = [] }) {
   const fraco = autoFraco?.[0];
   const principal = erroPrincipal?.fundamento;
@@ -1086,26 +1097,28 @@ function feedbackAlunoTexto(a) {
   const autoFraco = topNota(a.notasAuto, true);
   const autoForte = topNota(a.notasAuto, false);
   const scout = a.scoutResumo;
-  const erro = Number(scout?.erroPrincipal?.total || 0) >= 2 ? scout?.erroPrincipal : null;
-  const zona = scout?.zonaErroPrincipal || scout?.zonaCritica;
+  const errosSignificativos = significantScoutEntries(scout?.errosPorFundamento, 2, 6);
+  const erro = clearScoutPrincipal(errosSignificativos);
+  const zona = erro && erro.fundamento === scout?.erroPrincipal?.fundamento ? (scout?.zonaErroPrincipal || scout?.zonaCritica) : null;
   const nome = firstName(a.nome);
   const pontoAtencao = erro
     ? `${erro.total} situação(ões) ligadas a ${erro.fundamento}${zona ? `, principalmente na zona ${zona.zona}` : ''}.`
+    : errosSignificativos.length
+      ? `pontos de atenção em ${formatScoutList(errosSignificativos.slice(0,3))}.`
     : scout?.leitura || 'algumas situações que vamos acompanhar melhor em jogo.';
   const foco = erro?.fundamento || autoFraco?.[0] || a.foco || 'controle da bola';
-  const errosOrdenados = topScoutEntries(scout?.errosPorFundamento, 6);
-  const errosSignificativos = significantScoutEntries(scout?.errosPorFundamento, 2, 6);
-  const positivosOrdenados = significantScoutEntries(scout?.positivosPorFundamento || scout?.winnersPorFundamento, 2, 6);
+  const positivosOrdenados = significantScoutEntries(scout?.positivosPorFundamento || scout?.winnersPorFundamento, 2, 6)
+    .filter(([f,n])=>Number(n) >= scoutCount(errosSignificativos, f) + 2 || !scoutCount(errosSignificativos, f));
   const extrasFund = errosSignificativos
     .filter(([f])=>f !== erro?.fundamento)
     .slice(0,2);
   const positivosFund = positivosOrdenados.slice(0,2);
   const extraTatico = (scout?.problemasTaticos || []).find(p=>p?.texto);
   const textoTatico = extraTatico?.texto ? String(extraTatico.texto).replace(/\s+/g,' ').slice(0,160) : '';
-  const extraTexto = positivosFund.length || extrasFund.length || extraTatico
+  const extraTexto = positivosFund.length || (erro && extrasFund.length) || extraTatico
     ? ` ${[
         positivosFund.length ? `Também apareceram boas ações em ${positivosFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
-        extrasFund.length ? `Nos erros registrados, além do ponto principal, também apareceram ${extrasFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
+        erro && extrasFund.length ? `Nos erros registrados, além do ponto principal, também apareceram ${extrasFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
         textoTatico ? `Também apareceu este padrão no jogo: ${textoTatico}.` : '',
       ].filter(Boolean).join(' ')}`
     : '';
