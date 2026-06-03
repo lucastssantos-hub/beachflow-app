@@ -1142,7 +1142,7 @@ function feedbackAlunoTexto(a) {
     erros: errosSignificativos,
     positivos: positivosOrdenados,
   });
-  return `Oi, ${nome}! Aqui vai um feedback simples do seu treino.\n\nNo scout, vimos ${pontoAtencao}${extraTexto}\n\n${autoTexto}${leituraCruzada ? `\n\n${leituraCruzada}` : ''}\n\nNão é que você \"não sabe\" fazer. Significa que, em situação de jogo, esse ponto ainda pede mais calma, escolha melhor da bola e repetição.\n\nVamos trabalhar ${foco} de um jeito simples e prático, para você ganhar mais segurança nesse ponto.\n\nA ideia é evoluir um ajuste por vez, sem complicar.`;
+  return `Oi, ${nome}! Aqui vai um feedback simples do seu treino.\n\nNo scout, vimos ${pontoAtencao}${extraTexto}\n\n${autoTexto}${leituraCruzada ? `\n\n${leituraCruzada}` : ''}\n\nIsso mostra um ajuste de jogo: em algumas bolas, esse fundamento ainda precisa de mais regularidade, melhor escolha e execução mais tranquila.\n\nVamos trabalhar ${foco} com foco em controle e decisão, sem complicar.\n\nA ideia é evoluir um ajuste por vez.`;
 }
 
 function ScreenAluno({ nav, params }) {
