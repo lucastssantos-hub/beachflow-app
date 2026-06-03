@@ -1053,7 +1053,7 @@ function feedbackAlunoTexto(a) {
   const autoForte = topNota(a.notasAuto, false);
   const scout = a.scoutResumo;
   const erro = scout?.erroPrincipal;
-  const zona = scout?.zonaCritica;
+  const zona = scout?.zonaErroPrincipal || scout?.zonaCritica;
   const nome = firstName(a.nome);
   const pontoAtencao = erro
     ? `${erro.total} situação(ões) ligadas a ${erro.fundamento}${zona ? `, principalmente na zona ${zona.zona}` : ''}.`
@@ -1063,15 +1063,15 @@ function feedbackAlunoTexto(a) {
     .filter(([f])=>f !== erro?.fundamento)
     .sort((a,b)=>Number(b[1])-Number(a[1]))
     .slice(0,2);
-  const positivosFund = Object.entries(scout?.winnersPorFundamento || {})
+  const positivosFund = Object.entries(scout?.positivosPorFundamento || scout?.winnersPorFundamento || {})
     .sort((a,b)=>Number(b[1])-Number(a[1]))
     .slice(0,2);
   const extraTatico = (scout?.problemasTaticos || []).find(p=>p?.texto);
   const textoTatico = extraTatico?.texto ? String(extraTatico.texto).replace(/\s+/g,' ').slice(0,160) : '';
   const extraTexto = positivosFund.length || extrasFund.length || extraTatico
     ? ` ${[
-        positivosFund.length ? `Também apareceram pontos positivos em ${positivosFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
-        extrasFund.length ? `Além do ponto principal, também apareceram sinais de erro em ${extrasFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
+        positivosFund.length ? `Também apareceram boas ações em ${positivosFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
+        extrasFund.length ? `Nos erros registrados, além do ponto principal, também apareceram ${extrasFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
         textoTatico ? `Também apareceu este padrão no jogo: ${textoTatico}.` : '',
       ].filter(Boolean).join(' ')}`
     : '';

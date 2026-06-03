@@ -77,8 +77,10 @@ function buildScoutResumo(events = []) {
 
   const byFund = {};
   const errorsByFund = {};
+  const positivesByFund = {};
   const winnersByFund = {};
-  const zones = {};
+  const errorZones = {};
+  const errorZonesByFund = {};
   const intentions = {};
   const issues = {};
   const kindCount = {};
@@ -87,22 +89,31 @@ function buildScoutResumo(events = []) {
   for (const e of rows) {
     const fund = canonicalFund(e.fundamental || e.technique || 'Consistência');
     const kind = e.kind || (String(e.outcome || '').toLowerCase().includes('erro') ? 'error' : '');
+    const isError = kind === 'error' || /erro|error/i.test(e.outcome || '');
+    const isWinner = kind === 'winner' || /winner|ace/i.test(e.outcome || '');
+    const isPositive = isWinner || /forçou|forcou/i.test(e.outcome || '') || Number(e.score) >= 8;
     addCount(byFund, fund);
     addCount(kindCount, kind);
-    if (kind === 'error' || /erro|error/i.test(e.outcome || '')) addCount(errorsByFund, fund);
-    if (kind === 'winner' || /winner|ace/i.test(e.outcome || '')) addCount(winnersByFund, fund);
-    addCount(zones, e.zone);
+    if (isError) {
+      addCount(errorsByFund, fund);
+      addCount(errorZones, e.zone);
+      errorZonesByFund[fund] = errorZonesByFund[fund] || {};
+      addCount(errorZonesByFund[fund], e.zone);
+    }
+    if (isPositive) addCount(positivesByFund, fund);
+    if (isWinner) addCount(winnersByFund, fund);
     addCount(intentions, e.inferred_intention);
     addCount(issues, e.tactical_issue);
     if (e.match_id) matches.add(e.match_id);
   }
 
   const topError = topEntries(errorsByFund, 1)[0];
-  const topZone = topEntries(zones, 1)[0];
+  const topZone = topEntries(errorZones, 1)[0];
+  const topErrorZone = topError ? topEntries(errorZonesByFund[topError[0]], 1)[0] : null;
   const topIssue = topEntries(issues, 1)[0];
   const leitura = [
     topError ? `${topError[1]} erro(s) em ${topError[0]}` : '',
-    topZone ? `zona crítica ${topZone[0]}` : '',
+    topZone ? `zona dos erros ${topZone[0]}` : '',
     topIssue ? topIssue[0] : '',
   ].filter(Boolean).join(' · ');
 
@@ -116,7 +127,9 @@ function buildScoutResumo(events = []) {
     fundamentoMaisVisto: topEntries(byFund, 1)[0]?.[0] || null,
     erroPrincipal: topError ? { fundamento: topError[0], total: topError[1] } : null,
     zonaCritica: topZone ? { zona: topZone[0], total: topZone[1] } : null,
+    zonaErroPrincipal: topErrorZone ? { zona: topErrorZone[0], total: topErrorZone[1] } : null,
     errosPorFundamento: Object.fromEntries(topEntries(errorsByFund, 6)),
+    positivosPorFundamento: Object.fromEntries(topEntries(positivesByFund, 6)),
     winnersPorFundamento: Object.fromEntries(topEntries(winnersByFund, 6)),
     intencoes: Object.fromEntries(topEntries(intentions, 4)),
     problemasTaticos: topEntries(issues, 4).map(([texto, total]) => ({ texto, total })),
