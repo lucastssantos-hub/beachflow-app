@@ -1051,30 +1051,33 @@ function topNota(notas = {}, asc = true) {
 function topScoutEntries(obj = {}, limit = 6) {
   return Object.entries(obj || {}).sort((a,b)=>Number(b[1])-Number(a[1])).slice(0, limit);
 }
-function interpretacaoAutoScout({ notasAuto = {}, autoFraco, autoForte, erros = [], positivos = [] }) {
-  const frases = [];
+function scoutCount(entries = [], fund) {
+  return Number(entries.find(([f])=>f === fund)?.[1] || 0);
+}
+function interpretacaoAutoScout({ notasAuto = {}, autoFraco, erroPrincipal, erros = [], positivos = [] }) {
   const fraco = autoFraco?.[0];
-  const forte = autoForte?.[0];
-  const erroConfirma = fraco && erros.find(([f])=>f === fraco);
-  const bomConfirma = forte && Number(autoForte?.[1]) >= 3.5 && positivos.find(([f])=>f === forte);
-  const erroNaoPercebido = erros.find(([f])=>f !== fraco && (notasAuto[f] == null || Number(notasAuto[f]) >= 3.5));
-  const bomApesarAutoBaixa = positivos.find(([f])=>Number(notasAuto[f]) <= 3);
+  const principal = erroPrincipal?.fundamento;
+  const frases = [];
 
-  if (erroConfirma) {
-    frases.push(`Isso bate com a sua percepção: ${fraco} apareceu como ponto de atenção na autoavaliação e também apareceu no scout.`);
-  } else if (erroNaoPercebido) {
-    frases.push(`Um ponto importante: ${erroNaoPercebido[0]} apareceu no scout como algo para ajustar, mesmo não tendo aparecido tão baixo na sua autoavaliação.`);
+  if (principal && fraco && principal === fraco) {
+    frases.push(`Isso confirma a sua percepção: ${fraco} apareceu como ponto de atenção na autoavaliação e também no scout.`);
+  } else if (principal && fraco) {
+    frases.push(`Aqui apareceu uma diferença importante: na autoavaliação, o ponto que pediu mais atenção foi ${fraco}; no jogo, o scout mostrou ${principal} como ajuste principal.`);
+  } else if (principal) {
+    frases.push(`O scout trouxe um ponto claro para ajustar no jogo: ${principal}.`);
   }
 
-  if (bomConfirma) {
-    frases.push(`Também teve confirmação positiva: ${forte} apareceu bem no jogo e você também se percebeu seguro nesse fundamento.`);
-  }
-
+  const bomApesarAutoBaixa = positivos.find(([f,n])=>{
+    const auto = Number(notasAuto[f]);
+    if (!Number.isFinite(auto) || auto > 3) return false;
+    const errosNoFund = scoutCount(erros, f);
+    return Number(n) > errosNoFund;
+  });
   if (bomApesarAutoBaixa) {
-    frases.push(`E tem uma boa notícia: mesmo você se avaliando mais baixo em ${bomApesarAutoBaixa[0]}, o scout registrou boas ações nesse fundamento. Isso mostra que já existe recurso ali; o próximo passo é ganhar constância.`);
+    frases.push(`Também tem uma boa notícia: mesmo você se avaliando mais baixo em ${bomApesarAutoBaixa[0]}, o scout registrou boas ações nesse fundamento.`);
   }
 
-  return frases.slice(0, 3).join(' ');
+  return frases.slice(0, 2).join(' ');
 }
 function feedbackAlunoTexto(a) {
   const autoFraco = topNota(a.notasAuto, true);
@@ -1109,7 +1112,7 @@ function feedbackAlunoTexto(a) {
   const leituraCruzada = interpretacaoAutoScout({
     notasAuto: a.notasAuto,
     autoFraco,
-    autoForte,
+    erroPrincipal: erro,
     erros: errosOrdenados,
     positivos: positivosOrdenados,
   });
