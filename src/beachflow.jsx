@@ -1051,6 +1051,9 @@ function topNota(notas = {}, asc = true) {
 function topScoutEntries(obj = {}, limit = 6) {
   return Object.entries(obj || {}).sort((a,b)=>Number(b[1])-Number(a[1])).slice(0, limit);
 }
+function significantScoutEntries(obj = {}, min = 2, limit = 6) {
+  return topScoutEntries(obj, limit).filter(([,n])=>Number(n) >= min);
+}
 function scoutCount(entries = [], fund) {
   return Number(entries.find(([f])=>f === fund)?.[1] || 0);
 }
@@ -1083,7 +1086,7 @@ function feedbackAlunoTexto(a) {
   const autoFraco = topNota(a.notasAuto, true);
   const autoForte = topNota(a.notasAuto, false);
   const scout = a.scoutResumo;
-  const erro = scout?.erroPrincipal;
+  const erro = Number(scout?.erroPrincipal?.total || 0) >= 2 ? scout?.erroPrincipal : null;
   const zona = scout?.zonaErroPrincipal || scout?.zonaCritica;
   const nome = firstName(a.nome);
   const pontoAtencao = erro
@@ -1091,8 +1094,9 @@ function feedbackAlunoTexto(a) {
     : scout?.leitura || 'algumas situações que vamos acompanhar melhor em jogo.';
   const foco = erro?.fundamento || autoFraco?.[0] || a.foco || 'controle da bola';
   const errosOrdenados = topScoutEntries(scout?.errosPorFundamento, 6);
-  const positivosOrdenados = topScoutEntries(scout?.positivosPorFundamento || scout?.winnersPorFundamento, 6);
-  const extrasFund = errosOrdenados
+  const errosSignificativos = significantScoutEntries(scout?.errosPorFundamento, 2, 6);
+  const positivosOrdenados = significantScoutEntries(scout?.positivosPorFundamento || scout?.winnersPorFundamento, 2, 6);
+  const extrasFund = errosSignificativos
     .filter(([f])=>f !== erro?.fundamento)
     .slice(0,2);
   const positivosFund = positivosOrdenados.slice(0,2);
@@ -1113,7 +1117,7 @@ function feedbackAlunoTexto(a) {
     notasAuto: a.notasAuto,
     autoFraco,
     erroPrincipal: erro,
-    erros: errosOrdenados,
+    erros: errosSignificativos,
     positivos: positivosOrdenados,
   });
   return `Oi, ${nome}! Aqui vai um feedback simples do seu treino.\n\nNo scout, vimos ${pontoAtencao}${extraTexto}\n\n${autoTexto}${leituraCruzada ? `\n\n${leituraCruzada}` : ''}\n\nNão é que você \"não sabe\" fazer. Significa que, em situação de jogo, esse ponto ainda pede mais calma, escolha melhor da bola e repetição.\n\nVamos trabalhar ${foco} de um jeito simples e prático, para você ganhar mais segurança nesse ponto.\n\nA ideia é evoluir um ajuste por vez, sem complicar.`;
