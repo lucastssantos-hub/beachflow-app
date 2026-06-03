@@ -1051,7 +1051,15 @@ function topNota(notas = {}, asc = true) {
 function topScoutEntries(obj = {}, limit = 6) {
   return Object.entries(obj || {}).sort((a,b)=>Number(b[1])-Number(a[1])).slice(0, limit);
 }
-function significantScoutEntries(obj = {}, min = 2, limit = 6) {
+function scoutTotal(obj = {}) {
+  return Object.values(obj || {}).reduce((sum,n)=>sum + Number(n || 0), 0);
+}
+function minScoutSignal(obj = {}) {
+  const total = scoutTotal(obj);
+  if (!total) return Infinity;
+  return Math.max(2, Math.ceil(total * 0.35));
+}
+function significantScoutEntries(obj = {}, min = minScoutSignal(obj), limit = 6) {
   return topScoutEntries(obj, limit).filter(([,n])=>Number(n) >= min);
 }
 function scoutCount(entries = [], fund) {
@@ -1097,7 +1105,7 @@ function feedbackAlunoTexto(a) {
   const autoFraco = topNota(a.notasAuto, true);
   const autoForte = topNota(a.notasAuto, false);
   const scout = a.scoutResumo;
-  const errosSignificativos = significantScoutEntries(scout?.errosPorFundamento, 2, 6);
+  const errosSignificativos = significantScoutEntries(scout?.errosPorFundamento);
   const erro = clearScoutPrincipal(errosSignificativos);
   const zona = erro && erro.fundamento === scout?.erroPrincipal?.fundamento ? (scout?.zonaErroPrincipal || scout?.zonaCritica) : null;
   const nome = firstName(a.nome);
@@ -1105,10 +1113,11 @@ function feedbackAlunoTexto(a) {
     ? `${erro.total} situação(ões) ligadas a ${erro.fundamento}${zona ? `, principalmente na zona ${zona.zona}` : ''}.`
     : errosSignificativos.length
       ? `pontos de atenção em ${formatScoutList(errosSignificativos.slice(0,3))}.`
-    : scout?.leitura || 'algumas situações que vamos acompanhar melhor em jogo.';
+    : 'algumas situações isoladas, mas ainda sem um padrão forte o suficiente para virar conclusão.';
   const foco = erro?.fundamento || autoFraco?.[0] || a.foco || 'controle da bola';
-  const positivosOrdenados = significantScoutEntries(scout?.positivosPorFundamento || scout?.winnersPorFundamento, 2, 6)
-    .filter(([f,n])=>Number(n) >= scoutCount(errosSignificativos, f) + 2 || !scoutCount(errosSignificativos, f));
+  const errosBrutos = topScoutEntries(scout?.errosPorFundamento);
+  const positivosOrdenados = significantScoutEntries(scout?.positivosPorFundamento || scout?.winnersPorFundamento)
+    .filter(([f,n])=>Number(n) >= scoutCount(errosBrutos, f) + 2 || !scoutCount(errosBrutos, f));
   const extrasFund = errosSignificativos
     .filter(([f])=>f !== erro?.fundamento)
     .slice(0,2);
