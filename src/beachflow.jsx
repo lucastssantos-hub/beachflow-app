@@ -1063,10 +1063,14 @@ function feedbackAlunoTexto(a) {
     .filter(([f])=>f !== erro?.fundamento)
     .sort((a,b)=>Number(b[1])-Number(a[1]))
     .slice(0,2);
+  const positivosFund = Object.entries(scout?.winnersPorFundamento || {})
+    .sort((a,b)=>Number(b[1])-Number(a[1]))
+    .slice(0,2);
   const extraTatico = (scout?.problemasTaticos || []).find(p=>p?.texto);
   const textoTatico = extraTatico?.texto ? String(extraTatico.texto).replace(/\s+/g,' ').slice(0,160) : '';
-  const extraTexto = extrasFund.length || extraTatico
+  const extraTexto = positivosFund.length || extrasFund.length || extraTatico
     ? ` ${[
+        positivosFund.length ? `Também apareceram pontos positivos em ${positivosFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
         extrasFund.length ? `Além do ponto principal, também apareceram sinais de erro em ${extrasFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
         textoTatico ? `Também apareceu este padrão no jogo: ${textoTatico}.` : '',
       ].filter(Boolean).join(' ')}`
