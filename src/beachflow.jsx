@@ -1152,6 +1152,26 @@ function positivoFundamento(fundamento = '') {
   if (f.includes('smash')) return 'o smash apareceu bem quando havia bola clara para finalizar';
   return `${fundamento || 'esse fundamento'} apareceu como um recurso positivo no jogo`;
 }
+function leituraSaqueDoScout(scout, erroPrincipal) {
+  const erro = String(erroPrincipal?.fundamento || '').toLowerCase();
+  if (!erro.includes('saque')) return null;
+  const eventos = scout?.eventosRecentes || [];
+  const errosDeSaque = eventos.filter(e=>{
+    const fund = String(e.fundamento || e.tecnica || '').toLowerCase();
+    const desfecho = String(e.desfecho || e.tipo || '').toLowerCase();
+    return fund.includes('saque') && /erro/.test(desfecho);
+  }).length;
+  if (errosDeSaque) {
+    return {
+      texto: 'No jogo, o ajuste apareceu no próprio saque. Antes de pensar em atacar a próxima bola, precisamos garantir uma bola inicial mais segura e com margem.',
+      foco: 'o ponto a melhorar é reduzir o erro de saque: toss mais estável, contato mais limpo e alvo simples para começar o ponto com segurança.',
+    };
+  }
+  return {
+    texto: 'No jogo, o saque apareceu como principal ajuste, mas vale observar se o problema está no golpe inicial ou na organização logo depois dele.',
+    foco: 'o ponto a melhorar é sacar com direção simples e já recuperar a base para jogar a próxima bola.',
+  };
+}
 function leituraCadeiaDoPonto(autoFraco, erroPrincipal) {
   const percebido = String(autoFraco?.[0] || '').toLowerCase();
   const erro = String(erroPrincipal?.fundamento || '').toLowerCase();
@@ -1220,7 +1240,8 @@ function feedbackAlunoTexto(a) {
   const extraTatico = (scout?.problemasTaticos || []).find(p=>p?.texto);
   const textoTatico = extraTatico?.pratica || scout?.leituraPratica || (extraTatico?.texto ? practicalIssueText(extraTatico.texto) : '');
   const textoTaticoLimpo = textoTatico ? String(textoTatico).replace(/\s+/g,' ').slice(0,190) : '';
-  const cadeia = leituraCadeiaDoPonto(autoFraco, erro);
+  const leituraSaque = leituraSaqueDoScout(scout, erro);
+  const cadeia = leituraSaque || leituraCadeiaDoPonto(autoFraco, erro);
   const mesmaNota = autoForte && autoFraco && (autoForte[0] === autoFraco[0] || Number(autoForte[1]) === Number(autoFraco[1]));
   const autoTexto = mesmaNota
     ? `na sua autoavaliação, suas respostas ficaram bem próximas entre os fundamentos.`
