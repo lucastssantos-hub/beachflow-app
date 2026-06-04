@@ -46,6 +46,8 @@ REGRA ANTI-GENÉRICO: cada plano precisa ser aplicável por um professor em quad
 Se não houver dado suficiente, não preencha com treino padrão: gere uma aula diagnóstica específica para coletar o dado que falta.
 PROIBIDO usar frases vagas como "melhorar consistência", "trabalhar posicionamento", "exercício de fundamentos", "manter a bola em jogo" sem contexto, setor, bola inicial e critério.
 
+BIBLIOTECA CBT: se o JSON tiver "bibliotecaDrillsCbt", use esses drills como fonte canônica dos blocos. Escolha os drills por ID conforme diagnóstico, nível e método. Você pode adaptar comando/regra para ficar compacto, mas NÃO invente um drill incompatível quando houver drill CBT adequado. Inclua "drill_id" e "drill_nome" em cada bloco baseado em drill.
+
 CONFIANÇA — calibre pela amostra do scout (pontosAnalisados) e convergência das fontes. Use 4 níveis:
 - "muito baixa": scout < 10 pontos OU fontes divergentes sem confirmação.
 - "baixa": evidência fraca/parcial (~10-20 pontos sem padrão nítido).
@@ -110,9 +112,9 @@ SAÍDA: responda SOMENTE com JSON válido (sem markdown, sem texto fora do JSON)
   },
   "objetivo": "o que a aula precisa melhorar",
   "blocos": [
-    { "nome": "Bloco 1 — Aquecimento específico", "tempo": "10'", "organizacao": "posição em 1 frase", "bola_inicial": "como começa em 1 frase", "alvo_setor": "setor/alvo em 1 frase", "rotacao": "como roda em 1 frase", "comando": "comando principal curto", "criterio_qualidade": "métrica observável curta" },
-    { "nome": "Bloco 2 — Exercício principal", "tempo": "25'", "organizacao": "posição do professor em 1 frase", "bola_inicial": "como começa em 1 frase", "alvo_setor": "setor/alvo em 1 frase", "rotacao": "como roda em 1 frase", "regra": "regra principal curta", "correcao_principal": "1 correção principal", "erro_a_observar": "1 erro a observar" },
-    { "nome": "Bloco 3 — Jogo condicionado", "tempo": "15'", "organizacao": "duplas/lados em 1 frase", "bola_inicial": "como começa em 1 frase", "alvo_setor": "setor/alvo em 1 frase", "rotacao": "como roda em 1 frase", "regra": "regra principal curta", "pontuacao_especial": "bônus curto", "observar": "1 coisa a observar" },
+    { "nome": "Bloco 1 — Aquecimento específico", "tempo": "10'", "drill_id": "ID CBT se usado", "drill_nome": "nome CBT se usado", "organizacao": "posição em 1 frase", "bola_inicial": "como começa em 1 frase", "alvo_setor": "setor/alvo em 1 frase", "rotacao": "como roda em 1 frase", "comando": "comando principal curto", "criterio_qualidade": "métrica observável curta" },
+    { "nome": "Bloco 2 — Exercício principal", "tempo": "25'", "drill_id": "ID CBT se usado", "drill_nome": "nome CBT se usado", "organizacao": "posição do professor em 1 frase", "bola_inicial": "como começa em 1 frase", "alvo_setor": "setor/alvo em 1 frase", "rotacao": "como roda em 1 frase", "regra": "regra principal curta", "correcao_principal": "1 correção principal", "erro_a_observar": "1 erro a observar" },
+    { "nome": "Bloco 3 — Jogo condicionado", "tempo": "15'", "drill_id": "ID CBT se usado", "drill_nome": "nome CBT se usado", "organizacao": "duplas/lados em 1 frase", "bola_inicial": "como começa em 1 frase", "alvo_setor": "setor/alvo em 1 frase", "rotacao": "como roda em 1 frase", "regra": "regra principal curta", "pontuacao_especial": "bônus curto", "observar": "1 coisa a observar" },
     { "nome": "Bloco 4 — Fechamento", "tempo": "10'", "organizacao": "como reunir em 1 frase", "bola_inicial": "sem bola ou como começa", "alvo_setor": "o que validar em 1 frase", "rotacao": "quem fala/observa em 1 frase", "pergunta_final": "1 pergunta final", "registro_professor": "1 registro curto", "proximo_passo": "1 próximo passo" }
   ],
   "progressao": "quando aumentar a complexidade",
@@ -132,6 +134,7 @@ function buildUserMessage(ctx: Record<string, unknown> = {}): string {
     "Instruções:",
     "- Siga a hierarquia de dados e calibre a confiança pela amostra do scout (pontosAnalisados).",
     "- Se houver alunos/avaliações/scout no JSON, use esses dados no diagnóstico; não gere plano apenas pelo nível.",
+    "- Se houver bibliotecaDrillsCbt no JSON, escolha drills dessa biblioteca e preserve o ID no bloco.",
     "- Cada bloco precisa trazer bola inicial, alvo/setor, rotação e critério mensurável, mas tudo em frases curtas.",
     "- Priorize comandos executáveis em quadra: evite listas longas e explicações.",
     "- Respeite as técnicas permitidas/bloqueadas para o nível da turma.",

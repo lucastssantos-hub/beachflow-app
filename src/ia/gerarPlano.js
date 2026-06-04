@@ -3,6 +3,8 @@
 // Se o endpoint não estiver configurado/acessível, gera um plano local com os
 // dados disponíveis para a interface continuar funcionando em quadra.
 
+import { recomendarDrillsCbt, drillResumoParaIA, drillParaBloco } from '../data/drillsCbt.js';
+
 const ENDPOINT = import.meta.env.VITE_GERAR_PLANO_ENDPOINT || '';
 const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 const FORCE_DEMO = import.meta.env.VITE_FORCE_DEMO === 'true';
@@ -159,6 +161,38 @@ function localPlanFromContext(ctx = {}, erro = '') {
   const scoutContext = scout?.leitura || ctx.evidenciasScout?.join(' · ') || '';
   const scoreText = focus.score != null ? ` (${focus.score}/5)` : '';
   const source = focus.source || 'dados locais';
+  const metodo = confidence === 'alta' ? 'aberto' : 'semiaberto';
+  const drillCtx = { ...ctx, foco: focus.fund, fundamento: focus.fund, metodo };
+  const drills = recomendarDrillsCbt(drillCtx, 3);
+  const drillBlocks = drills.map((drill, i) => drillParaBloco(drill, [
+    'Bloco 1 — Aquecimento específico',
+    'Bloco 2 — Exercício principal',
+    'Bloco 3 — Jogo condicionado',
+  ][i] || `Bloco ${i + 1}`));
+  const fallbackBlocks = [
+    {
+      nome: 'Bloco 1 — Aquecimento específico',
+      tempo: "10'",
+      organizacao: 'Duplas em meia quadra, cesto e alvo amplo.',
+      comando: cfg.comando,
+      criterio_qualidade: 'Executa com margem e recupera a base antes da próxima bola.',
+    },
+    {
+      nome: 'Bloco 2 — Exercício principal',
+      tempo: "25'",
+      organizacao: 'Professor inicia a situação do gap; dupla executa e joga a bola seguinte.',
+      regra: cfg.regra,
+      correcao_principal: 'Uma correção por aluno: base, contato, direção ou recuperação.',
+      erro_a_observar: cfg.gap,
+    },
+    {
+      nome: 'Bloco 3 — Jogo condicionado',
+      tempo: "15'",
+      regra: cfg.regra,
+      pontuacao_especial: 'Bônus apenas quando a escolha aparece no contexto certo.',
+      observar: 'A ação resolve o problema de jogo ou vira tentativa apressada?',
+    },
+  ];
   return {
     titulo: cfg.titulo,
     diagnostico: {
@@ -173,34 +207,13 @@ function localPlanFromContext(ctx = {}, erro = '') {
     nivel: ctx.nivel || 'Intermediário',
     decisaoPedagogica: {
       estado: 'Estabilizar',
-      metodo: confidence === 'alta' ? 'aberto' : 'semiaberto',
+      metodo,
       focoTecnico: cfg.tecnico,
       focoTatico: cfg.tatico,
     },
     objetivo: cfg.objetivo,
     blocos: [
-      {
-        nome: 'Bloco 1 — Aquecimento específico',
-        tempo: "10'",
-        organizacao: 'Duplas em meia quadra, cesto e alvo amplo.',
-        comando: cfg.comando,
-        criterio_qualidade: 'Executa com margem e recupera a base antes da próxima bola.',
-      },
-      {
-        nome: 'Bloco 2 — Exercício principal',
-        tempo: "25'",
-        organizacao: 'Professor inicia a situação do gap; dupla executa e joga a bola seguinte.',
-        regra: cfg.regra,
-        correcao_principal: 'Uma correção por aluno: base, contato, direção ou recuperação.',
-        erro_a_observar: cfg.gap,
-      },
-      {
-        nome: 'Bloco 3 — Jogo condicionado',
-        tempo: "15'",
-        regra: cfg.regra,
-        pontuacao_especial: 'Bônus apenas quando a escolha aparece no contexto certo.',
-        observar: 'A ação resolve o problema de jogo ou vira tentativa apressada?',
-      },
+      ...(drillBlocks.length ? drillBlocks : fallbackBlocks),
       {
         nome: 'Bloco 4 — Fechamento',
         tempo: "10'",
@@ -213,9 +226,18 @@ function localPlanFromContext(ctx = {}, erro = '') {
     regressao: 'Aumentar alvo, reduzir velocidade e voltar para execução com margem.',
     scoutValidacao: 'Observar se o mesmo erro reduz quando volta para jogo real.',
     cicloPedagogico: { necessario: false, duracaoSemanas: 0, justificativa: 'Plano local de contingência até a IA externa estar disponível.' },
+    drillsCbt: drills.map(drillResumoParaIA),
     _localFallback: true,
     _erroIA: erro || '',
   };
+}
+
+function enrichContextWithDrills(ctx = {}) {
+  const focus = chooseFocus(ctx);
+  const metodo = ctx.metodo || ctx.tipo_treino || ctx.decisaoPedagogica?.metodo || '';
+  const drillCtx = { ...ctx, foco: focus.fund, fundamento: focus.fund, metodo };
+  const drills = recomendarDrillsCbt(drillCtx, 5).map(drillResumoParaIA);
+  return drills.length ? { ...ctx, bibliotecaDrillsCbt: drills } : ctx;
 }
 
 function isExamplePlan(plan) {
@@ -398,14 +420,15 @@ const _cache = new Map();
 // Gera o plano. Retorna { plano, id, fonte: 'ia' | 'exemplo' | 'cache', erro? }.
 export async function gerarPlano(ctx) {
   if (FORCE_DEMO) return { plano: SAMPLE_PLAN, id: null, fonte: 'demo' };
-  if (!ENDPOINT) return { plano: localPlanFromContext(ctx, 'Endpoint de IA não configurado'), id: null, fonte: 'local' };
-  const key = JSON.stringify(ctx);
+  const enrichedCtx = enrichContextWithDrills(ctx);
+  if (!ENDPOINT) return { plano: localPlanFromContext(enrichedCtx, 'Endpoint de IA não configurado'), id: null, fonte: 'local' };
+  const key = JSON.stringify(enrichedCtx);
   if (_cache.has(key)) return { ..._cache.get(key), fonte: 'cache' };
   try {
     const res = await fetch(ENDPOINT, {
       method: 'POST',
       headers: await _headers(),
-      body: JSON.stringify({ context: ctx, teacherId: teacherId() }),
+      body: JSON.stringify({ context: enrichedCtx, teacherId: teacherId() }),
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
@@ -420,7 +443,7 @@ export async function gerarPlano(ctx) {
   } catch (e) {
     const friendly = friendlyAiError(e.message);
     console.warn('[gerarPlano] usando plano local:', friendly);
-    return { plano: localPlanFromContext(ctx, friendly), id: null, fonte: 'local', erro: friendly };
+    return { plano: localPlanFromContext(enrichedCtx, friendly), id: null, fonte: 'local', erro: friendly };
   }
 }
 

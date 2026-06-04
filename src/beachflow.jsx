@@ -1753,6 +1753,7 @@ function ScreenPlano({ nav, params }) {
             <div style={{ display:'flex', alignItems:'baseline', gap:10 }}>
               <span style={{ fontFamily:'var(--ff-m)', fontSize:12, color: coral?C.coral:C.turq }}>{b.tempo}</span>
               <span style={{ fontSize:13.5, color:C.ink, fontWeight:600 }}>{cleanBlockTitle(b.nome)}</span>
+              {b.drill_id && <span style={{ fontFamily:'var(--ff-m)', fontSize:9, color:C.info, marginLeft:'auto' }}>{b.drill_id}</span>}
             </div>
             {command && <div style={{ marginTop:8, fontSize:12.5, color:C.inkDim, lineHeight:1.35 }}>
               {shortText(command, 155)}
