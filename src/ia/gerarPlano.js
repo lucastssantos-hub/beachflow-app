@@ -5,9 +5,10 @@
 
 import { recomendarDrillsCbt, recomendarSequenciaDrillsCbt, drillResumoParaIA, drillParaBloco } from '../data/drillsCbt.js';
 
-const ENDPOINT = import.meta.env.VITE_GERAR_PLANO_ENDPOINT || '';
-const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const FORCE_DEMO = import.meta.env.VITE_FORCE_DEMO === 'true';
+const ENV = import.meta.env || {};
+const ENDPOINT = ENV.VITE_GERAR_PLANO_ENDPOINT || '';
+const ANON = ENV.VITE_SUPABASE_ANON_KEY || '';
+const FORCE_DEMO = ENV.VITE_FORCE_DEMO === 'true';
 
 const FUNDAMENTOS = ['Saque', 'Devolução', 'Forehand', 'Backhand', 'Lob', 'Smash', 'Bandeja', 'Gancho', 'Tapa', 'Curta', 'Posicionamento', 'Consistência', 'Decisão'];
 
@@ -423,12 +424,12 @@ const _cache = new Map();
 
 // Gera o plano. Retorna { plano, id, fonte: 'ia' | 'exemplo' | 'cache', erro? }.
 export async function gerarPlano(ctx) {
-  if (FORCE_DEMO) return { plano: SAMPLE_PLAN, id: null, fonte: 'demo' };
-  const enrichedCtx = enrichContextWithDrills(ctx);
-  if (!ENDPOINT) return { plano: localPlanFromContext(enrichedCtx, 'Endpoint de IA não configurado'), id: null, fonte: 'local' };
-  const key = JSON.stringify(enrichedCtx);
-  if (_cache.has(key)) return { ..._cache.get(key), fonte: 'cache' };
   try {
+    if (FORCE_DEMO) return { plano: SAMPLE_PLAN, id: null, fonte: 'demo' };
+    const enrichedCtx = enrichContextWithDrills(ctx || {});
+    if (!ENDPOINT) return { plano: localPlanFromContext(enrichedCtx, 'Endpoint de IA não configurado'), id: null, fonte: 'local' };
+    const key = JSON.stringify(enrichedCtx);
+    if (_cache.has(key)) return { ..._cache.get(key), fonte: 'cache' };
     const res = await fetch(ENDPOINT, {
       method: 'POST',
       headers: await _headers(),
@@ -447,7 +448,7 @@ export async function gerarPlano(ctx) {
   } catch (e) {
     const friendly = friendlyAiError(e.message);
     console.warn('[gerarPlano] usando plano local:', friendly);
-    return { plano: localPlanFromContext(enrichedCtx, friendly), id: null, fonte: 'local', erro: friendly };
+    return { plano: localPlanFromContext(ctx || {}, friendly), id: null, fonte: 'local', erro: friendly };
   }
 }
 
