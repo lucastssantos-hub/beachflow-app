@@ -172,16 +172,16 @@ const PRACTICAL_FOCUS = {
 };
 
 const POSITIVE_FOCUS = {
-  Saque: 'o saque apareceu como uma bola de confiança para iniciar o ponto.',
-  Devolução: 'a devolução ajudou a começar alguns pontos com mais segurança.',
-  Forehand: 'o forehand apareceu como um recurso positivo para manter ou acelerar a troca.',
-  Backhand: 'o backhand apareceu como um recurso útil para controlar o lado não dominante.',
-  Lob: 'o lob ajudou a ganhar tempo e manter o ponto vivo.',
-  Smash: 'o smash apareceu bem quando havia bola clara para finalizar.',
-  Bandeja: 'a bandeja ajudou a controlar bolas altas sem precipitar.',
-  Gancho: 'o gancho ajudou a recuperar bolas difíceis sem perder completamente o ponto.',
-  Tapa: 'o tapa apareceu bem quando a bola estava confortável para acelerar.',
-  Curta: 'a curta criou dúvida no adversário quando foi usada com intenção.',
+  Saque: 'como ponto positivo, o saque apareceu bem para iniciar o ponto.',
+  Devolução: 'como ponto positivo, a devolução ajudou a começar alguns pontos com mais segurança.',
+  Forehand: 'como ponto positivo, o forehand ajudou a manter ou acelerar algumas trocas.',
+  Backhand: 'como ponto positivo, o backhand ajudou a controlar o lado não dominante.',
+  Lob: 'como ponto positivo, o lob ajudou a ganhar tempo e manter o ponto vivo.',
+  Smash: 'como ponto positivo, o smash apareceu bem quando havia bola clara para finalizar.',
+  Bandeja: 'como ponto positivo, a bandeja ajudou a controlar bolas altas sem precipitar.',
+  Gancho: 'como ponto positivo, o gancho ajudou a recuperar bolas difíceis sem perder completamente o ponto.',
+  Tapa: 'como ponto positivo, o tapa apareceu bem quando a bola estava confortável para acelerar.',
+  Curta: 'como ponto positivo, a curta criou dúvida no adversário quando foi usada com intenção.',
 };
 
 const STRUCTURE_BY_FUNDAMENTAL = {
@@ -233,6 +233,20 @@ function hasRecentServeError(events = []) {
   return events.some(eventLooksLikeServeError);
 }
 
+function cleanSentence(text = '') {
+  return String(text || '').replace(/\s+/g, ' ').replace(/[.。]+$/g, '').trim();
+}
+
+function tacticalKind(text = '') {
+  const value = normalizeKey(text);
+  if (!value) return '';
+  if (value.includes('defesa') || value.includes('lob') || value.includes('tempo') || value.includes('reorganiz')) return 'recuperacao';
+  if (value.includes('finalizacao') || value.includes('winner') || value.includes('aceler') || value.includes('vantagem')) return 'aceleracao';
+  if (value.includes('devolucao') || value.includes('terceira bola')) return 'entrada';
+  if (value.includes('posicion') || value.includes('centro') || value.includes('espaco')) return 'posicao';
+  return '';
+}
+
 export function practicalFundamentalFocus(fundamental = '') {
   const f = canonicalFundamental(fundamental);
   return PRACTICAL_FOCUS[f] || `usar ${fundamental || 'esse fundamento'} com mais escolha, controle e regularidade.`;
@@ -257,11 +271,37 @@ function bridgeAutoAndScout({ autoWeak, scoutError, scout, tacticalText }) {
   const weakFamily = familyOf(weak);
   const errorFamily = familyOf(error);
   const recentEvents = scout?.eventosRecentes || [];
+  const tactical = cleanSentence(tacticalText);
+  const tKind = tacticalKind(tactical);
 
   if (!error) {
+    if (tKind === 'recuperacao' && ATTACK_FAMILIES.has(weakFamily)) {
+      return {
+        gameText: 'No jogo, o ajuste não foi só o golpe de ataque: em algumas trocas a bola de defesa não deu tempo para reorganizar, então a aceleração chegou sem uma bola realmente confortável.',
+        bridgeText: weak ? `Isso ajuda a explicar por que ${weak} apareceu como ponto de atenção: antes de acelerar, a bola anterior precisa comprar tempo ou criar vantagem.` : '',
+        focusText: 'temos aqui um ponto a melhorar: ganhar tempo primeiro e só acelerar quando a bola estiver clara para ataque.',
+        trainingTopic: 'Recuperar antes de acelerar',
+      };
+    }
+    if (tKind === 'recuperacao') {
+      return {
+        gameText: 'No jogo, a bola de defesa não deu tempo suficiente para a dupla se organizar de novo.',
+        bridgeText: weak ? `Isso conversa com o que você sentiu em ${weak}: o ajuste começa antes do golpe final, na qualidade da bola que devolve tempo para o ponto.` : '',
+        focusText: 'temos aqui um ponto a melhorar: usar a bola de recuperação com mais altura, profundidade e tempo.',
+        trainingTopic: 'Ganhar tempo na defesa',
+      };
+    }
+    if (tKind === 'aceleracao') {
+      return {
+        gameText: 'No jogo, apareceu uma tendência de tentar resolver algumas bolas antes de criar uma vantagem clara.',
+        bridgeText: weak ? `Isso se conecta com ${weak}: o golpe melhora quando a escolha da bola vem antes da força.` : '',
+        focusText: 'temos aqui um ponto a melhorar: construir a bola certa antes de acelerar.',
+        trainingTopic: 'Construir antes de finalizar',
+      };
+    }
     return {
-      gameText: tacticalText
-        ? `No jogo, o ponto mais claro foi este: ${tacticalText}.`
+      gameText: tactical
+        ? `No jogo, apareceu este ajuste prático: ${tactical}.`
         : 'No jogo, ainda não apareceu um padrão forte o bastante para cravar o ajuste.',
       bridgeText: '',
       focusText: practicalFundamentalFocus(weak),
@@ -333,8 +373,8 @@ function bridgeAutoAndScout({ autoWeak, scoutError, scout, tacticalText }) {
   }
 
   return {
-    gameText: `No jogo, ${error} apareceu como o principal ajuste.${tacticalText ? ` ${tacticalText}.` : ''}`,
-    bridgeText: weak
+    gameText: `No jogo, ${error} apareceu como o principal ajuste.${tactical ? ` ${tactical}.` : ''}`,
+      bridgeText: weak
       ? `Você sentiu mais dificuldade em ${weak}, mas o jogo apontou ${error}; a leitura agora é entender onde essa diferença nasce dentro do ponto.`
       : '',
     focusText: `o ponto a melhorar é ${practicalFundamentalFocus(error)}`,
