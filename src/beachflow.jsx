@@ -931,6 +931,7 @@ function ScreenAlunos({ nav }) {
   const [q,setQ] = React.useState('');
   const [filtro,setFiltro] = React.useState('Todos');
   const [showMissingAuto,setShowMissingAuto] = React.useState(false);
+  const [showFeedbackReady,setShowFeedbackReady] = React.useState(false);
   const [autoMsg,setAutoMsg] = React.useState('');
   const [alunos,setAlunos] = React.useState(null);
   React.useEffect(()=>{
@@ -943,6 +944,7 @@ function ScreenAlunos({ nav }) {
   const FILTROS = ['Todos','Iniciante','Intermediário','Avançado'];
   const base = alunos||[];
   const semAuto = base.filter(a=>!a.notasAuto || !Object.keys(a.notasAuto).length);
+  const comFeedback = base.filter(a=>a.scoutResumo && a.notasAuto && Object.keys(a.notasAuto).length);
   const list = base.filter(a=>{
     const okBusca = a.nome.toLowerCase().includes(q.toLowerCase()) || (a.turma||'').toLowerCase().includes(q.toLowerCase());
     const okFiltro = filtro==='Todos' || a.nivel===filtro;
@@ -960,6 +962,11 @@ function ScreenAlunos({ nav }) {
     } catch(e) {
       setAutoMsg(e.message || 'Não foi possível preparar o link.');
     }
+  };
+  const copiarTodosFeedbacks = async ()=>{
+    const texto = comFeedback.map(a=>feedbackAlunoTexto(a)).join('\n\n--------------------\n\n');
+    await navigator.clipboard?.writeText(texto);
+    setAutoMsg(`${comFeedback.length} feedback(s) copiados.`);
   };
 
   return (
@@ -1013,6 +1020,47 @@ function ScreenAlunos({ nav }) {
                   style={{ border:0, borderRadius:9, padding:'8px 10px',
                     background:'rgba(22,194,163,.14)', color:C.turq, fontSize:12.5, fontWeight:700 }}>
                   Reenviar
+                </button>
+              </div>)}
+          </div>}
+        </Card>}
+        {alunos && <Card style={{ marginTop:10, padding:'12px 13px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ flex:1 }}>
+              <Mini>Feedback para alunos</Mini>
+              <div style={{ fontSize:12.5, color:C.inkDim, marginTop:3 }}>
+                {comFeedback.length} aluno(s) com scout + autoavaliação
+              </div>
+            </div>
+            <button className="bf-tap" onClick={()=>setShowFeedbackReady(v=>!v)}
+              style={{ border:`1px solid ${C.line2}`, borderRadius:9, padding:'8px 10px',
+                background:showFeedbackReady?'rgba(22,194,163,.12)':'transparent', color:showFeedbackReady?C.turq:C.inkDim,
+                fontSize:12.5, fontWeight:700 }}>
+              {showFeedbackReady?'Ocultar':'Ver lista'}
+            </button>
+          </div>
+          {showFeedbackReady && <div style={{ marginTop:10, borderTop:`1px solid ${C.line}`, paddingTop:8 }}>
+            {comFeedback.length===0 && <div style={{ fontSize:12.5, color:C.inkDim }}>Ainda não há alunos com os dois dados.</div>}
+            {comFeedback.length>0 && <button className="bf-tap" onClick={copiarTodosFeedbacks}
+              style={{ width:'100%', border:0, borderRadius:9, padding:'9px 10px',
+                background:'rgba(76,155,255,.14)', color:C.info, fontSize:12.5, fontWeight:700, marginBottom:6 }}>
+              Copiar todos os feedbacks
+            </button>}
+            {comFeedback.map(a=>
+              <div key={a.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 0', borderBottom:`1px solid ${C.line}` }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:13, color:C.ink, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.nome}</div>
+                  <div style={{ fontSize:11.5, color:a.phone?C.inkDim:C.warn }}>{a.phone || 'Sem WhatsApp'}</div>
+                </div>
+                {a.phone && <a href={whatsappUrl(a.phone, feedbackAlunoTexto(a))} target="_blank" rel="noreferrer"
+                  style={{ textDecoration:'none', borderRadius:9, padding:'8px 10px',
+                    background:'rgba(22,194,163,.14)', color:C.turq, fontSize:12.5, fontWeight:700 }}>
+                  WhatsApp
+                </a>}
+                <button className="bf-tap" onClick={()=>navigator.clipboard?.writeText(feedbackAlunoTexto(a))}
+                  style={{ border:`1px solid ${C.line2}`, borderRadius:9, padding:'8px 10px',
+                    background:'transparent', color:C.inkDim, fontSize:12.5, fontWeight:700 }}>
+                  Copiar
                 </button>
               </div>)}
           </div>}
@@ -1077,17 +1125,44 @@ function formatScoutList(entries = []) {
   if (parts.length <= 1) return parts[0] || '';
   return `${parts.slice(0,-1).join(', ')} e ${parts.at(-1)}`;
 }
+function praticaFundamento(fundamento = '') {
+  const f = String(fundamento || '').toLowerCase();
+  if (f.includes('tapa')) return 'escolher melhor o momento de acelerar. Nem toda bola pede ataque; algumas pedem controle para continuar o ponto.';
+  if (f.includes('devol')) return 'devolver com mais profundidade para começar o ponto sem entregar vantagem.';
+  if (f.includes('lob')) return 'usar o lob com altura e profundidade para ganhar tempo, não apenas para passar a bola.';
+  if (f.includes('gancho')) return 'usar o gancho para recuperar a posição antes de tentar resolver o ponto.';
+  if (f.includes('curta')) return 'usar a bola curta com intenção clara, não como solução automática.';
+  if (f.includes('smash')) return 'finalizar apenas quando a bola estiver realmente confortável.';
+  if (f.includes('saque')) return 'sacar já pensando na próxima bola, não apenas em colocar a bola em jogo.';
+  if (f.includes('backhand')) return 'controlar melhor o lado do backhand antes de tentar acelerar.';
+  if (f.includes('forehand')) return 'usar o forehand com mais controle de direção e recuperação depois do golpe.';
+  if (f.includes('bandeja')) return 'manter controle e profundidade sem transformar toda bola alta em definição.';
+  if (f.includes('consist')) return 'manter mais bolas vivas antes de tentar acelerar.';
+  if (f.includes('posicion')) return 'recuperar melhor a posição depois da batida para não abrir espaço.';
+  return `usar ${fundamento || 'esse fundamento'} com mais escolha, controle e regularidade.`;
+}
+function positivoFundamento(fundamento = '') {
+  const f = String(fundamento || '').toLowerCase();
+  if (f.includes('lob')) return 'foi uma bola que ajudou a ganhar tempo e manter o ponto vivo';
+  if (f.includes('saque')) return 'apareceu como uma bola de confiança para iniciar melhor o ponto';
+  if (f.includes('devol')) return 'ajudou a começar o ponto com mais segurança';
+  if (f.includes('tapa')) return 'apareceu bem quando a bola estava confortável para acelerar';
+  if (f.includes('gancho')) return 'ajudou a recuperar bolas difíceis sem perder completamente o ponto';
+  if (f.includes('curta')) return 'criou dúvida no adversário quando foi usada com intenção';
+  if (f.includes('smash')) return 'apareceu bem quando havia bola clara para finalizar';
+  return 'apareceu como um recurso positivo no jogo';
+}
 function interpretacaoAutoScout({ notasAuto = {}, autoFraco, erroPrincipal, erros = [], positivos = [] }) {
   const fraco = autoFraco?.[0];
   const principal = erroPrincipal?.fundamento;
   const frases = [];
 
   if (principal && fraco && principal === fraco) {
-    frases.push(`Isso confirma a sua percepção: ${fraco} apareceu como ponto de atenção na autoavaliação e também no scout.`);
+    frases.push(`Isso confirma sua percepção: ${fraco} foi o ponto que você sentiu mais inseguro e também apareceu como ajuste no jogo.`);
   } else if (principal && fraco) {
-    frases.push(`Aqui apareceu uma diferença importante: na autoavaliação, o ponto que pediu mais atenção foi ${fraco}; no jogo, o scout mostrou ${principal} como ajuste principal.`);
+    frases.push(`Aqui apareceu uma diferença importante: você sentiu mais dificuldade em ${fraco}, mas no jogo o ajuste mais claro apareceu em ${principal}.`);
   } else if (principal) {
-    frases.push(`O scout trouxe um ponto claro para ajustar no jogo: ${principal}.`);
+    frases.push(`O jogo trouxe um ponto claro para ajustar: ${principal}.`);
   }
 
   const bomApesarAutoBaixa = positivos.find(([f,n])=>{
@@ -1097,7 +1172,7 @@ function interpretacaoAutoScout({ notasAuto = {}, autoFraco, erroPrincipal, erro
     return Number(n) > errosNoFund;
   });
   if (bomApesarAutoBaixa) {
-    frases.push(`Também tem uma boa notícia: mesmo você se avaliando mais baixo em ${bomApesarAutoBaixa[0]}, o scout registrou boas ações nesse fundamento.`);
+    frases.push(`Também tem uma boa notícia: mesmo com insegurança em ${bomApesarAutoBaixa[0]}, esse fundamento teve boas ações no jogo.`);
   }
 
   return frases.slice(0, 2).join(' ');
@@ -1108,10 +1183,9 @@ function feedbackAlunoTexto(a) {
   const scout = a.scoutResumo;
   const errosSignificativos = significantScoutEntries(scout?.errosPorFundamento);
   const erro = clearScoutPrincipal(errosSignificativos);
-  const zona = erro && erro.fundamento === scout?.erroPrincipal?.fundamento ? (scout?.zonaErroPrincipal || scout?.zonaCritica) : null;
   const nome = firstName(a.nome);
   const pontoAtencao = erro
-    ? `${erro.total} situação(ões) ligadas a ${erro.fundamento}${zona ? `, principalmente na zona ${zona.zona}` : ''}.`
+    ? `${erro.total} situação(ões) em que ${erro.fundamento} pediu atenção.`
     : errosSignificativos.length
       ? `pontos de atenção em ${formatScoutList(errosSignificativos.slice(0,3))}.`
     : 'algumas situações isoladas, mas ainda sem um padrão forte o suficiente para virar conclusão.';
@@ -1128,8 +1202,8 @@ function feedbackAlunoTexto(a) {
   const textoTaticoLimpo = textoTatico ? String(textoTatico).replace(/\s+/g,' ').slice(0,190) : '';
   const extraTexto = positivosFund.length || (erro && extrasFund.length) || extraTatico
     ? ` ${[
-        positivosFund.length ? `Também apareceram boas ações em ${positivosFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
-        erro && extrasFund.length ? `Nos erros registrados, além do ponto principal, também apareceram ${extrasFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
+        positivosFund.length ? `Também teve ponto positivo: ${positivosFund.map(([f,n])=>`${f} (${n}) ${positivoFundamento(f)}`).join(' e ')}.` : '',
+        erro && extrasFund.length ? `Além disso, apareceram ajustes menores em ${extrasFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
         textoTaticoLimpo ? `Na prática: ${textoTaticoLimpo}.` : '',
       ].filter(Boolean).join(' ')}`
     : '';
@@ -1144,8 +1218,8 @@ function feedbackAlunoTexto(a) {
     erros: errosSignificativos,
     positivos: positivosOrdenados,
   });
-  const focoPratico = scout?.cartaoFocoScout?.foco || (textoTaticoLimpo ? textoTaticoLimpo : `usar ${foco} com mais controle e escolha melhor`);
-  return `Oi, ${nome}! Aqui vai um feedback simples do seu treino.\n\nCOMO VOCÊ SE PERCEBEU\n${autoTexto}\n\nO QUE APARECEU NO JOGO\nNo scout, vimos ${pontoAtencao}${extraTexto}\n\n${leituraCruzada ? `${leituraCruzada}\n\n` : ''}PRÓXIMO FOCO\n${focoPratico}\n\nVamos evoluir um ajuste por vez, sem complicar.`;
+  const focoPratico = praticaFundamento(foco);
+  return `Oi, ${nome}! Aqui vai um feedback simples do seu treino.\n\nCOMO VOCÊ SE PERCEBEU\n${autoTexto}\n\nO QUE APARECEU NO JOGO\nNo jogo observado, vimos ${pontoAtencao}${extraTexto}\n\n${leituraCruzada ? `${leituraCruzada}\n\n` : ''}PONTO A MELHORAR\n${focoPratico}\n\nVamos evoluir um ajuste por vez, sem complicar.`;
 }
 
 function ScreenAluno({ nav, params }) {
