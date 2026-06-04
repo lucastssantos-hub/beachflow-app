@@ -1152,6 +1152,31 @@ function positivoFundamento(fundamento = '') {
   if (f.includes('smash')) return 'o smash apareceu bem quando havia bola clara para finalizar';
   return `${fundamento || 'esse fundamento'} apareceu como um recurso positivo no jogo`;
 }
+function leituraCadeiaDoPonto(autoFraco, erroPrincipal) {
+  const percebido = String(autoFraco?.[0] || '').toLowerCase();
+  const erro = String(erroPrincipal?.fundamento || '').toLowerCase();
+  if (!percebido || !erro) return null;
+  const erroRali = ['forehand', 'backhand', 'neutra', 'consistência', 'consistencia', 'posicionamento'].some(x=>erro.includes(x));
+  if (percebido.includes('saque') && erroRali) {
+    return {
+      texto: `No jogo, o ajuste mais claro apareceu depois do início do ponto: ${erroPrincipal.fundamento}. Isso pode mostrar que a sensação de dificuldade no saque não está só no saque, mas na bola seguinte, na entrada no rali ou na recuperação depois de sacar.`,
+      foco: 'o ponto a melhorar é sacar e já se organizar para a terceira bola, entrando no rali com mais controle antes de tentar acelerar.',
+    };
+  }
+  if (percebido.includes('devol') && erroRali) {
+    return {
+      texto: `No jogo, o ajuste mais claro apareceu logo depois da devolução: ${erroPrincipal.fundamento}. Isso pode mostrar que a dificuldade não está só em devolver, mas em entrar organizada no rali depois da resposta ao saque.`,
+      foco: 'o ponto a melhorar é devolver e já recuperar a base para jogar a bola seguinte com mais controle.',
+    };
+  }
+  if ((percebido.includes('lob') || percebido.includes('gancho')) && ['tapa', 'smash', 'acelerada', 'ventaglio', 'anômalo', 'anomalo'].some(x=>erro.includes(x))) {
+    return {
+      texto: `No jogo, o ajuste apareceu na tentativa de acelerar. Isso pode mostrar que a bola de recuperação ainda não está dando tempo suficiente para preparar um ataque com segurança.`,
+      foco: 'o ponto a melhorar é ganhar tempo primeiro e só acelerar quando a bola vier realmente confortável.',
+    };
+  }
+  return null;
+}
 function interpretacaoAutoScout({ notasAuto = {}, autoFraco, erroPrincipal, erros = [], positivos = [], usePositive = true }) {
   const fraco = autoFraco?.[0];
   const principal = erroPrincipal?.fundamento;
@@ -1195,6 +1220,7 @@ function feedbackAlunoTexto(a) {
   const extraTatico = (scout?.problemasTaticos || []).find(p=>p?.texto);
   const textoTatico = extraTatico?.pratica || scout?.leituraPratica || (extraTatico?.texto ? practicalIssueText(extraTatico.texto) : '');
   const textoTaticoLimpo = textoTatico ? String(textoTatico).replace(/\s+/g,' ').slice(0,190) : '';
+  const cadeia = leituraCadeiaDoPonto(autoFraco, erro);
   const mesmaNota = autoForte && autoFraco && (autoForte[0] === autoFraco[0] || Number(autoForte[1]) === Number(autoFraco[1]));
   const autoTexto = mesmaNota
     ? `na sua autoavaliação, suas respostas ficaram bem próximas entre os fundamentos.`
@@ -1208,12 +1234,12 @@ function feedbackAlunoTexto(a) {
     usePositive: !positivosFund.length,
   });
   const positivoTexto = positivosFund.length ? positivoFundamento(positivosFund[0][0]) + '.' : '';
-  const jogoTexto = erro
+  const jogoTexto = cadeia?.texto || (erro
     ? `No jogo, ${erro.fundamento} apareceu como o principal ajuste. ${textoTaticoLimpo ? textoTaticoLimpo + '.' : 'Em algumas bolas, a escolha ou a execução ainda precisa ficar mais tranquila.'}`
     : textoTaticoLimpo
       ? `No jogo, o ponto mais claro foi este: ${textoTaticoLimpo}.`
-      : 'No jogo, ainda não apareceu um padrão forte o bastante para cravar um diagnóstico, mas já dá para orientar o próximo ajuste.';
-  const focoPratico = praticaFundamento(foco);
+      : 'No jogo, ainda não apareceu um padrão forte o bastante para cravar um diagnóstico, mas já dá para orientar o próximo ajuste.');
+  const focoPratico = cadeia?.foco || praticaFundamento(foco);
   return [
     `Oi, ${nome}! Passando um retorno rápido do treino.`,
     `Pelo que você respondeu, ${autoTexto}`,
