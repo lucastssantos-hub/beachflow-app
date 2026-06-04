@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BeachFlow</title>
+    <script>
+      (function () {
+        var base = '/beachflow-app/';
+        var match = window.location.pathname.match(/\/aluno\/([^/?#]+)/);
+        if (match && match[1]) {
+          window.location.replace(base + '?feedback=' + encodeURIComponent(decodeURIComponent(match[1])));
+          return;
+        }
+        window.location.replace(base);
+      })();
+    </script>
+  </head>
+  <body style="margin:0;background:#06121f;color:#eaf1f8;font-family:system-ui,sans-serif">
+    <div style="min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center">
+      <div>Carregando BeachFlow...</div>
+    </div>
+  </body>
+</html>

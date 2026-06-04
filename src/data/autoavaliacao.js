@@ -3,15 +3,15 @@ import { supabase } from '../supabaseClient.js';
 export const AUTO_FUNDAMENTOS = ['Saque', 'Devolução', 'Forehand', 'Backhand', 'Lob', 'Smash', 'Bandeja', 'Gancho', 'Tapa', 'Curta', 'Posicionamento', 'Consistência', 'Decisão'];
 
 export function selfAssessmentUrl(token, aluno = {}) {
-  const base = new URL(import.meta.env.BASE_URL || '/', window.location.origin);
-  base.searchParams.set('auto', token);
-  if (aluno.nome || aluno.name) base.searchParams.set('aluno', aluno.nome || aluno.name);
+  const basePath = import.meta.env.BASE_URL || '/';
+  const base = new URL(basePath, window.location.origin);
+  base.pathname = `${base.pathname.replace(/\/$/, '')}/aluno/${encodeURIComponent(token)}`;
   return base.toString();
 }
 
 export function selfAssessmentMessage(aluno, link) {
   const nome = String(aluno?.nome || aluno?.name || 'aluno').trim().split(/\s+/)[0] || 'aluno';
-  return `Oi, ${nome}! Quero entender como você se sente em cada fundamento do beach tennis para ajustar melhor seus treinos.\n\nÉ uma autoavaliação rápida, leva cerca de 2 minutos.\n\nResponda por aqui:\n${link}`;
+  return `Oi, ${nome}! Preparei seu espaço no BeachFlow 🎾\n\nSe ainda não respondeu, você faz uma autoavaliação rápida. Se já respondeu, o link mostra seu feedback de evolução.\n\nAcesse por aqui:\n${link}`;
 }
 
 async function currentTeacherId() {

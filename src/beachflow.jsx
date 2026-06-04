@@ -7,6 +7,7 @@ import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutD
 import { DEMO_ALUNOS as ALUNOS, DEMO_TURMAS, DEMO_RADAR_LABELS as RLAB } from './data/demo.js';
 import { prepararConfirmacoesTurma, atualizarStatusConfirmacoes, getConfirmacao, responderConfirmacao, confirmationUrl, whatsappUrl, statusLabel, statusTone } from './data/confirmacoes.js';
 import { AUTO_FUNDAMENTOS, prepararAutoavaliacaoAluno, salvarAutoavaliacaoToken } from './data/autoavaliacao.js';
+import { PUBLIC_FEEDBACK_FUNDAMENTOS, getPublicStudentFeedback } from './data/alunoFeedback.js';
 import { analyzeStudentFeedback, practicalIssueText } from './data/ontology.js';
 
 
@@ -564,6 +565,29 @@ function Radar({ data, size = 200, labels }) {
       {labels && labels.map((l,i)=>{const[x,y]=pt(i,1.18);const a=ang(i);
         return <text key={i} x={x} y={y} fill={C.inkDim} fontFamily="IBM Plex Mono" fontSize={fs}
           textAnchor={Math.abs(Math.cos(a))<0.3?'middle':(Math.cos(a)>0?'start':'end')} dominantBaseline="middle">{l}</text>;})}
+    </svg>
+  );
+}
+
+function PublicRadar({ rows = [], size = 238 }) {
+  const data = rows.length ? rows : PUBLIC_FEEDBACK_FUNDAMENTOS.map((label)=>({ label, auto:null, scout:null }));
+  const n = Math.max(data.length, 3);
+  const cx = size/2, cy = size/2, r = size*0.32;
+  const ang = i => (Math.PI/2) - (i*2*Math.PI/n);
+  const pt = (i, v) => [cx + Math.cos(ang(i))*r*v, cy - Math.sin(ang(i))*r*v];
+  const ring = v => data.map((_,i)=>pt(i,v).join(',')).join(' ');
+  const poly = (key) => data.map((d,i)=>pt(i, d[key] ?? 0).join(',')).join(' ');
+  const hasAuto = data.some(d=>d.auto != null);
+  const hasScout = data.some(d=>d.scout != null);
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display:'block', overflow:'visible' }}>
+      {[1,0.66,0.33].map((v,k)=><polygon key={k} points={ring(v)} fill="none" stroke={C.line2} strokeWidth="1"/>)}
+      {data.map((_,i)=>{const[x,y]=pt(i,1);return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke={C.line} strokeWidth="1"/>;})}
+      {hasAuto && <polygon points={poly('auto')} fill="rgba(42,193,255,.15)" stroke="#2AC1FF" strokeWidth="2.2"/>}
+      {hasScout && <polygon points={poly('scout')} fill="none" stroke={C.turq} strokeWidth="2.2" strokeDasharray="5 4"/>}
+      {data.map((d,i)=>{const[x,y]=pt(i,1.18);const a=ang(i);
+        return <text key={d.label} x={x} y={y} fill={C.inkDim} fontFamily="IBM Plex Mono" fontSize="7.5"
+          textAnchor={Math.abs(Math.cos(a))<0.3?'middle':(Math.cos(a)>0?'start':'end')} dominantBaseline="middle">{d.label}</text>;})}
     </svg>
   );
 }
@@ -2397,56 +2421,90 @@ function ScreenConfirmacao({ token }) {
 }
 
 function ScreenAutoavaliacaoPublica({ token }) {
-  const aluno = new URLSearchParams(window.location.search).get('aluno') || 'aluno';
-  const [scores,setScores] = React.useState(()=>Object.fromEntries(AUTO_FUNDAMENTOS.map(f=>[f,3])));
-  const [st,setSt] = React.useState({ loading:false, done:false, error:'' });
+  const [data,setData] = React.useState(null);
+  const [scores,setScores] = React.useState(()=>Object.fromEntries(PUBLIC_FEEDBACK_FUNDAMENTOS.map(f=>[f,5])));
+  const [st,setSt] = React.useState({ loading:true, saving:false, done:false, error:'' });
+  const load = React.useCallback(()=>{
+    setSt(s=>({ ...s, loading:true, error:'' }));
+    getPublicStudentFeedback(token)
+      .then(d=>{ setData(d); setSt({ loading:false, saving:false, done:false, error:'' }); })
+      .catch(e=>setSt({ loading:false, saving:false, done:false, error:e.message || 'Não conseguimos carregar seu feedback. Tente novamente.' }));
+  },[token]);
+  React.useEffect(()=>{ load(); },[load]);
   const set = (f,n)=>setScores(s=>({ ...s, [f]:n }));
   const enviar = async ()=>{
-    setSt({ loading:true, done:false, error:'' });
+    setSt({ loading:false, saving:true, done:false, error:'' });
     try {
-      const payload = Object.fromEntries(Object.entries(scores).map(([f,v])=>[f, Number(v) * 2]));
+      const payload = Object.fromEntries(Object.entries(scores).map(([f,v])=>[f, Number(v)]));
       await salvarAutoavaliacaoToken(token, payload);
-      setSt({ loading:false, done:true, error:'' });
+      setSt({ loading:false, saving:false, done:true, error:'' });
+      await getPublicStudentFeedback(token).then(setData);
     } catch(e) {
       const msg = String(e.message || 'Não foi possível enviar.');
-      setSt({ loading:false, done:false, error:/ja foi enviada|já foi enviada|utilizad/i.test(msg)
+      setSt({ loading:false, saving:false, done:false, error:/ja foi enviada|já foi enviada|utilizad/i.test(msg)
         ? 'Esta autoavaliação já foi enviada. Peça um novo link ao professor se quiser responder novamente.'
         : msg });
     }
   };
+  const hasFeedback = !!data?.hasAuto || st.done;
   return <Screen>
     <div className="bf-scroll" style={{ flex:1, overflowY:'auto', padding:'46px 22px 34px' }}>
       <div style={{ display:'flex', justifyContent:'center' }}><BFMark w={52}/></div>
-      <div style={{ textAlign:'center', fontFamily:'var(--ff-d)', fontWeight:800, fontSize:24, color:'#fff', marginTop:16 }}>Autoavaliação</div>
-      <Card glow style={{ marginTop:18, textAlign:'center' }}>
-        <div style={{ fontSize:14, color:C.ink }}>Oi, <b>{aluno}</b>.</div>
-        <div style={{ fontSize:12.5, color:C.inkDim, lineHeight:1.45, marginTop:8 }}>
-          Escolha como você se sente hoje em cada fundamento. Não precisa acertar: seja sincero.
-        </div>
-      </Card>
-      {st.done ? <Card style={{ marginTop:14, textAlign:'center', padding:'28px 18px' }}>
-        <div style={{ fontSize:17, color:C.ink, fontWeight:700 }}>Avaliação enviada.</div>
-        <div style={{ fontSize:12.5, color:C.inkDim, lineHeight:1.4, marginTop:8 }}>Obrigado. Seu professor já pode usar essas respostas para ajustar os treinos.</div>
+      <div style={{ textAlign:'center', fontFamily:'var(--ff-d)', fontWeight:800, fontSize:24, color:'#fff', marginTop:16 }}>
+        {hasFeedback ? 'Seu feedback' : 'Autoavaliação'}
+      </div>
+      {st.loading ? <Card glow style={{ marginTop:20, textAlign:'center', padding:'34px 18px' }}>
+        <div style={{ width:30, height:30, borderRadius:'50%', border:`3px solid ${C.line2}`, borderTopColor:C.turq, margin:'0 auto', animation:'bf-spin 1s linear infinite' }}/>
+        <div style={{ fontSize:12.5, color:C.inkDim, marginTop:13 }}>Carregando seu espaço BeachFlow…</div>
+      </Card> : st.error && !data ? <Card glow style={{ marginTop:20, textAlign:'center', padding:'30px 18px' }}>
+        <div style={{ fontSize:17, color:C.ink, fontWeight:700 }}>Este link não é válido ou expirou.</div>
+        <div style={{ fontSize:12.5, color:C.inkDim, lineHeight:1.4, marginTop:8 }}>{st.error}</div>
       </Card> : <>
-        {AUTO_FUNDAMENTOS.map(f=>
-          <Card key={f} style={{ marginTop:9, padding:'12px 13px' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontSize:13.5, color:C.ink }}>{f}</span>
-              <span style={{ fontFamily:'var(--ff-m)', fontSize:11.5, color:C.turq }}>{scores[f]}/5</span>
+        <Card glow style={{ marginTop:18, textAlign:'center' }}>
+          <div style={{ fontSize:14, color:C.ink }}>Olá, <b>{data?.firstName || 'aluno'}</b>.</div>
+          <div style={{ fontSize:12.5, color:C.inkDim, lineHeight:1.45, marginTop:8 }}>
+            {hasFeedback ? 'Aqui está uma leitura simples do seu jogo, cruzando sua percepção com o que apareceu em quadra.' : 'Escolha como você se sente hoje em cada fundamento. Seja sincero: isso ajuda o professor a ajustar melhor o treino.'}
+          </div>
+        </Card>
+
+        {hasFeedback ? <>
+          <Card style={{ marginTop:14, alignItems:'center', display:'flex', flexDirection:'column' }}>
+            <Mini style={{ alignSelf:'flex-start' }}>Sua evolução</Mini>
+            <PublicRadar rows={data?.radarRows || []}/>
+            {data?.movement && <div style={{ fontSize:12.5, color:C.turq, lineHeight:1.35, marginTop:4, textAlign:'center' }}>{data.movement}</div>}
+            <div style={{ display:'flex', gap:12, marginTop:8, fontSize:11.5, color:C.inkDim }}>
+              <span><b style={{color:'#2AC1FF'}}>—</b> sua percepção</span>
+              <span><b style={{color:C.turq}}>--</b> jogo observado</span>
             </div>
-            <div style={{ display:'flex', gap:6, marginTop:10 }}>
-              {[1,2,3,4,5].map(n=><button key={n} className="bf-tap" onClick={()=>set(f,n)}
-                style={{ flex:1, height:31, borderRadius:8, border:`1px solid ${scores[f]===n?C.turq:C.line}`,
-                  background:scores[f]===n?'rgba(22,194,163,.18)':'rgba(255,255,255,.04)',
-                  color:scores[f]===n?C.turq:C.inkDim, fontFamily:'var(--ff-m)', fontSize:12 }}>{n}</button>)}
-            </div>
-          </Card>)}
-        {st.error && <Card style={{ marginTop:12, borderColor:'rgba(242,84,91,.35)' }}>
-          <div style={{ fontSize:12.5, color:C.err, lineHeight:1.4 }}>{st.error}</div>
-        </Card>}
-        <Btn kind="secondary" style={{ width:'100%', marginTop:14 }} icon="check" onClick={enviar}>
-          {st.loading?'Enviando…':'Enviar avaliação'}
-        </Btn>
+          </Card>
+          <Card style={{ marginTop:12 }}>
+            <Mini>O que funcionou</Mini>
+            <div style={{ fontSize:15, color:C.ink, lineHeight:1.5, marginTop:8 }}>{data?.worked}</div>
+          </Card>
+          <Card style={{ marginTop:12 }}>
+            <Mini>O que pediu atenção</Mini>
+            <div style={{ fontSize:15, color:C.ink, lineHeight:1.5, marginTop:8 }}>{data?.cost || 'Ainda precisamos observar mais pontos para confirmar um padrão.'}</div>
+            {data?.focus && <div style={{ marginTop:11, padding:12, borderRadius:12, background:'rgba(22,194,163,.09)', border:'1px solid rgba(22,194,163,.18)', fontSize:14, color:C.ink, lineHeight:1.45 }}>
+              {data.focus.charAt(0).toUpperCase() + data.focus.slice(1)}
+            </div>}
+          </Card>
+        </> : <>
+          {PUBLIC_FEEDBACK_FUNDAMENTOS.map(f=>
+            <Card key={f} style={{ marginTop:9, padding:'12px 13px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:13.5, color:C.ink }}>{f}</span>
+                <span style={{ fontFamily:'var(--ff-m)', fontSize:11.5, color:C.turq }}>{Number(scores[f]).toFixed(1)}</span>
+              </div>
+              <input type="range" min="0" max="10" step="0.5" value={scores[f]} onChange={e=>set(f,e.target.value)}
+                style={{ width:'100%', accentColor:C.turq, marginTop:10 }}/>
+            </Card>)}
+          {st.error && <Card style={{ marginTop:12, borderColor:'rgba(242,84,91,.35)' }}>
+            <div style={{ fontSize:12.5, color:C.err, lineHeight:1.4 }}>{st.error}</div>
+          </Card>}
+          <Btn kind="secondary" style={{ width:'100%', marginTop:14 }} icon="check" onClick={enviar}>
+            {st.saving?'Enviando…':'Enviar avaliação'}
+          </Btn>
+        </>}
       </>}
     </div>
   </Screen>;
@@ -2463,8 +2521,11 @@ const REG = {
 const TAB_ROUTES = ['hoje', 'alunos', 'aulas', 'scout', 'financeiro'];
 
 export function App() {
-  const confirmToken = new URLSearchParams(window.location.search).get('confirm');
-  const autoToken = new URLSearchParams(window.location.search).get('auto');
+  const qs = new URLSearchParams(window.location.search);
+  const confirmToken = qs.get('confirm');
+  const pathMatch = window.location.pathname.match(/\/aluno\/([^/?#]+)/);
+  const publicAlunoToken = pathMatch?.[1] ? decodeURIComponent(pathMatch[1]) : (qs.get('feedback') || null);
+  const autoToken = qs.get('auto') || publicAlunoToken;
   const [stack, setStack] = React.useState([{ r: 'login' }]);
   const top = stack[stack.length - 1];
 
