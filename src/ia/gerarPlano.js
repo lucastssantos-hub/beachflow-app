@@ -3,7 +3,7 @@
 // Se o endpoint não estiver configurado/acessível, gera um plano local com os
 // dados disponíveis para a interface continuar funcionando em quadra.
 
-import { recomendarDrillsCbt, drillResumoParaIA, drillParaBloco } from '../data/drillsCbt.js';
+import { recomendarDrillsCbt, recomendarSequenciaDrillsCbt, drillResumoParaIA, drillParaBloco } from '../data/drillsCbt.js';
 
 const ENDPOINT = import.meta.env.VITE_GERAR_PLANO_ENDPOINT || '';
 const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -163,7 +163,7 @@ function localPlanFromContext(ctx = {}, erro = '') {
   const source = focus.source || 'dados locais';
   const metodo = confidence === 'alta' ? 'aberto' : 'semiaberto';
   const drillCtx = { ...ctx, foco: focus.fund, fundamento: focus.fund, metodo };
-  const drills = recomendarDrillsCbt(drillCtx, 3);
+  const drills = recomendarSequenciaDrillsCbt(drillCtx);
   const drillBlocks = drills.map((drill, i) => drillParaBloco(drill, [
     'Bloco 1 — Aquecimento específico',
     'Bloco 2 — Exercício principal',
@@ -236,7 +236,9 @@ function enrichContextWithDrills(ctx = {}) {
   const focus = chooseFocus(ctx);
   const metodo = ctx.metodo || ctx.tipo_treino || ctx.decisaoPedagogica?.metodo || '';
   const drillCtx = { ...ctx, foco: focus.fund, fundamento: focus.fund, metodo };
-  const drills = recomendarDrillsCbt(drillCtx, 5).map(drillResumoParaIA);
+  const sequencia = recomendarSequenciaDrillsCbt(drillCtx);
+  const extras = recomendarDrillsCbt(drillCtx, 5).filter(d => !sequencia.some(s => s.id === d.id));
+  const drills = [...sequencia, ...extras].slice(0, 6).map(drillResumoParaIA);
   return drills.length ? { ...ctx, bibliotecaDrillsCbt: drills } : ctx;
 }
 

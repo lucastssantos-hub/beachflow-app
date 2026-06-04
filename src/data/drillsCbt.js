@@ -1,5 +1,5 @@
-// Biblioteca CBT BeachFlow — 38 drills canonicos.
-// Gerado a partir de drills-cbt-beachflow_1.html e usado pelo motor de treinos.
+// Biblioteca CBT BeachFlow — 64 drills canonicos.
+// Gerado a partir de drills-cbt-beachflow_2.html e usado pelo motor de treinos.
 
 export const DRILLS_CBT = [
   {
@@ -1245,11 +1245,893 @@ export const DRILLS_CBT = [
       "Progressão: sacador usa formação em I para aumentar a confusão no posicionamento."
     ],
     "pergunta": "Depois da devolução, vocês voltaram ao centro ou ficaram do lado onde a bola foi?"
+  },
+  {
+    "id": "D039",
+    "nome": "Smash do Fundo — Mecânica Isolada",
+    "nivel": "intermediario",
+    "formato": "fechado",
+    "golpes": [
+      "Smash"
+    ],
+    "tags": [
+      "Smash do fundo (principal)"
+    ],
+    "estados": [
+      "Reconstrução",
+      "Construção"
+    ],
+    "jogadores": "1 executor + professor lançador",
+    "objetivoTecnico": "Desenvolver o smash executado de posição recuada (fundo da quadra), com laçada e posicionamento corretos antes do contato.",
+    "objetivoTatico": "Criar ferramenta de pressão ou continuidade ofensiva a partir do fundo — smash do fundo não é finalização imediata, é construção de vantagem.",
+    "passos": [
+      "Aluno posicionado no fundo da quadra (Zona Amarela/Vermelha). Professor lança lob flutuante para essa posição.",
+      "Aluno executa smash do fundo: posição de lado, braços altos, laçada completa. O objetivo não é definir — é manter pressão e bola difícil para o adversário.",
+      "Variação: smash com top spin (bola no backhand) e smash com slice (bola no forehand) conforme a posição da bola. Na Zona Vermelha pura: gancho — não smash.",
+      "Série: 10 bolas por aluno, professor variando profundidade do lob para que aluno leia a zona antes de executar.",
+      "Progressão: após smash do fundo, ponto fica vivo — aluno precisa avançar e cobrir a resposta adversária."
+    ],
+    "pergunta": "O smash do fundo foi de pressão (manter vantagem) ou você tentou definir quando a bola ainda estava atrás da cabeça?"
+  },
+  {
+    "id": "D040",
+    "nome": "3ª Bola Baixa → Neutra → Lob ou Curta Alta → Smash",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Smash",
+      "Lob",
+      "Curta"
+    ],
+    "tags": [
+      "3ª bola baixa",
+      "Lob",
+      "Curta alta",
+      "Smash",
+      "Bola neutra"
+    ],
+    "estados": [
+      "Saque",
+      "Neutro",
+      "Construção",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Encadear 3ª bola baixa + bola neutra + lob ou curta alta + smash de finalização como sequência completa de construção até definição.",
+    "objetivoTatico": "Desenvolver a cadeia tática completa: entrar no ponto com bola difícil (3ª bola baixa) → neutralizar → criar desequilíbrio (lob ou curta alta) → finalizar com smash. Cada bola prepara a próxima.",
+    "passos": [
+      "Ponto começa com saque. Sacador executa 3ª bola baixa — bola que obriga o devolvedor a pegar abaixo da cintura, dificultando a resposta.",
+      "Dupla sacadora joga bola neutra de construção para organizar a posição.",
+      "Na próxima oportunidade, a dupla executa lob de construção OU curta alta — ambas com objetivo de forçar bola levantada do adversário.",
+      "Com a bola levantada, a dupla executa smash de finalização na zona correta.",
+      "Variações paralelas do mesmo drill: (A) 3ª bola baixa + neutra + lob + smash; (B) 3ª bola baixa + neutra + curta alta + smash.",
+      "Semi-aberto: dupla sacadora declara qual variação vai usar antes do ponto. Depois o ponto fica livre após o smash."
+    ],
+    "pergunta": "A 3ª bola baixa criou realmente dificuldade para o adversário ou ele conseguiu responder confortavelmente?"
+  },
+  {
+    "id": "D041",
+    "nome": "Tapa + Curta Forehand + Smash Fundo + Tapa",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Forehand",
+      "Smash",
+      "Curta"
+    ],
+    "tags": [
+      "Tapa",
+      "Curta forehand",
+      "Smash fundo"
+    ],
+    "estados": [
+      "Pressão",
+      "Construção",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas + professor lançador inicial",
+    "objetivoTecnico": "Encadear tapa + curta + smash do fundo + novo tapa como sequência de pressão contínua sem pausas entre as ações.",
+    "objetivoTatico": "Desenvolver o princípio de pressão sustentada: cada golpe cria a condição do próximo. Tapa desorganiza → curta desloca → smash do fundo mantém pressão → tapa finaliza ou reinicia o ciclo.",
+    "passos": [
+      "Professor lança bola vulnerável (média-alta) para o forehand do executor. Aluno executa tapa de forehand — contato à frente, aceleração curta, direcionado.",
+      "A tapa força bola que volta ao aluno. Aluno executa curta de forehand no lado pré-definido — objetivo: deslocar adversário para frente.",
+      "Adversário corre para frente e levanta a bola. Aluno executa smash do fundo (ou meio) dependendo de onde está a bola.",
+      "Se o smash não finalizou, o ponto continua — e o aluno deve recuperar tapa como nova ação de pressão. Variação: Tapa + Curta backhand + Smash fundo + Tapa.",
+      "Semi-aberto: ponto fica completamente vivo após a segunda tapa. A sequência fixa termina ali — o restante é jogo."
+    ],
+    "pergunta": "Após o smash do fundo, você ficou parado esperando ou já se posicionou para a próxima tapa?"
+  },
+  {
+    "id": "D042",
+    "nome": "3ª Bola Back Alto + Estático Forehand + Smash Fundo + Tapa",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Backhand",
+      "Smash",
+      "Forehand"
+    ],
+    "tags": [
+      "3ª bola back alto",
+      "Estático forehand",
+      "Smash fundo",
+      "Tapa"
+    ],
+    "estados": [
+      "Saque",
+      "Neutro",
+      "Construção",
+      "Pressão"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Desenvolver a sequência: 3ª bola backhand alto (dificulta) → estático de forehand em resposta → smash do fundo → tapa. Cada bola em sua função correta.",
+    "objetivoTatico": "A 3ª bola backhand alto tira tempo do sacador — que responde com estático de forehand. Se a resposta flutua, smash do fundo mantém pressão. Tapa finaliza ou cria novo ciclo.",
+    "passos": [
+      "Ponto começa com saque. Devolvedor executa 3ª bola backhand alto — bola que passa alta e de costas, forçando o sacador a usar estático de forehand.",
+      "Sacador recebe com estático de forehand: raquete firme, face levemente inclinada para cima, sem tentar acelerar.",
+      "Se a resposta ao estático flutua ou sobe, o devolvedor executa smash do fundo. Se não flutua, continua o rali normalmente.",
+      "Variações do drill: (A) 3ª back alto + estático Four + smash fundo + tapa; (B) 3ª back alto + estático Four + lob Four + smash frente.",
+      "Semi-aberto: após a quarta bola da sequência (tapa), ponto fica vivo."
+    ],
+    "pergunta": "O estático de forehand devolveu a bola com segurança ou você tentou acelerar quando a bola veio difícil?"
+  },
+  {
+    "id": "D043",
+    "nome": "Lob de Bandeja + Lob Forehand Alto + Estático + Smash",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Lob",
+      "Smash",
+      "Forehand",
+      "Backhand"
+    ],
+    "tags": [
+      "Lob bandeja",
+      "Lob forehand alto",
+      "Estático backhand",
+      "Smash",
+      "Tapa"
+    ],
+    "estados": [
+      "Defesa",
+      "Reconstrução",
+      "Construção",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Encadear lob de bandeja + lob de forehand alto como dois lobs consecutivos de recuperação/construção, seguidos de estático e smash de finalização.",
+    "objetivoTatico": "Dois lobs seguidos criam pressão indireta e forçam o adversário a executar duas vezes do fundo. O estático neutraliza a resposta e o smash converte a vantagem gerada.",
+    "passos": [
+      "Dupla A começa na posição defensiva. Executa lob de bandeja — raquete plana acima da cabeça, lob profundo ao fundo.",
+      "Dupla B (adversária) executa smash ou gancho do fundo. Dupla A responde com lob de forehand alto — segundo lob consecutivo, ainda mais profundo.",
+      "Dupla B tem que executar mais uma vez do fundo. A resposta deles volta para dupla A como estático de backhand — que devolve controlado.",
+      "Se a bola sobe após o estático, dupla A executa tapa + smash para finalizar.",
+      "Semi-aberto: após o smash, ponto fica completamente vivo."
+    ],
+    "pergunta": "O segundo lob foi mais profundo que o primeiro, ou você perdeu qualidade por estar se movimentando?"
+  },
+  {
+    "id": "D044",
+    "nome": "Curta de Bandeja + Lob + Tapa + Gancho",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Curta",
+      "Lob",
+      "Gancho"
+    ],
+    "tags": [
+      "Curta bandeja",
+      "Lob",
+      "Tapa",
+      "Gancho"
+    ],
+    "estados": [
+      "Construção",
+      "Pressão"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Treinar a sequência curta de bandeja + lob de preparação + tapa + gancho como cadeia que alterna bolas curtas e profundas para criar desequilíbrio posicional.",
+    "objetivoTatico": "Curta traz o adversário para frente → lob o empurra ao fundo → tapa o prende no meio → gancho de saída se bola ficar alta e profunda. A sequência explora os dois extremos de profundidade.",
+    "passos": [
+      "Professor lança bola que permite curta de bandeja. Executor executa a curta de bandeja — raquete plana, toque suave, bola cai a 1m da rede adversária.",
+      "Adversário corre para frente e levanta a bola. Executor responde com lob profundo — bola alta que empurra o adversário ao fundo.",
+      "Adversário executa gancho ou smash do fundo. Executor responde com tapa de forehand se a bola for vulnerável.",
+      "Se a bola do adversário for alta e funda (após o smash deles), executor usa gancho de controle para fechar o ciclo.",
+      "Semi-aberto: após 4 bolas da sequência, ponto fica vivo com dupla completa."
+    ],
+    "pergunta": "A curta de bandeja deslocou o adversário para frente ou ele respondeu sem precisar se mover?"
+  },
+  {
+    "id": "D045",
+    "nome": "Voleio na Plataforma + Smash + Ventaglio",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Forehand",
+      "Smash"
+    ],
+    "tags": [
+      "Voleio forehand (plataforma)",
+      "Smash",
+      "Ventaglio",
+      "Bandeja forehand"
+    ],
+    "estados": [
+      "Pressão",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Treinar o voleio dinâmico de forehand na posição de plataforma (colado à rede), seguido de smash e ventaglio como sequência de pressão máxima na rede.",
+    "objetivoTatico": "Dupla posicionada na plataforma (máxima aproximação da rede) usa voleio para interceptar, smash para pressionar e ventaglio para fechar espaços quando o adversário responde ao lado do backhand.",
+    "passos": [
+      "Dupla A posicionada na plataforma — colada à rede, ambos em split step. Professor lança bola acelerada para o forehand de A.",
+      "Executor intercepta com voleio dinâmico de forehand — passo curto diagonal, bloqueio do voleio cruzado ou no pé do adversário.",
+      "Se a resposta do adversário for alta, executor executa smash na zona correta (forehand/backhand conforme posição da bola).",
+      "Se a resposta for ao lado do backhand do executor, usa ventaglio — anômalo de backhand que cria saída pelo lado não dominante.",
+      "Variação: Bandeja de Forehand + Smash. Mesma lógica, mas com lob mais alto que exige bandeja antes do smash.",
+      "Semi-aberto: após smash + ventaglio, ponto fica vivo. Dupla A mantém a plataforma e fecha o ponto."
+    ],
+    "pergunta": "Quando veio ao backhand, você usou ventaglio ou tentou tapa de backhand automático?"
+  },
+  {
+    "id": "D046",
+    "nome": "Curta Back Paralela/Cruzada + Smash Meio/Paralela",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Curta",
+      "Backhand",
+      "Smash"
+    ],
+    "tags": [
+      "Curta backhand paralela",
+      "Curta backhand cruzada",
+      "Smash meio",
+      "Smash paralela",
+      "Curta forehand"
+    ],
+    "estados": [
+      "Construção",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Treinar curta de backhand em dois ângulos (paralela e cruzada), cada uma criando abertura diferente para smash de definição no meio ou na paralela.",
+    "objetivoTatico": "A direção da curta define o espaço que se abre: curta back paralela abre o fundo cruzado → smash cruzado. Curta back cruzada abre o fundo paralelo → smash paralela. Aluno aprende a ler a abertura criada pela própria curta.",
+    "passos": [
+      "Professor lança bola baixa no backhand do executor, posicionado a 5–6m da rede.",
+      "Variação A: Executor executa curta back paralela. Adversário corre em diagonal paralela. Espaço abre no cruzado → executor avança e smasha no meio ou cruzado.",
+      "Variação B: Executor executa curta back cruzada. Adversário corre em diagonal cruzada. Espaço abre na paralela → executor smasha na paralela.",
+      "Variação adicional: Curta forehand no meio + smash no meio — trabalha a mesma lógica pelo lado dominante.",
+      "Série: professor lança sem avisar qual variação — executor declara em voz alta antes de executar a curta."
+    ],
+    "pergunta": "A direção do smash acompanhou o espaço aberto pela curta, ou você escolheu o smash sem verificar onde estava o adversário?"
+  },
+  {
+    "id": "D047",
+    "nome": "Ventaglio + Tapa + Smash",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Forehand",
+      "Backhand",
+      "Smash"
+    ],
+    "tags": [
+      "Ventaglio",
+      "Tapa forehand",
+      "Smash",
+      "Gancho"
+    ],
+    "estados": [
+      "Construção",
+      "Pressão",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Encadear ventaglio (backhand anômalo com spin) + tapa de forehand + smash de finalização como sequência de pressão a partir do lado não dominante.",
+    "objetivoTatico": "Ventaglio cria ângulo difícil pelo backhand → tapa de forehand capitaliza a bola que sobe → smash define. A sequência mostra como o backhand pode gerar pressão quando usado com intenção de construção.",
+    "passos": [
+      "Professor lança bola no backhand do executor (lado não dominante). Executor executa ventaglio — forehand anômalo com spin pelo lado de backhand.",
+      "O ventaglio cria bola com ângulo incomum. A resposta do adversário tende a ser mais alta ou flutuante.",
+      "Executor capitaliza a bola alta com tapa de forehand — contato à frente, aceleração curta.",
+      "Se a tapa não finalizar, a bola sobe e o executor executa smash na zona correta.",
+      "Progressão adicionada no drill: Gancho + Ventaglio (saída do fundo com gancho → transição para ventaglio de pressão).",
+      "Semi-aberto: após smash, ponto fica vivo."
+    ],
+    "pergunta": "O ventaglio criou uma bola realmente difícil para o adversário ou foi uma bola neutra disfarçada?"
+  },
+  {
+    "id": "D048",
+    "nome": "Smash Ajoelhado + Smash com Toss + Drop + Smash",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Smash",
+      "Curta"
+    ],
+    "tags": [
+      "Smash ajoelhado",
+      "Smash com toss",
+      "Drop (curta)",
+      "Lob forehand"
+    ],
+    "estados": [
+      "Construção",
+      "Finalização"
+    ],
+    "jogadores": "1 executor + professor lançador + parceiro cobrindo",
+    "objetivoTecnico": "Progressão técnica do smash: ajoelhado (contato isolado) → com toss (controle do ponto de contato) → drop + smash (encadeamento com curta).",
+    "objetivoTatico": "A sequência drop + smash é uma combinação tática: drop (curta) traz adversário para frente → smash na bola levantada. Smash ajoelhado e com toss são ferramentas técnicas que preparam a mecânica antes do contexto.",
+    "passos": [
+      "Drill 1 — Smash ajoelhado: Aluno ajoelha e executa smash com toss próprio para isolar o ponto de contato sem variável do deslocamento.",
+      "Drill 2 — Smash com toss: Em pé, aluno lança própria bola e executa smash completo. Objetivo: controlar o ponto de contato e a laçada.",
+      "Drill 3 — Drop + Smash: Professor lança bola para executor executar drop (curta de bandeja). Adversário corre para frente e levanta. Executor smasha na bola levantada.",
+      "Variação: Drop + Smash / Lob de forehand + Smash — duas entradas diferentes para o mesmo smash de definição.",
+      "Semi-aberto: após o smash, ponto fica vivo."
+    ],
+    "pergunta": "No drop + smash, você finalizou pela altura da bola ou pela ansiedade de bater forte?"
+  },
+  {
+    "id": "D049",
+    "nome": "Top Spin + Ventaglio + Smash Frente/Fundo",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Forehand",
+      "Smash"
+    ],
+    "tags": [
+      "Top Spin",
+      "Ventaglio",
+      "Smash frente",
+      "Smash fundo"
+    ],
+    "estados": [
+      "Construção",
+      "Pressão",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Encadear top spin (spin de forehand que levanta a bola) + ventaglio (backhand anômalo) + smash frente ou fundo conforme a posição da bola devolvida.",
+    "objetivoTatico": "Top spin muda o ritmo e força bola alta → ventaglio mantém pressão pelo backhand → smash define conforme onde a bola ficou (frente = flat, fundo = spin/slice). O aluno lê a posição da bola antes de escolher o smash.",
+    "passos": [
+      "Rali em andamento. Executor executa top spin de forehand — spin de cima para baixo que força a bola a subir e cair rápido, criando pressão diferente.",
+      "A resposta ao top spin costuma ser mais alta. Executor usa ventaglio no backhand para manter pressão pelo lado não dominante.",
+      "Com a bola alta gerada, executor lê a posição: (A) Bola próxima = smash frente com flat; (B) Bola mais funda = smash fundo com top spin.",
+      "Declaração obrigatória: executor diz \"frente\" ou \"fundo\" antes do smash para confirmar a leitura da zona.",
+      "Semi-aberto: após o smash, ponto fica vivo."
+    ],
+    "pergunta": "Qual sinal da bola fez você escolher smash frente ou smash fundo — zona, altura ou instinto?"
+  },
+  {
+    "id": "D050",
+    "nome": "Smash Ajoelhado + 3ª Bola Tapa + Curta Back + Smash",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Smash",
+      "Backhand",
+      "Lob",
+      "Curta"
+    ],
+    "tags": [
+      "3ª bola tapa",
+      "Curta backhand",
+      "Smash",
+      "Lob backhand",
+      "Smash fundo"
+    ],
+    "estados": [
+      "Saque",
+      "Construção",
+      "Pressão",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Combinar smash ajoelhado (mecânica) com sequência tática completa: 3ª bola tapa + curta backhand + smash de finalização.",
+    "objetivoTatico": "A 3ª bola tapa cria pressão imediata → curta back desloca o adversário pelo lado não dominante → smash finaliza no espaço criado. Variação com lob back em vez de curta back explora mais profundidade.",
+    "passos": [
+      "Drill 1 mecânico: Smash ajoelhado para estabelecer ponto de contato correto antes da sequência tática.",
+      "Ponto começa com saque. Sacador executa 3ª bola tapa — aceleração curta no forehand, contato à frente, para criar pressão imediata no devolvedor.",
+      "Sacador executa curta de backhand — deslocando o adversário pelo lado não dominante.",
+      "Adversário levanta a bola correndo para frente. Sacador smasha na zona correta para finalizar.",
+      "Variações: (A) 3ª bola tapa + curta back + smash; (B) 3ª bola tapa + lob back + smash; (C) smash fundo + smash frente."
+    ],
+    "pergunta": "A 3ª bola tapa criou pressão suficiente para abrir espaço para a curta back, ou o adversário ainda estava bem posicionado?"
+  },
+  {
+    "id": "D051",
+    "nome": "3ª Bola + Curta Back + Smash / Lob Back + Contra-Lob",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Backhand",
+      "Lob",
+      "Smash"
+    ],
+    "tags": [
+      "3ª bola",
+      "Curta backhand",
+      "Lob backhand",
+      "Smash",
+      "Contra-lob",
+      "Bandeja"
+    ],
+    "estados": [
+      "Neutro",
+      "Construção",
+      "Reconstrução"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "A partir da 3ª bola, treinar duas saídas distintas: curta de backhand + smash (ofensiva) ou lob de backhand + contra-lob (defensiva/reconstrução). O aluno lê a situação e escolhe.",
+    "objetivoTatico": "A mesma 3ª bola pode pedir saída ofensiva (adversário ao fundo → curta back + smash) ou defensiva/reconstrução (adversário à frente → lob back + contra-lob). A leitura da posição adversária determina a saída.",
+    "passos": [
+      "Ponto começa com saque. Sacador joga 3ª bola no fundo — profunda e baixa.",
+      "Saída A — Ofensiva: Adversário está ao fundo. Sacador executa curta de backhand (desloca o adversário para frente) + smash na bola levantada.",
+      "Saída B — Defensiva/Reconstrução: Adversário está adiantado ou veio para frente após 3ª bola. Sacador executa lob de backhand profundo + contra-lob se o adversário lobar de volta.",
+      "Variação: 3ª bola de bandeja + curta back + smash — entrada via bandeja quando a 3ª bola for alta.",
+      "Professor alterna situações (adversário ao fundo vs adiantado) para forçar a leitura do aluno."
+    ],
+    "pergunta": "Você leu a posição do adversário antes de escolher curta back ou lob back — ou a escolha foi automática?"
+  },
+  {
+    "id": "D052",
+    "nome": "Lob 1ª Bola + Estático Four/Back + Smash / Bandeja",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Lob",
+      "Forehand",
+      "Backhand",
+      "Smash",
+      "Defesa"
+    ],
+    "tags": [
+      "Lob (1ª bola)",
+      "Estático forehand",
+      "Estático backhand",
+      "Smash",
+      "Lob bandeja"
+    ],
+    "estados": [
+      "Saque",
+      "Defesa",
+      "Neutro",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Treinar a sequência completa: lob como 1ª bola do rali (após saque adversário) + estático de forehand ou backhand + smash, integrando defesa e construção.",
+    "objetivoTatico": "Lob na 1ª bola (devolução via lob) empurra sacador ao fundo e cria tempo para organização → estático neutraliza a resposta → smash ou bandeja converte a vantagem. Inclui o ciclo inverso: smash + lob de bandeja.",
+    "passos": [
+      "Dupla A saca. Dupla B devolve com lob como 1ª bola — em vez de devolução baixa, usa lob alto e profundo para empurrar dupla A ao fundo.",
+      "Dupla A executa estático de forehand (se lob for para o forehand) ou estático de backhand (se for para o backhand) como resposta ao lob.",
+      "Se o estático criar bola alta, dupla B usa smash de finalização. Se criar bola profunda, dupla B usa lob de bandeja de forehand ou backhand para manter pressão.",
+      "Variações: (A) Lob 1ª bola + estático Four + smash; (B) Lob 1ª bola + estático Back + smash; (C) Smash + lob bandeja four; (D) Smash + lob bandeja back.",
+      "Semi-aberto: após smash ou segunda bandeja, ponto fica vivo."
+    ],
+    "pergunta": "Após o lob como 1ª bola, a dupla adversária ficou pressionada ou reorganizou facilmente?"
+  },
+  {
+    "id": "D053",
+    "nome": "Neutra Forehand/Back + Lob + Defesa Arco Inferior",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Forehand",
+      "Backhand",
+      "Lob",
+      "Defesa"
+    ],
+    "tags": [
+      "Forehand/Backhand neutro",
+      "Lob",
+      "Defesa arco inferior",
+      "Smash",
+      "Tapa"
+    ],
+    "estados": [
+      "Neutro",
+      "Construção",
+      "Defesa"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Encadear bola neutra + lob + defesa em arco inferior como sequência que integra controle, lob de saída e defesa de smash.",
+    "objetivoTatico": "Bola neutra prepara o ponto → lob empurra adversário e ganha tempo → adversário ataca com smash → defesa em arco inferior neutraliza. Treina a dupla a não se desesperar após o lob: se vier smash, há defesa preparada.",
+    "passos": [
+      "Professor lança bola neutra no forehand. Aluno A executa bola neutra de forehand + lob alto profundo.",
+      "Dupla B executa smash ou gancho do fundo. A dupla A antecipa: recua para base defensiva, joelhos flexionados, raquete em arco inferior pronta.",
+      "Dupla A defende em arco inferior — saída preferencial: lob alto para reiniciar o ciclo.",
+      "Variação backhand: neutra de backhand + lob backhand + defesa arco inferior.",
+      "Adicionais do Drill 4 de Lucas: drop + smash + tapa / drop back + smash + tapa como encadeamento de construção e finalização.",
+      "Semi-aberto: após o lob de saída da defesa em arco inferior, ponto fica vivo."
+    ],
+    "pergunta": "Depois do lob, você ficou aguardando o smash deles com a defesa pronta, ou foi pego de surpresa?"
+  },
+  {
+    "id": "D054",
+    "nome": "Correção de Gancho + Contra-Lob + Tapa + Lob Forehand",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Gancho",
+      "Lob",
+      "Defesa"
+    ],
+    "tags": [
+      "Gancho (correção)",
+      "Contra-lob",
+      "Defesa",
+      "Tapa",
+      "Lob forehand"
+    ],
+    "estados": [
+      "Defesa",
+      "Reconstrução",
+      "Construção"
+    ],
+    "jogadores": "2 duplas + professor lançador",
+    "objetivoTecnico": "Corrigir o gancho partindo do mesmo lado da quadra (drill de correção), progressão para gancho com contra-lob, depois integrar defesa + gancho + contra-lob e tapa como sequência completa.",
+    "objetivoTatico": "A sequência defesa → gancho → contra-lob é a cadeia de reconstrução clássica: defende com arco inferior ou estático → ganha o ponto alto com gancho → usa contra-lob para empurrar adversário ao fundo e reorganizar.",
+    "passos": [
+      "Drill 1 — Correção de gancho mesmo lado: Lançador e executor no mesmo lado da quadra. Executor treina o gancho sem precisar cruzar a rede — foco total na mecânica (braços altos, ombro, punho firme).",
+      "Drill 2 — Gancho vs contra-lob: Lançador lança bola alta. Executor alterna: um gancho baixo (saída no pé) e um contra-lob profundo (empurra ao fundo). Lê a posição adversária antes.",
+      "Drill 3 — Defesa + gancho + contra-lob: Professor simula smash. Executor defende (arco inferior ou estático). Bola fica alta → gancho → contra-lob de saída.",
+      "Drill 4 variações: (A) Tapa + gancho + contra-lob; (B) Lob de forehand + gancho + contra-lob.",
+      "Semi-aberto: após o contra-lob, ponto fica vivo com dupla completa."
+    ],
+    "pergunta": "O gancho foi uma saída intencional (baixa no pé ou contra-lob) ou você apenas devolveu a bola sem escolher?"
+  },
+  {
+    "id": "D055",
+    "nome": "3ª Bola Neutra + Defesa Back + Curta Back/Four + Gancho",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Backhand",
+      "Curta",
+      "Gancho",
+      "Defesa"
+    ],
+    "tags": [
+      "3ª bola neutra",
+      "Defesa backhand",
+      "Curta backhand",
+      "Gancho",
+      "Curta forehand"
+    ],
+    "estados": [
+      "Neutro",
+      "Defesa",
+      "Construção",
+      "Reconstrução"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Encadear 3ª bola neutra + defesa de backhand + curta de backhand ou forehand + gancho como sequência que integra controle defensivo, construção e saída alta.",
+    "objetivoTatico": "3ª bola neutra organiza o rali → defesa back absorve a resposta adversária → curta back ou four cria desequilíbrio → gancho fecha o ciclo quando a bola ficar alta. Treina a transição Neutro → Construção → Reconstrução em sequência única.",
+    "passos": [
+      "Ponto começa com saque. Sacador joga 3ª bola neutra de backhand — profunda, com margem.",
+      "Adversário responde. Sacador defende com defesa de backhand (estático back ou arco inferior) — raquete firme, sem tentar atacar.",
+      "Com a bola devolvida mais lenta, sacador executa curta de backhand ou forehand — escolha baseada na posição adversária.",
+      "Adversário corre para frente e levanta. Sacador executa gancho de controle — baixo no pé ou contra-lob.",
+      "Semi-aberto: após o gancho, ponto fica vivo."
+    ],
+    "pergunta": "A defesa de backhand foi um bloqueio firme ou você tentou acelerar quando a prioridade era controlar?"
+  },
+  {
+    "id": "D056",
+    "nome": "Estático Back + Curta Back + Ventaglio + Smash",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Backhand",
+      "Forehand",
+      "Smash"
+    ],
+    "tags": [
+      "Estático backhand",
+      "Curta backhand",
+      "Ventaglio",
+      "Smash",
+      "Lob bandeja back"
+    ],
+    "estados": [
+      "Defesa",
+      "Construção",
+      "Pressão",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Encadear estático de backhand + curta de backhand + ventaglio + smash como sequência que inicia defensiva e termina ofensiva, passando pelo backhand em três funções diferentes.",
+    "objetivoTatico": "Estático back absorve → curta back cria desequilíbrio → ventaglio mantém pressão pelo backhand → smash finaliza. Demonstra que o backhand não é apenas defesa: pode construir, pressionar e preparar a finalização.",
+    "passos": [
+      "Professor lança bola acelerada no backhand. Aluno executa estático de backhand — raquete firme, face levemente para cima, mão não dominante presente.",
+      "Na próxima oportunidade, aluno executa curta de backhand — desloca o adversário para frente.",
+      "Adversário levanta a bola ao lado do backhand. Aluno usa ventaglio — backhand anômalo com spin que cria pressão incomum.",
+      "Bola fica alta após o ventaglio. Aluno executa smash de finalização.",
+      "Variações: (A) Estático back + lob bandeja (muda saída do estático); (B) Smash fundo + ventaglio (inverte a ordem — começa pelo smash).",
+      "Semi-aberto: após smash, ponto fica vivo. Desempate com smash fundo."
+    ],
+    "pergunta": "O backhand foi apenas defesa ou você conseguiu usá-lo como ferramenta de construção em todas as três funções do drill?"
+  },
+  {
+    "id": "D057",
+    "nome": "Backhand + Gancho / Anômala + Gancho + Drop Back",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Backhand",
+      "Gancho"
+    ],
+    "tags": [
+      "Backhand",
+      "Gancho",
+      "Anômala backhand",
+      "Drop back",
+      "Lob back"
+    ],
+    "estados": [
+      "Neutro",
+      "Reconstrução",
+      "Construção"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Encadear backhand profundo + gancho de saída e sua variação com anômala de backhand + gancho. Adiciona drop back + anômala e lob back + gancho como variações de maior complexidade.",
+    "objetivoTatico": "Backhand/anômala criam desequilíbrio → gancho capitaliza quando bola fica alta e funda. Sequência mostra como o gancho emerge naturalmente de uma série de backhand difícil — não é improvisação.",
+    "passos": [
+      "Professor lança bola no backhand do executor. Executor executa backhand profundo cruzado + gancho quando a bola do adversário ficar alta e funda.",
+      "Variação: anômala de backhand em vez do backhand convencional. Anômala cria ângulo diferente → gancho se torna mais difícil para o adversário.",
+      "Drill avançado: backhand + gancho (ambos) → anômala + gancho (ambos) em sequência alternada.",
+      "Variações adicionais: (A) Drop de back + anômala (curta por backhand + spin anômalo); (B) Lob de back + gancho (lob profundo + gancho na resposta).",
+      "Semi-aberto: após gancho, ponto fica vivo."
+    ],
+    "pergunta": "O gancho foi uma resposta intencional à bola alta do adversário ou surgiu porque a situação forçou sem você prever?"
+  },
+  {
+    "id": "D058",
+    "nome": "Estático Back + Drop/Curta Back + Smash Cobertura + Lob Bandeja",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Backhand",
+      "Smash",
+      "Curta",
+      "Lob"
+    ],
+    "tags": [
+      "Estático backhand",
+      "Drop backhand",
+      "Curta backhand",
+      "Smash cobertura",
+      "Lob bandeja",
+      "Top spin back"
+    ],
+    "estados": [
+      "Defesa",
+      "Construção",
+      "Pressão",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Treinar estático de backhand + drop/curta back no meio + smash de cobertura + lob de bandeja como sequência que passa por defesa, construção, pressão e reinício.",
+    "objetivoTatico": "Estático back absorve bola difícil → drop/curta back no meio coloca bola no centro criando confusão na dupla adversária → smash de cobertura fecha o espaço → lob de bandeja reinicia se não definiu.",
+    "passos": [
+      "Professor lança bola acelerada no backhand. Aluno executa estático de backhand — base firme, raquete parede.",
+      "Com a bola devolvida mais lenta, aluno executa drop de backhand no meio ou curta back no meio — bola que cai no centro da quadra adversária criando indecisão entre os dois adversários.",
+      "Um dos adversários vai buscar a curta/drop e levanta. Aluno executa smash de cobertura — golpe que \"cobre\" o espaço aberto pela curta.",
+      "Se o smash de cobertura não finalizou, aluno usa lob de bandeja para reiniciar o ciclo.",
+      "Variação avançada: estático back + ventaglio + acelerada anômala / estático back + top spin back no meio.",
+      "Semi-aberto: desempate com lob de bandeja após sequência."
+    ],
+    "pergunta": "O drop/curta back no meio criou indecisão entre os adversários ou um deles teve tempo de cobrir facilmente?"
+  },
+  {
+    "id": "D059",
+    "nome": "3ª Bola Forehand + Smash + Drop",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Forehand",
+      "Smash",
+      "Curta"
+    ],
+    "tags": [
+      "3ª bola forehand",
+      "Smash",
+      "Drop (curta)",
+      "Tapa",
+      "Estático forehand"
+    ],
+    "estados": [
+      "Saque",
+      "Construção",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Encadear 3ª bola de forehand + smash + drop (curta) como sequência de ataque-finalização-reinício, onde o drop após o smash serve para recuperar ou criar nova pressão.",
+    "objetivoTatico": "3ª bola forehand cria pressão inicial → smash converte bola alta → drop finaliza se adversário avançar. Variação: tapa + smash + drop para quando a bola não é alta o suficiente para smash direto.",
+    "passos": [
+      "Ponto começa com saque. Sacador executa 3ª bola de forehand — profunda, com pressão.",
+      "Resposta do adversário sobe ou fica alta. Sacador executa smash na zona correta.",
+      "Adversário consegue defender o smash com lob ou defesa. Sacador usa drop (curta) para trazer o adversário à frente e criar nova pressão.",
+      "Variação: Lob de forehand + estático + drop + tapa + smash + drop — sequência mais longa que treina paciência tática.",
+      "Semi-aberto: após o drop final, ponto fica completamente vivo."
+    ],
+    "pergunta": "O drop após o smash foi intencional (criar nova pressão) ou foi porque você não tinha outra opção?"
+  },
+  {
+    "id": "D060",
+    "nome": "Estático Forehand 2x + Arco Inferior + Lob Bandeja",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Defesa",
+      "Smash",
+      "Lob"
+    ],
+    "tags": [
+      "Estático forehand (2x)",
+      "Arco inferior",
+      "Lob bandeja",
+      "Smash",
+      "Estático backhand"
+    ],
+    "estados": [
+      "Defesa",
+      "Neutro",
+      "Reconstrução"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Treinar dois estáticos de forehand consecutivos (resistência defensiva) seguidos de arco inferior para defesa de smash ou lob de bandeja para reorganização.",
+    "objetivoTatico": "Dupla que aguenta 2 estáticos consecutivos demonstra que pode manter a bola viva sob pressão antes de precisar usar arco inferior. O arco inferior ou lob de bandeja reinicia o ciclo ofensivo.",
+    "passos": [
+      "Professor/adversário lança sequência de smashes/tapas. Aluno defende os dois primeiros com estático de forehand — raquete parede, sem aceleração.",
+      "No terceiro ataque (smash direto ao solo): aluno usa arco inferior — recuo, joelhos flexionados, raquete pendular abaixo da cintura.",
+      "Saída do arco inferior: lob de bandeja para reorganizar. Variação: troca dos dois estáticos de forehand para estáticos de backhand + lob de bandeja.",
+      "Drill complementar do Lucas: Smash + acelerada (ciclo inverso — começa atacando e termina com acelerada de pressão).",
+      "Semi-aberto: após lob de bandeja, ponto fica vivo com dupla completa."
+    ],
+    "pergunta": "Depois dos dois estáticos, você identificou que vinha smash direto ao solo — ou foi surpreendido pelo arco inferior?"
+  },
+  {
+    "id": "D061",
+    "nome": "Voleio Dinâmico Chapado + Spin + Smash",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Forehand",
+      "Backhand",
+      "Smash"
+    ],
+    "tags": [
+      "Voleio dinâmico chapado",
+      "Voleio dinâmico spin",
+      "Smash"
+    ],
+    "estados": [
+      "Pressão",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas + professor lançador",
+    "objetivoTecnico": "Treinar o voleio dinâmico em duas variações (chapado e com spin) e encadeá-los com smash de cobertura ou finalização.",
+    "objetivoTatico": "Chapado fecha o meio com velocidade (tirar tempo) → spin cria dificuldade com mudança de trajetória → smash finaliza quando a dupla tem vantagem após os voleios. O aluno aprende que voleio chapado e spin têm objetivos táticos diferentes.",
+    "passos": [
+      "Dupla posicionada próxima à rede. Professor lança bola acelerada no meio ou no forehand.",
+      "Voleio chapado: Executor intercepta com voleio de forehand plano (sem spin) — passo curto diagonal, bloqueio firme, direcionado ao pé do adversário. Alta velocidade, baixa altura.",
+      "Voleio com spin: Executor intercepta colocando efeito no voleio — bola sai com rotação que dificulta a defesa adversária.",
+      "Drill combinado: chapado + spin alternados → quando bola ficar alta após a resposta, smash de finalização no meio ou paralela.",
+      "Semi-aberto: após smash + voleio dinâmico (meio ou spin), ponto fica vivo."
+    ],
+    "pergunta": "Você usou chapado para pressionar ou spin para criar dificuldade — ou a escolha foi aleatória?"
+  },
+  {
+    "id": "D062",
+    "nome": "Curta Back Meio + Lob Back + Defesa Arco Inferior / Curta Four + Lob Four + Estático",
+    "nivel": "intermediario",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Curta",
+      "Lob",
+      "Defesa",
+      "Backhand"
+    ],
+    "tags": [
+      "Curta backhand",
+      "Lob backhand",
+      "Arco inferior",
+      "Curta forehand",
+      "Lob forehand",
+      "Estático forehand"
+    ],
+    "estados": [
+      "Construção",
+      "Neutro",
+      "Defesa"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Treinar duas cadeias paralelas: (A) curta de backhand + lob de backhand + defesa arco inferior; (B) curta de forehand + lob de forehand + estático forehand. Cada cadeia passa por construção → lob → defesa.",
+    "objetivoTatico": "Curta cria abertura → lob (do mesmo lado) prepara para a dupla se reorganizar → defesa absorve o contra-ataque adversário. O aluno aprende que curta e lob podem funcionar em sequência no mesmo lado de jogo.",
+    "passos": [
+      "Cadeia A: Aluno executa curta de backhand no meio → adversário corre para frente → aluno faz lob de backhand profundo → adversário smasha → aluno defende em arco inferior.",
+      "Cadeia B: Aluno executa curta de forehand → adversário corre para frente → aluno faz lob de forehand profundo → adversário smasha → aluno usa estático de forehand para absorver.",
+      "Alternância: professor determina qual cadeia o aluno executa (A ou B) ou mistura sem aviso para forçar leitura.",
+      "Variação de desempate: smash (não joga) + curta back no meio / smash + curta four no meio — o smash sinaliza o início sem executar, forçando o adversário a reagir ao movimento.",
+      "Semi-aberto: após a defesa (arco inferior ou estático), ponto fica vivo."
+    ],
+    "pergunta": "O lob após a curta foi profundo o suficiente para forçar o adversário ao fundo, ou ficou curto e entregou o smash?"
+  },
+  {
+    "id": "D063",
+    "nome": "Acelerada/Catapulta + Curta Bandeja + Acelerada + Smash",
+    "nivel": "avancado",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Forehand",
+      "Smash",
+      "Curta"
+    ],
+    "tags": [
+      "Acelerada (catapulta)",
+      "Curta bandeja",
+      "Smash",
+      "Estático forehand",
+      "Forehand anômalo"
+    ],
+    "estados": [
+      "Pressão",
+      "Construção",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Treinar a sequência acelerada (catapulta) + curta de bandeja + nova acelerada + smash como progressão técnica de semana — inicia com mecânica da catapulta e termina com cadeia tática completa.",
+    "objetivoTatico": "Acelerada cria pressão → curta de bandeja desloca adversário → segunda acelerada tira o tempo da resposta → smash define. A sequência demonstra como alternar bolas curtas e aceleradas para criar pressão diversificada.",
+    "passos": [
+      "Treino 1 — Progressão técnica: Drill 1 = acelerada/catapulta isolada. Drill 2 = curta de bandeja + acelerada. Drill 3 = curta de bandeja + acelerada + smash. Drill 4 = estático forehand + curta + acelerada + smash.",
+      "Técnica da catapulta: punho solto, pegada leve, face levemente inclinada para trás. Apertar rápido e forte no contato. Empurrar o cabo para frente para gerar velocidade na cabeça da raquete.",
+      "Treino 2 — Progressão anômala: Drill 1 = forehand anômalo + ventaglio. Drill 2 = 1ª bola de aproximação + forehand anômalo. Drill 3 = 1ª bola de aproximação + forehand anômalo + ventaglio. Drill 4 = smash → ventaglio + tapa + smash.",
+      "Semi-aberto: estático forehand + curta + acelerada + smash. Ponto fica vivo após o smash."
+    ],
+    "pergunta": "A acelerada/catapulta gerou velocidade pela cabeça da raquete ou pelo braço?"
+  },
+  {
+    "id": "D064",
+    "nome": "Tapa Paralela + Ventaglio + Spin Back + Smash Fundo",
+    "nivel": "avancado",
+    "formato": "semi-aberto",
+    "golpes": [
+      "Forehand",
+      "Backhand",
+      "Smash"
+    ],
+    "tags": [
+      "Tapa paralela",
+      "Ventaglio",
+      "Top Spin backhand",
+      "Smash fundo",
+      "Smash cobertura"
+    ],
+    "estados": [
+      "Pressão",
+      "Finalização"
+    ],
+    "jogadores": "2 duplas completas",
+    "objetivoTecnico": "Encadear tapa paralela (pressão direta) + ventaglio (backhand anômalo) + top spin backhand cruzada + smash fundo como sequência de pressão avançada com variação de lado e tipo de spin.",
+    "objetivoTatico": "Tapa paralela desorganiza lateralmente → ventaglio mantem pressão pelo backhand com ângulo diferente → spin back cruzada cria abertura → smash fundo fecha o ponto com bola de pressão ao fundo. Cada golpe varia a direção e o tipo de pressão.",
+    "passos": [
+      "Rali em andamento. Executor recebe bola vulnerável no forehand e executa tapa paralela — aceleração curta direcionada ao lado paralelo do adversário.",
+      "Bola retorna ao backhand do executor. Usa ventaglio — forehand anômalo com spin pelo backhand — para manter pressão e criar ângulo incomum.",
+      "Bola retorna novamente ao backhand. Executor usa top spin de backhand cruzada — spin de cima para baixo que cria trajetória descendente e dificulta a resposta.",
+      "Bola sobe após o top spin back. Executor executa smash do fundo — pressão máxima de fundo de quadra.",
+      "Drill adicional de smash cobertura: smash fundo meio + tapa + smash cobertura (parceiro cobre a resposta após o smash fundo).",
+      "Semi-aberto: após smash fundo, ponto fica completamente vivo."
+    ],
+    "pergunta": "Cada golpe da sequência variou a direção ou você ficou no mesmo padrão que o adversário já estava lendo?"
   }
 ];
 
 const LEVEL_ORDER = ['iniciante', 'intermediario', 'avancado'];
-const FORMAT_ORDER = ['fechado', 'semi-aberto', 'aberto'];
+const FORMAT_ORDER = ['fechado', 'semiaberto', 'aberto'];
 
 function norm(v = '') {
   return String(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[-_\s]+/g, '').trim();
@@ -1293,7 +2175,7 @@ function textOf(drill) {
   return norm([drill.nome, drill.objetivoTecnico, drill.objetivoTatico, drill.golpes?.join(' '), drill.tags?.join(' '), drill.estados?.join(' ')].join(' '));
 }
 
-export function recomendarDrillsCbt(ctx = {}, limit = 4) {
+function scoreDrill(drill, ctx = {}) {
   const nivel = ctx.nivel || ctx.level || 'Intermediário';
   const metodo = ctx.metodo || ctx.decisaoPedagogica?.metodo || ctx.tipo_treino || '';
   const foco = canonicalFund(ctx.foco || ctx.fundamento || ctx.focoTecnico || ctx.decisaoPedagogica?.focoTecnico || ctx.scout?.erroPrincipal?.fundamento || '');
@@ -1305,24 +2187,74 @@ export function recomendarDrillsCbt(ctx = {}, limit = 4) {
     ctx.scout?.leitura,
     ...(ctx.evidenciasScout || []),
   ].filter(Boolean).map(norm);
+  const hay = textOf(drill);
+  let score = 0;
+  let relevance = 0;
+  score += levelScore(drill.nivel, nivel);
+  score += formatScore(drill.formato, metodo);
+  if (foco && drill.golpes.some(g => canonicalFund(g) === foco || norm(g).includes(norm(foco)))) { score += 12; relevance += 1; }
+  if (foco && drill.tags?.some(g => norm(g).includes(norm(foco)))) { score += 12; relevance += 1; }
+  if (foco && norm(foco).length > 4 && hay.includes(norm(foco))) { score += 8; relevance += 1; }
+  for (const termo of termos) {
+    if (!termo || termo.length < 5) continue;
+    if (hay.includes(termo)) { score += 3; relevance += 1; }
+  }
+  if (norm(metodo).includes('semi') && norm(drill.formato) === 'semiaberto') score += 2;
+  if (norm(metodo).includes('aberto') && norm(drill.formato) === 'aberto') score += 2;
+  return { ...drill, score, relevance };
+}
 
-  return DRILLS_CBT.map(drill => {
-    const hay = textOf(drill);
-    let score = 0;
-    let relevance = 0;
-    score += levelScore(drill.nivel, nivel);
-    score += formatScore(drill.formato, metodo);
-    if (foco && drill.golpes.some(g => canonicalFund(g) === foco || norm(g).includes(norm(foco)))) { score += 12; relevance += 1; }
-    if (foco && drill.tags?.some(g => norm(g).includes(norm(foco)))) { score += 12; relevance += 1; }
-    if (foco && norm(foco).length > 4 && hay.includes(norm(foco))) { score += 8; relevance += 1; }
-    for (const termo of termos) {
-      if (!termo || termo.length < 5) continue;
-      if (hay.includes(termo)) { score += 3; relevance += 1; }
+export function recomendarDrillsCbt(ctx = {}, limit = 4) {
+  const foco = canonicalFund(ctx.foco || ctx.fundamento || ctx.focoTecnico || ctx.decisaoPedagogica?.focoTecnico || ctx.scout?.erroPrincipal?.fundamento || '');
+  return DRILLS_CBT
+    .map(drill => scoreDrill(drill, ctx))
+    .filter(d => d.score > 0 && (!foco || d.relevance > 0))
+    .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
+    .slice(0, limit);
+}
+
+function bestByFormat(scored, formato, used = new Set()) {
+  return scored.find(d => norm(d.formato) === norm(formato) && !used.has(d.id));
+}
+
+function firstUnused(scored, used = new Set()) {
+  return scored.find(d => !used.has(d.id));
+}
+
+export function recomendarSequenciaDrillsCbt(ctx = {}) {
+  const scored = recomendarDrillsCbt(ctx, 12);
+  const used = new Set();
+  const metodo = norm(ctx.metodo || ctx.decisaoPedagogica?.metodo || ctx.tipo_treino || '');
+  const alvo = [];
+
+  const pick = (formatos) => {
+    let chosen = null;
+    for (const formato of formatos) {
+      chosen = bestByFormat(scored, formato, used);
+      if (chosen) break;
     }
-    if (norm(metodo).includes('semi') && drill.formato === 'semi-aberto') score += 2;
-    if (norm(metodo).includes('aberto') && drill.formato === 'aberto') score += 2;
-    return { ...drill, score, relevance };
-  }).filter(d => d.score > 0 && (!foco || d.relevance > 0)).sort((a, b) => b.score - a.score || a.id.localeCompare(b.id)).slice(0, limit);
+    chosen = chosen || firstUnused(scored, used);
+    if (chosen) {
+      used.add(chosen.id);
+      alvo.push(chosen);
+    }
+  };
+
+  if (metodo === 'fechado') {
+    pick(['fechado']);
+    pick(['semiaberto', 'fechado']);
+    pick(['aberto', 'semiaberto']);
+  } else if (metodo === 'aberto') {
+    pick(['semiaberto', 'fechado']);
+    pick(['aberto', 'semiaberto']);
+    pick(['aberto']);
+  } else {
+    pick(['fechado', 'semiaberto']);
+    pick(['semiaberto']);
+    pick(['aberto', 'semiaberto']);
+  }
+
+  return alvo;
 }
 
 export function drillResumoParaIA(drill) {

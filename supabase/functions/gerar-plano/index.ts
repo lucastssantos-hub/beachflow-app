@@ -47,6 +47,7 @@ Se não houver dado suficiente, não preencha com treino padrão: gere uma aula 
 PROIBIDO usar frases vagas como "melhorar consistência", "trabalhar posicionamento", "exercício de fundamentos", "manter a bola em jogo" sem contexto, setor, bola inicial e critério.
 
 BIBLIOTECA CBT: se o JSON tiver "bibliotecaDrillsCbt", use esses drills como fonte canônica dos blocos. Escolha os drills por ID conforme diagnóstico, nível e método. Você pode adaptar comando/regra para ficar compacto, mas NÃO invente um drill incompatível quando houver drill CBT adequado. Inclua "drill_id" e "drill_nome" em cada bloco baseado em drill.
+PADRÃO CBT DA AULA: Bloco 1 deve estabilizar o padrão (preferir drill fechado ou o mais simples disponível); Bloco 2 deve aplicar com decisão limitada (preferir semiaberto); Bloco 3 deve transferir para jogo (preferir aberto). Se a biblioteca enviada não tiver um formato exato para o problema, use o drill mais próximo e explique a regra de forma compacta.
 
 CONFIANÇA — calibre pela amostra do scout (pontosAnalisados) e convergência das fontes. Use 4 níveis:
 - "muito baixa": scout < 10 pontos OU fontes divergentes sem confirmação.
@@ -135,6 +136,7 @@ function buildUserMessage(ctx: Record<string, unknown> = {}): string {
     "- Siga a hierarquia de dados e calibre a confiança pela amostra do scout (pontosAnalisados).",
     "- Se houver alunos/avaliações/scout no JSON, use esses dados no diagnóstico; não gere plano apenas pelo nível.",
     "- Se houver bibliotecaDrillsCbt no JSON, escolha drills dessa biblioteca e preserve o ID no bloco.",
+    "- Monte a progressão CBT: fechado/estabilização → semiaberto/aplicação → aberto/jogo condicionado.",
     "- Cada bloco precisa trazer bola inicial, alvo/setor, rotação e critério mensurável, mas tudo em frases curtas.",
     "- Priorize comandos executáveis em quadra: evite listas longas e explicações.",
     "- Respeite as técnicas permitidas/bloqueadas para o nível da turma.",
