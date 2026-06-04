@@ -7,6 +7,7 @@ import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutD
 import { DEMO_ALUNOS as ALUNOS, DEMO_TURMAS, DEMO_RADAR_LABELS as RLAB } from './data/demo.js';
 import { prepararConfirmacoesTurma, atualizarStatusConfirmacoes, getConfirmacao, responderConfirmacao, confirmationUrl, whatsappUrl, statusLabel, statusTone } from './data/confirmacoes.js';
 import { AUTO_FUNDAMENTOS, prepararAutoavaliacaoAluno, salvarAutoavaliacaoToken } from './data/autoavaliacao.js';
+import { practicalIssueText } from './data/ontology.js';
 
 
 /* ===== app/ios-frame.jsx ===== */
@@ -1123,12 +1124,13 @@ function feedbackAlunoTexto(a) {
     .slice(0,2);
   const positivosFund = positivosOrdenados.slice(0,2);
   const extraTatico = (scout?.problemasTaticos || []).find(p=>p?.texto);
-  const textoTatico = extraTatico?.texto ? String(extraTatico.texto).replace(/\s+/g,' ').slice(0,160) : '';
+  const textoTatico = extraTatico?.pratica || scout?.leituraPratica || (extraTatico?.texto ? practicalIssueText(extraTatico.texto) : '');
+  const textoTaticoLimpo = textoTatico ? String(textoTatico).replace(/\s+/g,' ').slice(0,190) : '';
   const extraTexto = positivosFund.length || (erro && extrasFund.length) || extraTatico
     ? ` ${[
         positivosFund.length ? `Também apareceram boas ações em ${positivosFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
         erro && extrasFund.length ? `Nos erros registrados, além do ponto principal, também apareceram ${extrasFund.map(([f,n])=>`${f} (${n})`).join(' e ')}.` : '',
-        textoTatico ? `Também apareceu este padrão no jogo: ${textoTatico}.` : '',
+        textoTaticoLimpo ? `Na prática: ${textoTaticoLimpo}.` : '',
       ].filter(Boolean).join(' ')}`
     : '';
   const mesmaNota = autoForte && autoFraco && (autoForte[0] === autoFraco[0] || Number(autoForte[1]) === Number(autoFraco[1]));
@@ -1142,7 +1144,8 @@ function feedbackAlunoTexto(a) {
     erros: errosSignificativos,
     positivos: positivosOrdenados,
   });
-  return `Oi, ${nome}! Aqui vai um feedback simples do seu treino.\n\nNo scout, vimos ${pontoAtencao}${extraTexto}\n\n${autoTexto}${leituraCruzada ? `\n\n${leituraCruzada}` : ''}\n\nIsso mostra um ajuste de jogo: em algumas bolas, esse fundamento ainda precisa de mais regularidade, melhor escolha e execução mais tranquila.\n\nVamos trabalhar ${foco} com foco em controle e decisão, sem complicar.\n\nA ideia é evoluir um ajuste por vez.`;
+  const focoPratico = scout?.cartaoFocoScout?.foco || (textoTaticoLimpo ? textoTaticoLimpo : `usar ${foco} com mais controle e escolha melhor`);
+  return `Oi, ${nome}! Aqui vai um feedback simples do seu treino.\n\nCOMO VOCÊ SE PERCEBEU\n${autoTexto}\n\nO QUE APARECEU NO JOGO\nNo scout, vimos ${pontoAtencao}${extraTexto}\n\n${leituraCruzada ? `${leituraCruzada}\n\n` : ''}PRÓXIMO FOCO\n${focoPratico}\n\nVamos evoluir um ajuste por vez, sem complicar.`;
 }
 
 function ScreenAluno({ nav, params }) {

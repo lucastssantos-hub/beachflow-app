@@ -1,6 +1,7 @@
 // Camada de dados de alunos/turmas (READ-ONLY) — lê o app antigo no mesmo Supabase.
 // Tabelas: students, classes, class_enrollments, evaluations. RLS por teacher_id = auth.uid().
 import { supabase } from '../supabaseClient.js';
+import { inferTacticalIssue, practicalIssueText, focusCardFromIssue, ONTOLOGY_PROMPT_BLOCK } from './ontology.js';
 
 const PALETTE = ['#16C2A3', '#FF6A45', '#1E72E0'];
 const NIVEL = { iniciante: 'Iniciante', intermediario: 'Intermediário', avancado: 'Avançado' };
@@ -103,7 +104,8 @@ function buildScoutResumo(events = []) {
     if (isPositive) addCount(positivesByFund, fund);
     if (isWinner) addCount(winnersByFund, fund);
     addCount(intentions, e.inferred_intention);
-    addCount(issues, e.tactical_issue);
+    const ontologyIssue = inferTacticalIssue(e);
+    addCount(issues, e.tactical_issue || ontologyIssue?.issue);
     if (e.match_id) matches.add(e.match_id);
   }
 
@@ -111,6 +113,8 @@ function buildScoutResumo(events = []) {
   const topZone = topEntries(errorZones, 1)[0];
   const topErrorZone = topError ? topEntries(errorZonesByFund[topError[0]], 1)[0] : null;
   const topIssue = topEntries(issues, 1)[0];
+  const practicalIssue = topIssue ? practicalIssueText(topIssue[0]) : '';
+  const focusCard = topIssue ? focusCardFromIssue(topIssue[0]) : null;
   const leitura = [
     topError ? `${topError[1]} erro(s) em ${topError[0]}` : '',
     topZone ? `zona dos erros ${topZone[0]}` : '',
@@ -132,7 +136,9 @@ function buildScoutResumo(events = []) {
     positivosPorFundamento: Object.fromEntries(topEntries(positivesByFund, 6)),
     winnersPorFundamento: Object.fromEntries(topEntries(winnersByFund, 6)),
     intencoes: Object.fromEntries(topEntries(intentions, 4)),
-    problemasTaticos: topEntries(issues, 4).map(([texto, total]) => ({ texto, total })),
+    problemasTaticos: topEntries(issues, 4).map(([texto, total]) => ({ texto, total, pratica: practicalIssueText(texto), cartao: focusCardFromIssue(texto) })),
+    leituraPratica: practicalIssue || '',
+    cartaoFocoScout: focusCard,
     eventosRecentes: rows.slice(0, 12).map((e) => ({
       data: e.created_at,
       fundamento: canonicalFund(e.fundamental || e.technique || 'Consistência'),
@@ -406,7 +412,9 @@ export async function contextoTurmaParaIA(turma) {
         winners: scout.winners,
         erroPrincipal: scout.erroPrincipal,
         zonaCritica: scout.zonaCritica,
-        leitura: scout.leitura,
+      leitura: scout.leitura,
+      leituraPratica: scout.leituraPratica,
+      cartaoFocoScout: scout.cartaoFocoScout,
       } : null,
     };
   });
@@ -438,5 +446,6 @@ export async function contextoTurmaParaIA(turma) {
       ].filter(Boolean),
     } : {}),
     observacoes: turma.foco ? `Foco padrão cadastrado da turma: ${turma.foco}. Use apenas se convergir com radar/scout.` : '',
+    ontologiaOperacional: ONTOLOGY_PROMPT_BLOCK,
   };
 }

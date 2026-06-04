@@ -17,6 +17,20 @@ PRINCÍPIO: todo plano nasce de um diagnóstico com evidência, nunca apenas do 
 
 HIERARQUIA DOS DADOS (peso decrescente): 1) Scout recente com amostra suficiente; 2) Avaliação técnica do professor; 3) Histórico/evolução; 4) Autoavaliação do aluno; 5) Nível. A autoavaliação NÃO manda sozinha; se diverge do scout, prevalece o scout (e diga isso).
 
+ONTOLOGIA CANÔNICA INVISÍVEL: use como cérebro interno, não como texto de aula.
+- O jogo vem antes do golpe; o golpe é consequência da situação.
+- Decisão vem antes da execução; winner fora de contexto não valida a escolha.
+- Estados internos: Saque, Defesa, Reconstrução, Neutro, Construção, Pressão, Finalização.
+- Para alunos, NUNCA usar termos como "Neutro", "Reconstrução", "Pressão", "transição quebrada". Traduza para prática: "atacou cedo", "não recuperou base", "devolução entregou terceira bola", "lob ficou curto".
+- Saque: direção -> devolução previsível -> terceira bola organizada.
+- Devolução: reduzir a qualidade da terceira bola adversária; não buscar winner automático.
+- Defesa/Reconstrução: ganhar tempo com lob profundo, gancho com margem ou defesa estática.
+- Neutro/Construção: criar desequilíbrio antes de pressionar.
+- Pressão/Finalização: finalizar apenas com vantagem clara, bola favorável, equilíbrio e posição.
+- Proibições pedagógicas: smash em zona vermelha; tapa de backhand como aceleração principal; lob curto; curta com adversário adiantado.
+- Tapa é prioritariamente forehand em bola média-alta, à frente, com equilíbrio. No backhand, usar ventaglio/anômala ou controle.
+- Bandeja é controle/continuidade, não semi-smash nem finalização.
+
 REGRA ANTI-GENÉRICO: cada plano precisa ser aplicável por um professor em quadra sem improvisar. Em cada bloco, escreva:
 - quem participa e como organiza (filas, duplas, lado da quadra, quantidade por estação);
 - onde o professor fica e como a bola começa (saque, bola lançada, feed da cesta, troca iniciada, ponto real);

@@ -1,6 +1,7 @@
 // Motor de pontuação do scout — PORTE FIEL do app antigo (beach tennis).
 // Formatos: lesson4 (até 4 games), lesson6 (até 6), competition6 (set c/ tiebreak),
 // pro3 (melhor de 3 c/ super tiebreak no 1-1).
+import { inferIntentionFromOntology } from './ontology.js';
 
 export const MODES = [
   ['lesson4', 'Aula até 4 games'],
@@ -67,10 +68,5 @@ export function applyScoutWinner(score, winner) {
 }
 
 export function inferIntention(technique, outcome, zone) {
-  if (technique === 'Smash' || technique === 'Tapa' || (technique === 'Gancho' && outcome === 'Winner') || (technique === 'Curta' && outcome === 'Winner')) return 'Finalização';
-  if (['Acelerada', 'Ventaglio', 'Anômalo', 'Voleio'].includes(technique) || (technique === 'Gancho' && zone === 'Verde')) return 'Pressão';
-  if (['Curta', 'Bandeja'].includes(technique) || (technique === 'Lob' && outcome === 'Winner')) return 'Construção';
-  if (technique === 'Gancho') return 'Reconstrução';
-  if (['Lob', 'Defesa alta', 'Defesa baixa'].includes(technique)) return 'Defesa';
-  return 'Neutro';
+  return inferIntentionFromOntology(technique, outcome, zone);
 }
