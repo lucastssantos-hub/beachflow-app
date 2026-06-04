@@ -165,9 +165,10 @@ function localPlanFromContext(ctx = {}, erro = '') {
   const drillCtx = { ...ctx, foco: focus.fund, fundamento: focus.fund, metodo };
   const drills = recomendarSequenciaDrillsCbt(drillCtx);
   const drillBlocks = drills.map((drill, i) => drillParaBloco(drill, [
-    'Bloco 1 — Aquecimento específico',
-    'Bloco 2 — Exercício principal',
-    'Bloco 3 — Jogo condicionado',
+    'Bloco 1 — Fechado do golpe',
+    'Bloco 2 — Fechado da transição',
+    'Bloco 3 — Semiaberto da transição',
+    'Bloco 4 — Jogo condicionado',
   ][i] || `Bloco ${i + 1}`));
   const fallbackBlocks = [
     {
@@ -193,6 +194,7 @@ function localPlanFromContext(ctx = {}, erro = '') {
       observar: 'A ação resolve o problema de jogo ou vira tentativa apressada?',
     },
   ];
+  const exerciseBlocks = drillBlocks.length ? drillBlocks : fallbackBlocks;
   return {
     titulo: cfg.titulo,
     diagnostico: {
@@ -213,9 +215,9 @@ function localPlanFromContext(ctx = {}, erro = '') {
     },
     objetivo: cfg.objetivo,
     blocos: [
-      ...(drillBlocks.length ? drillBlocks : fallbackBlocks),
+      ...exerciseBlocks,
       {
-        nome: 'Bloco 4 — Fechamento',
+        nome: `Bloco ${exerciseBlocks.length + 1} — Fechamento`,
         tempo: "10'",
         pergunta_final: 'Qual bola pediu controle e qual bola liberou pressão?',
         registro_professor: 'Anotar se o padrão melhorou no jogo com regra.',

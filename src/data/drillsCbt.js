@@ -2137,6 +2137,18 @@ function norm(v = '') {
   return String(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[-_\s]+/g, '').trim();
 }
 
+function plain(v = '') {
+  return String(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function hasTerm(value = '', term = '') {
+  const t = plain(term).trim();
+  if (!t) return false;
+  const p = plain(value);
+  if (t.length <= 4) return new RegExp(`(^|[^a-z0-9])${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`).test(p);
+  return p.includes(t);
+}
+
 function canonicalFund(v = '') {
   const t = norm(v);
   if (t.includes('devol')) return 'Devolução';
@@ -2175,6 +2187,36 @@ function textOf(drill) {
   return norm([drill.nome, drill.objetivoTecnico, drill.objetivoTatico, drill.golpes?.join(' '), drill.tags?.join(' '), drill.estados?.join(' ')].join(' '));
 }
 
+function transitionTermsFor(foco = '', ctx = {}) {
+  const f = canonicalFund(foco);
+  const scout = norm([ctx.scout?.leitura, ctx.diagnostico?.contexto, ctx.diagnostico?.gapPrincipal, ...(ctx.evidenciasScout || [])].filter(Boolean).join(' '));
+  const base = {
+    Saque: ['terceirabola', 'devolucao', 'entrada', 'neutro', 'construcao', 'direcao'],
+    Devolução: ['terceirabola', 'sacador', 'entrada', 'rali', 'neutro', 'continuidade'],
+    Forehand: ['terceirabola', 'curta', 'pressao', 'smash', 'construcao', 'direcao'],
+    Backhand: ['neutra', 'continuidade', 'gancho', 'anomala', 'ventaglio', 'controle'],
+    Lob: ['reorganizacao', 'defesa', 'recuperacao', 'gancho', 'contralob', 'profundo'],
+    Smash: ['lob', 'zonas', 'fundo', 'pressao', 'construcao', 'finalizacao'],
+    Gancho: ['recuperacao', 'reorganizacao', 'contralob', 'lob', 'defesa', 'ventaglio'],
+    Tapa: ['bola', 'vulneravel', 'curta', 'pressao', 'smash', 'recuperacao', 'finalizacao'],
+    Curta: ['construcao', 'desloca', 'smash', 'lob', 'aproximacao', 'cobertura'],
+    Posicionamento: ['centro', 'cobertura', 'protecao', 'comunicacao', 'expansao', 'dupla'],
+    Defesa: ['recuperacao', 'reorganizacao', 'lob', 'gancho', 'arco', 'contralob'],
+  }[f] || ['construcao', 'continuidade', 'recuperacao'];
+  const extra = [];
+  if (scout.includes('terceirabola')) extra.push('terceirabola', 'entrada');
+  if (scout.includes('cedo') || scout.includes('finalizacao')) extra.push('construcao', 'finalizacao');
+  if (scout.includes('defesa') || scout.includes('saida')) extra.push('recuperacao', 'reorganizacao');
+  return [...new Set([...base, ...extra])];
+}
+
+function transitionScore(drill, ctx = {}) {
+  const foco = canonicalFund(ctx.foco || ctx.fundamento || ctx.focoTecnico || ctx.decisaoPedagogica?.focoTecnico || ctx.scout?.erroPrincipal?.fundamento || '');
+  const terms = transitionTermsFor(foco, ctx);
+  const hay = textOf(drill);
+  return terms.reduce((acc, term) => acc + (hay.includes(norm(term)) ? 1 : 0), 0);
+}
+
 function scoreDrill(drill, ctx = {}) {
   const nivel = ctx.nivel || ctx.level || 'Intermediário';
   const metodo = ctx.metodo || ctx.decisaoPedagogica?.metodo || ctx.tipo_treino || '';
@@ -2193,15 +2235,20 @@ function scoreDrill(drill, ctx = {}) {
   score += levelScore(drill.nivel, nivel);
   score += formatScore(drill.formato, metodo);
   if (foco && drill.golpes.some(g => canonicalFund(g) === foco || norm(g).includes(norm(foco)))) { score += 12; relevance += 1; }
-  if (foco && drill.tags?.some(g => norm(g).includes(norm(foco)))) { score += 12; relevance += 1; }
-  if (foco && norm(foco).length > 4 && hay.includes(norm(foco))) { score += 8; relevance += 1; }
+  if (foco && drill.tags?.some(g => hasTerm(g, foco))) { score += 12; relevance += 1; }
+  if (foco && hasTerm(drill.nome, foco)) { score += 20; relevance += 2; }
+  if (foco && norm(foco).length > 4 && hasTerm(hay, foco)) { score += 8; relevance += 1; }
   for (const termo of termos) {
     if (!termo || termo.length < 5) continue;
     if (hay.includes(termo)) { score += 3; relevance += 1; }
   }
   if (norm(metodo).includes('semi') && norm(drill.formato) === 'semiaberto') score += 2;
   if (norm(metodo).includes('aberto') && norm(drill.formato) === 'aberto') score += 2;
-  return { ...drill, score, relevance };
+  const transicao = transitionScore(drill, ctx);
+  const nomeDoFoco = !!(foco && hasTerm(drill.nome, foco));
+  const nomeComecaNoFoco = !!(foco && plain(drill.nome).trim().startsWith(plain(foco).trim()));
+  score += transicao * 4;
+  return { ...drill, score, relevance, transicao, nomeDoFoco, nomeComecaNoFoco };
 }
 
 export function recomendarDrillsCbt(ctx = {}, limit = 4) {
@@ -2213,8 +2260,15 @@ export function recomendarDrillsCbt(ctx = {}, limit = 4) {
     .slice(0, limit);
 }
 
-function bestByFormat(scored, formato, used = new Set()) {
-  return scored.find(d => norm(d.formato) === norm(formato) && !used.has(d.id));
+function bestByFormat(scored, formato, used = new Set(), opts = {}) {
+  const candidates = scored.filter(d => {
+    if (norm(d.formato) !== norm(formato) || used.has(d.id)) return false;
+    if (opts.transition && !d.transicao) return false;
+    if (opts.specific && !d.relevance) return false;
+    return true;
+  });
+  if (opts.specific) return candidates.find(d => d.nomeComecaNoFoco) || candidates.find(d => d.nomeDoFoco) || candidates[0];
+  return candidates[0];
 }
 
 function firstUnused(scored, used = new Set()) {
@@ -2222,18 +2276,18 @@ function firstUnused(scored, used = new Set()) {
 }
 
 export function recomendarSequenciaDrillsCbt(ctx = {}) {
-  const scored = recomendarDrillsCbt(ctx, 12);
+  const scored = recomendarDrillsCbt(ctx, 18);
   const used = new Set();
   const metodo = norm(ctx.metodo || ctx.decisaoPedagogica?.metodo || ctx.tipo_treino || '');
   const alvo = [];
 
-  const pick = (formatos) => {
+  const pick = (formatos, opts = {}) => {
     let chosen = null;
     for (const formato of formatos) {
-      chosen = bestByFormat(scored, formato, used);
+      chosen = bestByFormat(scored, formato, used, opts);
       if (chosen) break;
     }
-    chosen = chosen || firstUnused(scored, used);
+    if (!opts.required) chosen = chosen || firstUnused(scored, used);
     if (chosen) {
       used.add(chosen.id);
       alvo.push(chosen);
@@ -2241,17 +2295,20 @@ export function recomendarSequenciaDrillsCbt(ctx = {}) {
   };
 
   if (metodo === 'fechado') {
-    pick(['fechado']);
-    pick(['semiaberto', 'fechado']);
-    pick(['aberto', 'semiaberto']);
+    pick(['fechado', 'semiaberto'], { specific: true });
+    pick(['fechado'], { transition: true, required: true });
+    pick(['semiaberto'], { transition: true });
+    pick(['aberto', 'semiaberto'], { transition: true });
   } else if (metodo === 'aberto') {
-    pick(['semiaberto', 'fechado']);
-    pick(['aberto', 'semiaberto']);
-    pick(['aberto']);
+    pick(['fechado', 'semiaberto'], { specific: true, required: true });
+    pick(['fechado'], { transition: true, required: true });
+    pick(['semiaberto'], { transition: true });
+    pick(['aberto'], { transition: true });
   } else {
-    pick(['fechado', 'semiaberto']);
-    pick(['semiaberto']);
-    pick(['aberto', 'semiaberto']);
+    pick(['fechado', 'semiaberto'], { specific: true, required: true });
+    pick(['fechado'], { transition: true, required: true });
+    pick(['semiaberto'], { transition: true });
+    pick(['aberto', 'semiaberto'], { transition: true });
   }
 
   return alvo;
