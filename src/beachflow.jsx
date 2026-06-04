@@ -1604,10 +1604,10 @@ function ScreenPlano({ nav, params }) {
         right={<div className="bf-tap" onClick={startEdit} style={{ width:34,height:34,borderRadius:11, border:`1px solid ${C.line2}`,
           display:'flex',alignItems:'center',justifyContent:'center' }}><Icon name="edit" size={18} color={C.turq}/></div>}/>
       <Body top={16} bottom={96}>
-        {st.fonte==='exemplo' &&
+        {st.fonte==='local' &&
           <div style={{ marginBottom:12, padding:'9px 12px', borderRadius:10, fontSize:11.5,
-            background:'rgba(246,180,60,.10)', border:'1px solid rgba(246,180,60,.28)', color:C.warn }}>
-            Plano de exemplo · configure a IA para gerar de verdade (ver supabase/README.md)</div>}
+            background:'rgba(22,194,163,.10)', border:'1px solid rgba(22,194,163,.25)', color:C.turq }}>
+            Plano local gerado com os dados disponíveis.</div>}
         {saved &&
           <div style={{ marginBottom:12, padding:'9px 12px', borderRadius:10, fontSize:12, animation:'bf-in .25s ease',
             background:'rgba(39,192,138,.12)', border:'1px solid rgba(39,192,138,.3)', color:C.ok }}>
@@ -2067,9 +2067,9 @@ function ScreenDiagnostico({ nav, params }) {
           </ul>
         </Card>
 
-        {st.fonte==='exemplo' &&
+        {st.fonte==='local' &&
           <div style={{ marginTop:12, fontSize:11, color:C.n500, textAlign:'center' }}>
-            Diagnóstico de exemplo · configure a IA para usar dados reais</div>}
+            Diagnóstico local gerado com os dados disponíveis.</div>}
       </Body>
       <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'12px 20px 30px',
         background:'linear-gradient(transparent,'+C.navy900+' 30%)' }}>
