@@ -6,3 +6,4 @@ dist
 .DS_Store
 .evals
 material-ia
+supabase/.temp

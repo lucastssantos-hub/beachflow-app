@@ -1028,7 +1028,7 @@ function ScreenAlunos({ nav }) {
               style={{ border:`1px solid ${C.line2}`, borderRadius:9, padding:'8px 10px',
                 background:showMissingAuto?'rgba(22,194,163,.12)':'transparent', color:showMissingAuto?C.turq:C.inkDim,
                 fontSize:12.5, fontWeight:700 }}>
-              {showMissingAuto?'Ocultar':'Reenviar'}
+              {showMissingAuto?'Ocultar':'Enviar'}
             </button>
           </div>
           {autoMsg && <div style={{ fontSize:11.5, color:autoMsg.includes('Não foi')?C.err:C.turq, marginTop:9, lineHeight:1.35 }}>{autoMsg}</div>}
@@ -1041,9 +1041,9 @@ function ScreenAlunos({ nav }) {
                   <div style={{ fontSize:11.5, color:a.phone?C.inkDim:C.warn }}>{a.phone || 'Sem WhatsApp'}</div>
                 </div>
                 <button className="bf-tap" onClick={()=>enviarAuto(a)}
-                  style={{ border:0, borderRadius:9, padding:'8px 10px',
+                  style={{ border:0, borderRadius:9, padding:'8px 12px',
                     background:'rgba(22,194,163,.14)', color:C.turq, fontSize:12.5, fontWeight:700 }}>
-                  Reenviar
+                  {a.phone?'Enviar no WhatsApp':'Copiar link'}
                 </button>
               </div>)}
           </div>}
