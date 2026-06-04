@@ -3,7 +3,7 @@
 // Se o endpoint não estiver configurado/acessível, gera um plano local com os
 // dados disponíveis para a interface continuar funcionando em quadra.
 
-import { recomendarDrillsCbt, recomendarSequenciaDrillsCbt, drillResumoParaIA, drillParaBloco } from '../data/drillsCbt.js';
+import { DRILLS_CBT, recomendarDrillsCbt, recomendarSequenciaDrillsCbt, drillResumoParaIA, drillParaBloco } from '../data/drillsCbt.js';
 import { pedagogicalPlanForContext } from './pedagogicalEngine.js';
 
 const ENV = import.meta.env || {};
@@ -106,6 +106,11 @@ const FUND_CONFIG = {
   },
 };
 
+function drillsFromPedagogicalPlan(planoPedagogico = {}) {
+  const byId = new Map(DRILLS_CBT.map((d) => [d.id, d]));
+  return (planoPedagogico.drillsSelecionados || []).map((id) => byId.get(id)).filter(Boolean);
+}
+
 function num(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
@@ -166,7 +171,8 @@ function localPlanFromContext(ctx = {}, erro = '') {
   const source = focus.source || 'dados locais';
   const metodo = confidence === 'alta' ? 'aberto' : 'semiaberto';
   const drillCtx = { ...ctx, foco: focus.fund, fundamento: focus.fund, metodo };
-  const drills = recomendarSequenciaDrillsCbt(drillCtx);
+  const drills = drillsFromPedagogicalPlan(planoPedagogico);
+  const fallbackDrills = recomendarSequenciaDrillsCbt(drillCtx);
   const drillBlocks = drills.map((drill, i) => drillParaBloco(drill, [
     'Bloco 1 — Fechado do golpe',
     'Bloco 2 — Fechado da transição',
@@ -197,7 +203,12 @@ function localPlanFromContext(ctx = {}, erro = '') {
       observar: 'A ação resolve o problema de jogo ou vira tentativa apressada?',
     },
   ];
-  const exerciseBlocks = drillBlocks.length ? drillBlocks : fallbackBlocks;
+  const exerciseBlocks = drillBlocks.length ? drillBlocks : (fallbackDrills.length ? fallbackDrills.map((drill, i) => drillParaBloco(drill, [
+    'Bloco 1 — Fechado do golpe',
+    'Bloco 2 — Fechado da transição',
+    'Bloco 3 — Semiaberto da transição',
+    'Bloco 4 — Jogo condicionado',
+  ][i] || `Bloco ${i + 1}`)) : fallbackBlocks);
   return {
     titulo: cfg.titulo,
     diagnostico: {
@@ -231,7 +242,7 @@ function localPlanFromContext(ctx = {}, erro = '') {
     regressao: 'Aumentar alvo, reduzir velocidade e voltar para execução com margem.',
     scoutValidacao: 'Observar se o mesmo erro reduz quando volta para jogo real.',
     cicloPedagogico: { necessario: false, duracaoSemanas: 0, justificativa: 'Plano local de contingência até a IA externa estar disponível.' },
-    drillsCbt: drills.map(drillResumoParaIA),
+    drillsCbt: (drills.length ? drills : fallbackDrills).map(drillResumoParaIA),
     planoPedagogico,
     _localFallback: true,
     _erroIA: erro || '',
@@ -243,9 +254,11 @@ function enrichContextWithDrills(ctx = {}) {
   const focus = chooseFocus(ctx);
   const metodo = ctx.metodo || ctx.tipo_treino || ctx.decisaoPedagogica?.metodo || '';
   const drillCtx = { ...ctx, foco: focus.fund, fundamento: focus.fund, metodo };
-  const sequencia = recomendarSequenciaDrillsCbt(drillCtx);
-  const extras = recomendarDrillsCbt(drillCtx, 5).filter(d => !sequencia.some(s => s.id === d.id));
-  const drills = [...sequencia, ...extras].slice(0, 6).map(drillResumoParaIA);
+  const sequencia = drillsFromPedagogicalPlan(planoPedagogico);
+  const fallbackSequencia = recomendarSequenciaDrillsCbt(drillCtx);
+  const baseSequencia = sequencia.length ? sequencia : fallbackSequencia;
+  const extras = recomendarDrillsCbt(drillCtx, 5).filter(d => !baseSequencia.some(s => s.id === d.id));
+  const drills = [...baseSequencia, ...extras].slice(0, 6).map(drillResumoParaIA);
   return {
     ...ctx,
     planoPedagogico,

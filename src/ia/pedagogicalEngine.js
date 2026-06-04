@@ -1,4 +1,5 @@
 import ontology from '../data/beachflow_ontology_engine_v1.json' with { type: 'json' };
+import { DRILLS_CBT, recomendarSequenciaDrillsCbt } from '../data/drillsCbt.js';
 
 const SHOT_ALIASES = {
   SAQUE: ['SAQUE', 'SERVICO'],
@@ -24,6 +25,18 @@ const SHOT_LABELS = {
   CURTA: 'Curta',
   FOREHAND_BACKHAND_DINAMICO: 'Forehand/Backhand dinâmico',
   FOREHAND_BACKHAND_ESTATICO: 'Defesa estática/controle',
+};
+
+const FALLBACK_DRILL_IDS = {
+  SAQUE: ['D003', 'D035', 'D006', 'D019', 'D023'],
+  DEVOLUCAO: ['D016', 'D003', 'D006', 'D019', 'D023'],
+  LOB: ['D015', 'D022', 'D024', 'D010'],
+  GANCHO: ['D002', 'D013', 'D020', 'D024'],
+  SMASH: ['D001', 'D039', 'D020', 'D023'],
+  TAPA_ACELERADA_ESPETADA: ['D021', 'D039', 'D050', 'D024'],
+  CURTA: ['D018', 'D008', 'D023', 'D044'],
+  FOREHAND_BACKHAND_DINAMICO: ['D004', 'D017', 'D023', 'D011'],
+  FOREHAND_BACKHAND_ESTATICO: ['D005', 'D014', 'D024', 'D010'],
 };
 
 const STATE_LABELS = {
@@ -161,7 +174,51 @@ function orderedUnique(values = []) {
   return [...new Set(values.filter(Boolean))];
 }
 
+function fmt(drill = {}) {
+  return norm(drill.formato || drill.format || '');
+}
+
+function orderDrillsForLesson(drills = []) {
+  const used = new Set();
+  const take = (predicate) => {
+    const found = drills.find((d) => !used.has(d.id) && predicate(d));
+    if (found) used.add(found.id);
+    return found;
+  };
+  const first = drills[0];
+  if (first) used.add(first.id);
+  return [
+    first,
+    take((d) => fmt(d) === 'FECHADO'),
+    take((d) => fmt(d) === 'SEMI_ABERTO' || fmt(d) === 'SEMIABERTO'),
+    take((d) => fmt(d) === 'ABERTO'),
+    ...drills.filter((d) => !used.has(d.id)),
+  ].filter(Boolean).slice(0, 4);
+}
+
 function selectDrills(route, data = ontology) {
+  const currentCbt = recomendarSequenciaDrillsCbt({
+    nivel: route.level,
+    foco: route.focusLabel || label(route.allowedShots?.[0] || route.targetShot || ''),
+    fundamento: route.focusLabel || label(route.allowedShots?.[0] || route.targetShot || ''),
+    metodo: route.metodo || 'semiaberto',
+    scout: {
+      leitura: route.transition?.objective || '',
+      erroPrincipal: { fundamento: route.focusLabel || label(route.targetShot || route.allowedShots?.[0] || '') },
+    },
+  });
+  if (currentCbt.length) {
+    const byId = new Map(DRILLS_CBT.map((d) => [d.id, d]));
+    const fallbackIds = FALLBACK_DRILL_IDS[route.targetShot] || FALLBACK_DRILL_IDS[route.allowedShots?.[0]] || [];
+    const filled = [...currentCbt];
+    for (const id of fallbackIds) {
+      if (filled.length >= 4) break;
+      const drill = byId.get(id);
+      if (drill && !filled.some((d) => d.id === drill.id)) filled.push(drill);
+    }
+    return orderDrillsForLesson(filled);
+  }
+
   const progression = data.decision_rules?.format_progression || ['fechado', 'semi-aberto', 'aberto'];
   const level = route.level;
   const shotSet = new Set(route.allowedShots || []);
@@ -198,6 +255,10 @@ function scoresFromInput(input = {}) {
 }
 
 function stepText(drill, type) {
+  if (drill?.passos?.length) {
+    const found = drill.passos.find((p) => norm(p).includes(norm(type))) || drill.passos[0];
+    return found || drill.objetivoTatico || drill.objetivoTecnico || drill.nome || '';
+  }
   const steps = drill?.operational_steps || [];
   const found = steps.find((s) => norm(s.type || s.label || '').includes(norm(type))) || steps[0];
   return found?.text || found?.description || drill?.tactical_objective || drill?.technical_objective || drill?.name || '';
@@ -206,7 +267,7 @@ function stepText(drill, type) {
 function drillLine(drill) {
   if (!drill) return '';
   const org = stepText(drill, 'organizacao') || stepText(drill, 'execucao');
-  return `${drill.id} · ${drill.name}: ${org}`.slice(0, 220);
+  return `${drill.id} · ${drill.nome || drill.name}: ${org}`.slice(0, 220);
 }
 
 export function generatePedagogicalPlan(input = {}) {
@@ -221,7 +282,14 @@ export function generatePedagogicalPlan(input = {}) {
   constraints.allowedShots = prioritizeRoot
     ? orderedUnique([rootCause.key, diagnosis.targetShot, ...constraints.allowedShots])
     : orderedUnique([diagnosis.targetShot, rootCause.key, ...constraints.allowedShots]);
-  const route = { level, transition, allowedShots: constraints.allowedShots };
+  const route = {
+    level,
+    transition,
+    allowedShots: constraints.allowedShots,
+    targetShot: diagnosis.targetShot,
+    focusLabel: label(diagnosis.targetShot || rootCause.key || constraints.allowedShots[0]),
+    metodo: level === 'iniciante' ? 'fechado' : 'semiaberto',
+  };
   const drills = selectDrills(route);
   const transitionText = transition ? `${STATE_LABELS[transition.from] || transition.from} → ${STATE_LABELS[transition.to] || transition.to}` : 'Neutro → Construção';
   const principalShot = constraints.allowedShots[0] || rootCause.key || diagnosis.targetShot || 'FOREHAND_BACKHAND_DINAMICO';
@@ -256,11 +324,11 @@ export function generatePedagogicalPlan(input = {}) {
       rootCause,
       drills: drills.map((d) => ({
         id: d.id,
-        name: d.name,
-        level: d.level,
-        format: d.format,
-        tacticalObjective: d.tactical_objective,
-        activeQuestion: d.active_question,
+        name: d.nome || d.name,
+        level: d.nivel || d.level,
+        format: d.formato || d.format,
+        tacticalObjective: d.objetivoTatico || d.tactical_objective,
+        activeQuestion: d.pergunta || d.active_question,
       })),
     },
   };
