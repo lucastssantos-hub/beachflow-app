@@ -987,10 +987,27 @@ function ScreenAlunos({ nav }) {
       setAutoMsg(e.message || 'Não foi possível preparar o link.');
     }
   };
+  // mensagem de feedback COM o link da tela do aluno (radar + leitura visual)
+  const mensagemFeedbackComLink = async (a)=>{
+    const { link } = await prepararAutoavaliacaoAluno(a); // garante token + link /aluno/:token
+    return `${feedbackAlunoTexto(a)}\n\n📊 Veja seu radar e os detalhes aqui:\n${link}`;
+  };
+  const enviarFeedback = async (a, viaWhats)=>{
+    setAutoMsg('');
+    try {
+      const msg = await mensagemFeedbackComLink(a);
+      if (viaWhats && a.phone) window.open(whatsappUrl(a.phone, msg), '_blank', 'noopener,noreferrer');
+      else { await navigator.clipboard?.writeText(msg); setAutoMsg(`Feedback de ${a.nome} copiado com o link.`); }
+    } catch(e) { setAutoMsg(e.message || 'Não foi possível gerar o link do aluno.'); }
+  };
   const copiarTodosFeedbacks = async ()=>{
-    const texto = comFeedback.map(a=>feedbackAlunoTexto(a)).join('\n\n--------------------\n\n');
-    await navigator.clipboard?.writeText(texto);
-    setAutoMsg(`${comFeedback.length} feedback(s) copiados.`);
+    setAutoMsg('');
+    try {
+      const partes = [];
+      for (const a of comFeedback) partes.push(await mensagemFeedbackComLink(a));
+      await navigator.clipboard?.writeText(partes.join('\n\n--------------------\n\n'));
+      setAutoMsg(`${comFeedback.length} feedback(s) copiados (com link).`);
+    } catch(e) { setAutoMsg(e.message || 'Falha ao gerar os links.'); }
   };
 
   return (
@@ -1076,15 +1093,15 @@ function ScreenAlunos({ nav }) {
                   <div style={{ fontSize:13, color:C.ink, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.nome}</div>
                   <div style={{ fontSize:11.5, color:a.phone?C.inkDim:C.warn }}>{a.phone || 'Sem WhatsApp'}</div>
                 </div>
-                {a.phone && <a href={whatsappUrl(a.phone, feedbackAlunoTexto(a))} target="_blank" rel="noreferrer"
-                  style={{ textDecoration:'none', borderRadius:9, padding:'8px 10px',
+                {a.phone && <button className="bf-tap" onClick={()=>enviarFeedback(a, true)}
+                  style={{ border:0, borderRadius:9, padding:'8px 10px',
                     background:'rgba(22,194,163,.14)', color:C.turq, fontSize:12.5, fontWeight:700 }}>
                   WhatsApp
-                </a>}
-                <button className="bf-tap" onClick={()=>navigator.clipboard?.writeText(feedbackAlunoTexto(a))}
+                </button>}
+                <button className="bf-tap" onClick={()=>enviarFeedback(a, false)}
                   style={{ border:`1px solid ${C.line2}`, borderRadius:9, padding:'8px 10px',
                     background:'transparent', color:C.inkDim, fontSize:12.5, fontWeight:700 }}>
-                  Copiar
+                  Copiar link
                 </button>
               </div>)}
           </div>}
