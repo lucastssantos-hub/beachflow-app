@@ -4,6 +4,7 @@
 // dados disponíveis para a interface continuar funcionando em quadra.
 
 import { recomendarDrillsCbt, recomendarSequenciaDrillsCbt, drillResumoParaIA, drillParaBloco } from '../data/drillsCbt.js';
+import { pedagogicalPlanForContext } from './pedagogicalEngine.js';
 
 const ENV = import.meta.env || {};
 const ENDPOINT = ENV.VITE_GERAR_PLANO_ENDPOINT || '';
@@ -155,6 +156,7 @@ function chooseFocus(ctx = {}) {
 }
 
 function localPlanFromContext(ctx = {}, erro = '') {
+  const planoPedagogico = ctx.planoPedagogico || pedagogicalPlanForContext(ctx);
   const focus = chooseFocus(ctx);
   const cfg = FUND_CONFIG[focus.fund] || FUND_CONFIG.Consistência;
   const scout = ctx.scout;
@@ -199,8 +201,8 @@ function localPlanFromContext(ctx = {}, erro = '') {
   return {
     titulo: cfg.titulo,
     diagnostico: {
-      gapPrincipal: `${cfg.gap}${scoreText}`,
-      contexto: scoutContext || cfg.contexto,
+      gapPrincipal: `${planoPedagogico.diagnostico?.gapPrincipal || cfg.gap}${scoreText}`,
+      contexto: planoPedagogico.diagnostico?.justificativa || scoutContext || cfg.contexto,
       fonte: source,
       confianca: confidence,
       justificativaConfianca: scout
@@ -209,12 +211,12 @@ function localPlanFromContext(ctx = {}, erro = '') {
     },
     nivel: ctx.nivel || 'Intermediário',
     decisaoPedagogica: {
-      estado: 'Estabilizar',
+      estado: planoPedagogico.diagnostico?.estadoComprometido || 'Estabilizar',
       metodo,
-      focoTecnico: cfg.tecnico,
-      focoTatico: cfg.tatico,
+      focoTecnico: planoPedagogico.golpesSelecionados?.[0] || cfg.tecnico,
+      focoTatico: planoPedagogico.transicoesSelecionadas?.[0] || cfg.tatico,
     },
-    objetivo: cfg.objetivo,
+    objetivo: planoPedagogico.treino?.observacoesProfessor?.[0] || cfg.objetivo,
     blocos: [
       ...exerciseBlocks,
       {
@@ -230,19 +232,34 @@ function localPlanFromContext(ctx = {}, erro = '') {
     scoutValidacao: 'Observar se o mesmo erro reduz quando volta para jogo real.',
     cicloPedagogico: { necessario: false, duracaoSemanas: 0, justificativa: 'Plano local de contingência até a IA externa estar disponível.' },
     drillsCbt: drills.map(drillResumoParaIA),
+    planoPedagogico,
     _localFallback: true,
     _erroIA: erro || '',
   };
 }
 
 function enrichContextWithDrills(ctx = {}) {
+  const planoPedagogico = pedagogicalPlanForContext(ctx);
   const focus = chooseFocus(ctx);
   const metodo = ctx.metodo || ctx.tipo_treino || ctx.decisaoPedagogica?.metodo || '';
   const drillCtx = { ...ctx, foco: focus.fund, fundamento: focus.fund, metodo };
   const sequencia = recomendarSequenciaDrillsCbt(drillCtx);
   const extras = recomendarDrillsCbt(drillCtx, 5).filter(d => !sequencia.some(s => s.id === d.id));
   const drills = [...sequencia, ...extras].slice(0, 6).map(drillResumoParaIA);
-  return drills.length ? { ...ctx, bibliotecaDrillsCbt: drills } : ctx;
+  return {
+    ...ctx,
+    planoPedagogico,
+    motorPedagogico: {
+      diagnostico: planoPedagogico.diagnostico,
+      estado_comprometido: planoPedagogico.diagnostico?.estadoComprometido,
+      transicoes: planoPedagogico.transicoesSelecionadas,
+      golpes: planoPedagogico.golpesSelecionados,
+      drills: planoPedagogico.drillsSelecionados,
+      restricoes: planoPedagogico.restricoesAplicadas,
+      objetivo_da_aula: planoPedagogico.treino?.observacoesProfessor?.[0] || planoPedagogico.diagnostico?.justificativa,
+    },
+    ...(drills.length ? { bibliotecaDrillsCbt: drills } : {}),
+  };
 }
 
 function isExamplePlan(plan) {

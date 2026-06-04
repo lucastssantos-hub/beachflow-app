@@ -2263,11 +2263,24 @@ function ScreenAvaliacao({ nav, params }) {
 }
 
 // ---------- AUTOAVALIAÇÃO (aluno) ----------
-function ScreenAutoaval({ nav }) {
+function ScreenAutoaval({ nav, params }) {
+  const aluno = params?.aluno || null;
   const Q = ['Como você se sentiu no saque hoje?','Conseguiu ler o jogo da dupla?','Sua recepção foi consistente?'];
   const [ans,setAns] = React.useState([2,1,2]);
+  const [foco,setFoco] = React.useState('Devolução');
+  const [saved,setSaved] = React.useState(false);
   const set=(i,n)=>setAns(s=>s.map((v,j)=>j===i?n:v));
   const faces=['😟','😕','🙂','😄'];
+  const enviar = ()=>{
+    const row = { alunoId: aluno?.id || null, alunoNome: aluno?.nome || null, respostas: ans, foco, created_at: new Date().toISOString() };
+    try {
+      const key = 'bf_autoavaliacoes_internas';
+      const prev = JSON.parse(localStorage.getItem(key) || '[]');
+      localStorage.setItem(key, JSON.stringify([row, ...prev].slice(0, 100)));
+    } catch { /* localStorage pode estar indisponível */ }
+    setSaved(true);
+    setTimeout(()=>nav.back(), 700);
+  };
   return (
     <Screen bg={C.navy850}>
       <Header onBack={nav.back} kicker="Aluno · após a aula" title="Como foi hoje?"/>
@@ -2287,16 +2300,19 @@ function ScreenAutoaval({ nav }) {
         <Card style={{ marginTop:10 }}>
           <Mini>O que você quer treinar mais?</Mini>
           <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginTop:10 }}>
-            {['Saque','Devolução','Ataque','Defesa','Constância'].map((t,i)=>
-              <span key={t} className="bf-tap" style={{ fontFamily:'var(--ff-m)', fontSize:11.5, padding:'7px 12px',
-                borderRadius:9, border:`1px solid ${i===1?C.coral:C.line2}`, color:i===1?C.coral:C.inkDim,
-                background:i===1?'rgba(255,106,69,.1)':'transparent' }}>{t}</span>)}
+            {['Saque','Devolução','Ataque','Defesa','Constância'].map((t)=>
+              <span key={t} className="bf-tap" onClick={()=>setFoco(t)} style={{ fontFamily:'var(--ff-m)', fontSize:11.5, padding:'7px 12px',
+                borderRadius:9, border:`1px solid ${foco===t?C.coral:C.line2}`, color:foco===t?C.coral:C.inkDim,
+                background:foco===t?'rgba(255,106,69,.1)':'transparent' }}>{t}</span>)}
           </div>
         </Card>
+        {saved && <Card style={{ marginTop:10, borderColor:'rgba(39,192,138,.3)' }}>
+          <div style={{ fontSize:12.5, color:C.ok }}>Autoavaliação registrada para o professor.</div>
+        </Card>}
       </Body>
       <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'12px 20px 30px',
         background:'linear-gradient(transparent,'+C.navy850+' 30%)' }}>
-        <Btn kind="secondary" style={{ width:'100%' }} icon="check" onClick={nav.back}>Enviar para o professor</Btn>
+        <Btn kind="secondary" style={{ width:'100%' }} icon="check" onClick={enviar}>Enviar para o professor</Btn>
       </div>
     </Screen>
   );

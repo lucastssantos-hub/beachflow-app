@@ -47,6 +47,8 @@ PROIBIDO: mesmo treino para turmas diferentes; plano só com base no nível; nom
 
 BIBLIOTECA CBT: se o contexto trouxer "bibliotecaDrillsCbt", use esses drills como referência canônica. Escolha por ID, adapte para o problema do dia e mantenha "drill_id" e "drill_nome" no bloco. Não invente exercício quando existir drill CBT adequado. Siga a progressão CBT: fechado específico do golpe → fechado da transição que o golpe exige → semiaberto da transição → aberto/jogo condicionado.
 
+MOTOR PEDAGÓGICO: se o contexto trouxer "motorPedagogico" ou "planoPedagogico", essa rota já foi calculada pelo app com a ontologia. Obedeça diagnóstico, estado comprometido, transições, golpes, drills e restrições. Sua função é organizar a aula em linguagem de quadra, não trocar o foco nem inventar drill fora da biblioteca.
+
 SAÍDA: responda SOMENTE com um objeto JSON válido (sem markdown, sem comentários, sem texto fora do JSON) neste formato exato:
 {
   "titulo": "string curta e direta",
@@ -92,6 +94,8 @@ export function buildUserMessage(ctx = {}) {
     avaliacaoProfessor && `Avaliação técnica do professor (0-5): ${j(avaliacaoProfessor)}.`,
     autoavaliacao && `Autoavaliação do aluno: ${j(autoavaliacao)}.`,
     scout && `Scout recente: ${j(scout)}.`,
+    ctx.motorPedagogico && `Motor pedagógico estruturado: ${j(ctx.motorPedagogico)}.`,
+    ctx.planoPedagogico && `Plano pedagógico interno: ${j(ctx.planoPedagogico)}.`,
     historico && `Histórico/evolução: ${j(historico)}.`,
     observacoes && `Observações do professor: ${observacoes}.`,
     'Diagnostique o gap principal seguindo a hierarquia de dados e gere o plano no formato JSON exigido.',

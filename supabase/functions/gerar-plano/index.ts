@@ -47,6 +47,7 @@ Se não houver dado suficiente, não preencha com treino padrão: gere uma aula 
 PROIBIDO usar frases vagas como "melhorar consistência", "trabalhar posicionamento", "exercício de fundamentos", "manter a bola em jogo" sem contexto, setor, bola inicial e critério.
 
 BIBLIOTECA CBT: se o JSON tiver "bibliotecaDrillsCbt", use esses drills como fonte canônica dos blocos. Escolha os drills por ID conforme diagnóstico, nível e método. Você pode adaptar comando/regra para ficar compacto, mas NÃO invente um drill incompatível quando houver drill CBT adequado. Inclua "drill_id" e "drill_nome" em cada bloco baseado em drill.
+MOTOR PEDAGÓGICO: se o JSON tiver "motorPedagogico" ou "planoPedagogico", isso já é a rota técnica calculada pelo app antes da IA. Você deve obedecer essa rota: diagnóstico, estado comprometido, transições, golpes, drills e restrições. A IA é apenas a camada final de linguagem e organização da aula. NÃO troque o foco para outro golpe só porque parece mais fácil. NÃO use drill fora dos IDs indicados se houver drills compatíveis enviados.
 PADRÃO CBT DA AULA: Bloco 1 = fechado específico do golpe principal. Bloco 2 = fechado da transição que esse golpe exige. Bloco 3 = semiaberto da transição. Bloco 4 = aberto/jogo condicionado para transferência. Se a biblioteca enviada não tiver um formato exato para o problema, use o drill mais próximo e explique a regra de forma compacta.
 
 CONFIANÇA — calibre pela amostra do scout (pontosAnalisados) e convergência das fontes. Use 4 níveis:
@@ -136,6 +137,7 @@ function buildUserMessage(ctx: Record<string, unknown> = {}): string {
     "Instruções:",
     "- Siga a hierarquia de dados e calibre a confiança pela amostra do scout (pontosAnalisados).",
     "- Se houver alunos/avaliações/scout no JSON, use esses dados no diagnóstico; não gere plano apenas pelo nível.",
+    "- Se houver motorPedagogico/planoPedagogico no JSON, trate como decisão técnica já calculada; a sua função é organizar a aula, não substituir o motor.",
     "- Se houver bibliotecaDrillsCbt no JSON, escolha drills dessa biblioteca e preserve o ID no bloco.",
     "- Monte a progressão CBT: fechado do golpe → fechado da transição → semiaberto da transição → aberto/jogo condicionado.",
     "- Cada bloco precisa trazer bola inicial, alvo/setor, rotação e critério mensurável, mas tudo em frases curtas.",

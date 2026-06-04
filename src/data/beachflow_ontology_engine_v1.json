@@ -1,0 +1,4000 @@
+{
+  "metadata": {
+    "name": "BeachFlow Ontology Engine",
+    "version": "1.0.0",
+    "language": "pt-BR",
+    "created_at": "2026-06-03T17:46:02.858905Z",
+    "purpose": "Motor pedagógico para IA do BeachFlow baseado em estados do jogo, transições, dependências e biblioteca de drills.",
+    "source_files": [
+      "transicoes-cbt.html",
+      "regras-pedagogicas-cbt.html",
+      "drills-cbt-beachflow.html"
+    ]
+  },
+  "core_principle": "Golpes não são o núcleo do jogo; golpes são ferramentas para alterar estados táticos. O motor deve raciocinar: gap -> estado -> dependência -> transição -> golpe -> situação -> drill -> texto final.",
+  "states": {
+    "SAQUE": {
+      "objective": "Iniciar o ponto",
+      "central_problem": "O ponto ainda não foi estruturado",
+      "desired_exits": [
+        "NEUTRO",
+        "CONSTRUCAO",
+        "PRESSAO"
+      ]
+    },
+    "DEFESA": {
+      "objective": "Evitar perder o ponto",
+      "central_problem": "O adversário possui vantagem ou retirou tempo",
+      "desired_exits": [
+        "RECONSTRUCAO",
+        "NEUTRO"
+      ]
+    },
+    "RECONSTRUCAO": {
+      "objective": "Recuperar organização e tempo",
+      "central_problem": "A dupla está desorganizada ou fora da faixa ideal",
+      "desired_exits": [
+        "NEUTRO",
+        "CONSTRUCAO"
+      ]
+    },
+    "NEUTRO": {
+      "objective": "Manter equilíbrio e preparar vantagem",
+      "central_problem": "Nenhuma dupla possui vantagem clara",
+      "desired_exits": [
+        "CONSTRUCAO",
+        "PRESSAO",
+        "DEFESA"
+      ]
+    },
+    "CONSTRUCAO": {
+      "objective": "Produzir vantagem",
+      "central_problem": "Ainda não existe oportunidade clara de ataque",
+      "desired_exits": [
+        "PRESSAO",
+        "NEUTRO",
+        "DEFESA"
+      ]
+    },
+    "PRESSAO": {
+      "objective": "Retirar tempo e forçar erro/bola vulnerável",
+      "central_problem": "Existe vantagem, mas ela ainda precisa ser convertida",
+      "desired_exits": [
+        "FINALIZACAO",
+        "CONSTRUCAO",
+        "NEUTRO"
+      ]
+    },
+    "FINALIZACAO": {
+      "objective": "Encerrar o ponto",
+      "central_problem": "Converter oportunidade clara sem erro não forçado",
+      "desired_exits": [
+        "PONTO",
+        "PRESSAO",
+        "DEFESA"
+      ]
+    }
+  },
+  "shots": {
+    "SAQUE": {
+      "from_state": "SAQUE",
+      "to_state": [
+        "NEUTRO",
+        "CONSTRUCAO",
+        "PRESSAO"
+      ],
+      "objective": "Iniciar o ponto com intenção de criar devolução vulnerável",
+      "solves": [
+        "entrada neutra no ponto",
+        "ausência de iniciativa inicial"
+      ],
+      "fixes_errors": [
+        "saque sem alvo",
+        "potência sem plano de terceira bola"
+      ],
+      "favorable": [
+        "início do ponto",
+        "alvo declarado",
+        "dupla sincronizada"
+      ],
+      "unfavorable": [
+        "toss instável",
+        "sem direção declarada",
+        "parceiro sem combinação"
+      ],
+      "dependencies": [
+        "TOSS",
+        "POSICAO_INICIAL",
+        "DIRECAO"
+      ]
+    },
+    "DEVOLUCAO": {
+      "from_state": "SAQUE",
+      "to_state": [
+        "NEUTRO",
+        "CONSTRUCAO",
+        "PRESSAO"
+      ],
+      "objective": "Neutralizar o saque e dificultar a terceira bola",
+      "solves": [
+        "vantagem inicial do sacador"
+      ],
+      "fixes_errors": [
+        "devolução alta no parceiro avançado",
+        "devolução sem profundidade"
+      ],
+      "favorable": [
+        "saque legível",
+        "base ajustada ao sacador"
+      ],
+      "unfavorable": [
+        "saque agressivo",
+        "devolução atrasada"
+      ],
+      "dependencies": [
+        "LEITURA_SAQUE",
+        "VOLEIO_ESTATICO",
+        "VOLEIO_DINAMICO"
+      ]
+    },
+    "LOB": {
+      "from_state": [
+        "DEFESA",
+        "RECONSTRUCAO",
+        "CONSTRUCAO"
+      ],
+      "to_state": [
+        "RECONSTRUCAO",
+        "NEUTRO",
+        "CONSTRUCAO"
+      ],
+      "objective": "Ganhar tempo, empurrar adversário e reorganizar a dupla",
+      "solves": [
+        "falta de tempo",
+        "pressão adversária",
+        "dupla fora de posição"
+      ],
+      "fixes_errors": [
+        "contra-ataque precipitado",
+        "acelerar em desvantagem",
+        "bola baixa atacada sem contexto"
+      ],
+      "favorable": [
+        "bola defensiva",
+        "bola baixa/média-baixa",
+        "adversário colado à rede"
+      ],
+      "unfavorable": [
+        "lob curto",
+        "ponto de contato muito baixo",
+        "trajetória baixa"
+      ],
+      "dependencies": [
+        "CONTROLE_PROFUNDIDADE",
+        "PONTO_CONTATO",
+        "REPOSICIONAMENTO"
+      ]
+    },
+    "GANCHO": {
+      "from_state": [
+        "RECONSTRUCAO",
+        "CONSTRUCAO",
+        "PRESSAO"
+      ],
+      "to_state": [
+        "CONSTRUCAO",
+        "PRESSAO"
+      ],
+      "objective": "Responder bola alta/funda com controle e reposicionar a dupla ou pressionar",
+      "solves": [
+        "bola alta atrás da cabeça",
+        "adversário próximo da rede",
+        "impossibilidade de smash ideal"
+      ],
+      "fixes_errors": [
+        "tentar smash fora de zona",
+        "excesso de força no fundo",
+        "gancho curto sem profundidade"
+      ],
+      "favorable": [
+        "bola alta",
+        "bola funda",
+        "tempo para cross-step"
+      ],
+      "unfavorable": [
+        "bola baixa",
+        "smash adversário",
+        "pouco tempo de reação"
+      ],
+      "dependencies": [
+        "LOB",
+        "CROSS_STEP",
+        "TEMPO_BOLA",
+        "CONTROLE_PROFUNDIDADE"
+      ]
+    },
+    "BANDEJA_ARCO_SUPERIOR": {
+      "from_state": [
+        "CONSTRUCAO",
+        "PRESSAO"
+      ],
+      "to_state": [
+        "PRESSAO"
+      ],
+      "objective": "Manter ataque/interceptar bola alta sem risco excessivo",
+      "solves": [
+        "lob adversário controlável",
+        "necessidade de manter rede"
+      ],
+      "fixes_errors": [
+        "smash forçado sem ângulo",
+        "perder domínio da rede"
+      ],
+      "favorable": [
+        "lob profundo controlável",
+        "possibilidade de avanço",
+        "contato alto"
+      ],
+      "unfavorable": [
+        "lob muito profundo",
+        "base atrasada",
+        "contato baixo"
+      ],
+      "dependencies": [
+        "LEITURA_LOB",
+        "AVANCO",
+        "CONTATO_ALTO"
+      ]
+    },
+    "SMASH": {
+      "from_state": "PRESSAO",
+      "to_state": "FINALIZACAO",
+      "objective": "Converter vantagem clara em ponto",
+      "solves": [
+        "oportunidade clara de ataque",
+        "bola alta vulnerável"
+      ],
+      "fixes_errors": [
+        "ponto prolongado quando havia chance clara",
+        "não converter vantagem"
+      ],
+      "favorable": [
+        "bola alta",
+        "zona verde",
+        "equilíbrio",
+        "tempo disponível"
+      ],
+      "unfavorable": [
+        "zona vermelha",
+        "bola baixa/média-baixa",
+        "sem equilíbrio",
+        "objetivo de sobreviver"
+      ],
+      "dependencies": [
+        "LOB",
+        "LEITURA_LOB",
+        "POSICIONAMENTO",
+        "AJUSTE_BASE",
+        "CONTATO_ALTO"
+      ]
+    },
+    "TAPA_ACELERADA_ESPETADA": {
+      "from_state": [
+        "CONSTRUCAO",
+        "PRESSAO"
+      ],
+      "to_state": [
+        "PRESSAO",
+        "FINALIZACAO"
+      ],
+      "objective": "Acelerar quando há bola média-alta e equilíbrio",
+      "solves": [
+        "adversário com tempo",
+        "pressão insuficiente"
+      ],
+      "fixes_errors": [
+        "acelerar bola baixa",
+        "tapa automático no backhand",
+        "contato atrasado"
+      ],
+      "favorable": [
+        "bola média-alta",
+        "forehand",
+        "contato à frente",
+        "base equilibrada"
+      ],
+      "unfavorable": [
+        "bola baixa",
+        "bola atrasada",
+        "backhand sem recurso adequado",
+        "zona defensiva"
+      ],
+      "dependencies": [
+        "EQUILIBRIO",
+        "CONTATO_A_FRENTE",
+        "LEITURA_ALTURA"
+      ]
+    },
+    "CURTA": {
+      "from_state": "CONSTRUCAO",
+      "to_state": "PRESSAO",
+      "objective": "Deslocar adversário para frente e abrir fundo",
+      "solves": [
+        "adversário recuado",
+        "troca previsível de profundidade"
+      ],
+      "fixes_errors": [
+        "só jogar fundo",
+        "não usar dimensão vertical"
+      ],
+      "favorable": [
+        "adversário distante da rede",
+        "bola controlável",
+        "ponto de contato próximo à altura da rede"
+      ],
+      "unfavorable": [
+        "adversário próximo",
+        "curta alta",
+        "bola muito baixa sem controle"
+      ],
+      "dependencies": [
+        "CONTROLE_DIRECIONAL",
+        "AMORTECIMENTO",
+        "LEITURA_POSICIONAMENTO"
+      ]
+    },
+    "FOREHAND_BACKHAND_DINAMICO": {
+      "from_state": [
+        "NEUTRO",
+        "CONSTRUCAO"
+      ],
+      "to_state": [
+        "CONSTRUCAO",
+        "PRESSAO"
+      ],
+      "objective": "Antecipar bola lenta/flutuante e reduzir tempo do adversário",
+      "solves": [
+        "bola neutra sem iniciativa"
+      ],
+      "fixes_errors": [
+        "esperar bola chegar",
+        "contato atrasado"
+      ],
+      "favorable": [
+        "bola lenta/flutuante",
+        "tempo para projeção"
+      ],
+      "unfavorable": [
+        "bola acelerada",
+        "sem tempo para deslocar"
+      ],
+      "dependencies": [
+        "SPLIT_STEP",
+        "RAIO_ACAO",
+        "PONTO_CONTATO"
+      ]
+    },
+    "FOREHAND_BACKHAND_ESTATICO": {
+      "from_state": [
+        "DEFESA",
+        "NEUTRO"
+      ],
+      "to_state": [
+        "NEUTRO",
+        "RECONSTRUCAO"
+      ],
+      "objective": "Absorver bola acelerada com raquete firme",
+      "solves": [
+        "pouco tempo de reação",
+        "ataque direto no corpo"
+      ],
+      "fixes_errors": [
+        "mão frouxa",
+        "movimento excessivo no impacto",
+        "efeito desnecessário"
+      ],
+      "favorable": [
+        "bola acelerada",
+        "pouco tempo",
+        "base sólida"
+      ],
+      "unfavorable": [
+        "bola lenta/flutuante que permitiria avanço"
+      ],
+      "dependencies": [
+        "POSICAO_INICIAL",
+        "MAO_NAO_DOMINANTE",
+        "RAQUETE_FIRME"
+      ]
+    }
+  },
+  "core_transitions": [
+    {
+      "id": "CORE_T01",
+      "from": "SAQUE",
+      "to": "CONSTRUCAO",
+      "shots": [
+        "SAQUE",
+        "DEVOLUCAO"
+      ],
+      "objective": "iniciar rali com vantagem ou neutralizar vantagem do sacador"
+    },
+    {
+      "id": "CORE_T02",
+      "from": "DEFESA",
+      "to": "RECONSTRUCAO",
+      "shots": [
+        "LOB",
+        "FOREHAND_BACKHAND_ESTATICO"
+      ],
+      "objective": "sobreviver e ganhar tempo"
+    },
+    {
+      "id": "CORE_T03",
+      "from": "RECONSTRUCAO",
+      "to": "CONSTRUCAO",
+      "shots": [
+        "LOB",
+        "GANCHO"
+      ],
+      "objective": "recuperar organização e voltar a construir"
+    },
+    {
+      "id": "CORE_T04",
+      "from": "NEUTRO",
+      "to": "CONSTRUCAO",
+      "shots": [
+        "FOREHAND_BACKHAND_DINAMICO",
+        "LOB",
+        "GANCHO"
+      ],
+      "objective": "criar vantagem sem risco excessivo"
+    },
+    {
+      "id": "CORE_T05",
+      "from": "CONSTRUCAO",
+      "to": "PRESSAO",
+      "shots": [
+        "CURTA",
+        "TAPA_ACELERADA_ESPETADA",
+        "GANCHO"
+      ],
+      "objective": "desorganizar adversário e retirar tempo"
+    },
+    {
+      "id": "CORE_T06",
+      "from": "PRESSAO",
+      "to": "FINALIZACAO",
+      "shots": [
+        "SMASH",
+        "TAPA_ACELERADA_ESPETADA"
+      ],
+      "objective": "converter vantagem em ponto"
+    },
+    {
+      "id": "CORE_T07",
+      "from": "PRESSAO",
+      "to": "PRESSAO",
+      "shots": [
+        "BANDEJA_ARCO_SUPERIOR"
+      ],
+      "objective": "manter ataque sem risco desnecessário"
+    }
+  ],
+  "source_transitions": [
+    {
+      "id": "T001",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Saque",
+      "game_situation": "Devolução de saque — sacador do lado direito, bola volta ao sacador",
+      "action_or_shot": "Devolução baixa direcionada à frente do sacador",
+      "expected_result": "Sacador inicia o rali em posição defensiva ou neutra desfavorável",
+      "final_state": "Construção",
+      "tactical_objective": "Forçar o sacador a entrar no rali sem vantagem; preparar a terceira bola em desfavor do sacador",
+      "level": "Iniciante",
+      "source_reference": "CBT Verde 2.2.1",
+      "tags": {
+        "level_filter": "iniciante",
+        "source_filter": "verde"
+      }
+    },
+    {
+      "id": "T002",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Saque",
+      "game_situation": "Saque nas direções 4 e 5 (aberto), quadra oposta desguarnecida",
+      "action_or_shot": "Devolução cruzada para a quadra aberta",
+      "expected_result": "Dupla sacadora é surpreendida e precisa cobrir ângulo aberto",
+      "final_state": "Pressão",
+      "tactical_objective": "Explorar o ângulo aberto gerado pelo saque aberto; desorganizar o posicionamento da dupla sacadora",
+      "level": "Intermediário",
+      "source_reference": "CBT Verde 2.2.1",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "verde"
+      }
+    },
+    {
+      "id": "T003",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Saque",
+      "game_situation": "Devolução — opção de lob sobre o parceiro do sacador",
+      "action_or_shot": "Lob sobre o parceiro do sacador",
+      "expected_result": "Defesa (se lob curto) ou Construção (se lob profundo)",
+      "final_state": "Defesa Construção",
+      "tactical_objective": "Variar direção de devolução; desorganizar a base da dupla sacadora",
+      "level": "Intermediário",
+      "source_reference": "CBT Verde 2.2.1",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "verde"
+      }
+    },
+    {
+      "id": "T004",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Defesa",
+      "game_situation": "Dupla sob ataque direto — bola acelerada vinda dos adversários",
+      "action_or_shot": "Lob alto e profundo (lob defensivo)",
+      "expected_result": "Adversários empurrados para o fundo; tempo ganho para reorganização",
+      "final_state": "Neutro Reconstrução",
+      "tactical_objective": "Retirar os adversários da condição ofensiva; ganhar tempo para reposicionar a dupla",
+      "level": "Iniciante",
+      "source_reference": "CBT Verde 2.3.3 / 11.10",
+      "tags": {
+        "level_filter": "iniciante",
+        "source_filter": "verde"
+      }
+    },
+    {
+      "id": "T005",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Defesa",
+      "game_situation": "Adversário executa smash ou gancho potente e direto ao solo",
+      "action_or_shot": "Arco inferior (backhand em movimento pendular abaixo da cintura)",
+      "expected_result": "Bola interceptada e devolvida; ponto sobrevivido",
+      "final_state": "Reconstrução",
+      "tactical_objective": "Interceptar ataque potente e direto; sobreviver ao ponto e recuperar posição",
+      "level": "Intermediário",
+      "source_reference": "CBT Amarelo 5.1",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T006",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Defesa",
+      "game_situation": "Lob executado com eficiência e profundidade pelos adversários; possibilidade de aproximação",
+      "action_or_shot": "Arco superior (forehand acima da cabeça, ligeiramente à frente)",
+      "expected_result": "Bola interceptada próxima à rede; tempo de reação do oponente reduzido",
+      "final_state": "Construção Pressão",
+      "tactical_objective": "Interceptar o golpe adversário; reduzir tempo de reorganização do oponente",
+      "level": "Intermediário",
+      "source_reference": "CBT Amarelo 5.2",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T007",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro",
+      "game_situation": "Rali em desenvolvimento — bola flutuante e lenta no lado do forehand",
+      "action_or_shot": "Forehand dinâmico (voleio com projeção em direção à bola)",
+      "expected_result": "Ponto de contato alto, acima da borda da rede; tempo de reação do adversário reduzido",
+      "final_state": "Pressão Construção",
+      "tactical_objective": "Antecipar o contato; diminuir o tempo de reação do adversário",
+      "level": "Iniciante",
+      "source_reference": "CBT Verde 11.2",
+      "tags": {
+        "level_filter": "iniciante",
+        "source_filter": "verde"
+      }
+    },
+    {
+      "id": "T008",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro",
+      "game_situation": "Rali — bola flutuante e lenta no lado do backhand",
+      "action_or_shot": "Backhand dinâmico (voleio com projeção, lado backhand)",
+      "expected_result": "Ponto de contato alto; adversário com menos tempo de reação",
+      "final_state": "Construção Pressão",
+      "tactical_objective": "Antecipar o contato pelo lado não dominante; manter controle do ponto",
+      "level": "Iniciante",
+      "source_reference": "CBT Verde 11.3",
+      "tags": {
+        "level_filter": "iniciante",
+        "source_filter": "verde"
+      }
+    },
+    {
+      "id": "T009",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Defesa Neutro",
+      "game_situation": "Adversário executa golpe acelerado — pouco tempo de reação",
+      "action_or_shot": "Forehand estático (\"escudo\")",
+      "expected_result": "Bola contida e devolvida; ponto mantido em jogo",
+      "final_state": "Neutro Reconstrução",
+      "tactical_objective": "Absorver impacto; manter a bola em jogo quando não há tempo de antecipar",
+      "level": "Iniciante",
+      "source_reference": "CBT Verde 11.4",
+      "tags": {
+        "level_filter": "iniciante",
+        "source_filter": "verde"
+      }
+    },
+    {
+      "id": "T010",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Defesa Neutro",
+      "game_situation": "Adversário executa golpe acelerado — pouco tempo de reação, bola no backhand",
+      "action_or_shot": "Backhand estático (mão não dominante apoia no coração da raquete)",
+      "expected_result": "Bola contida; ponto mantido",
+      "final_state": "Neutro Reconstrução",
+      "tactical_objective": "Absorver impacto pelo lado não dominante; manter a bola em jogo",
+      "level": "Iniciante",
+      "source_reference": "CBT Verde 11.5",
+      "tags": {
+        "level_filter": "iniciante",
+        "source_filter": "verde"
+      }
+    },
+    {
+      "id": "T011",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Pressão",
+      "game_situation": "Bola sobe alta e o jogador está bem posicionado sob ela",
+      "action_or_shot": "Smash",
+      "expected_result": "Bola encerrada com potência descendente; adversário com dificuldade ou impossibilidade de devolver",
+      "final_state": "Finalização",
+      "tactical_objective": "Converter vantagem em definição do ponto",
+      "level": "Iniciante",
+      "source_reference": "CBT Verde 11.6",
+      "tags": {
+        "level_filter": "iniciante",
+        "source_filter": "verde"
+      }
+    },
+    {
+      "id": "T012",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Pressão",
+      "game_situation": "Bola sobe alta mas está ligeiramente atrás da cabeça — smash ideal impossibilitado",
+      "action_or_shot": "Gancho (preparação mais ampla, 180°)",
+      "expected_result": "Bola devolvida com controle; ponto mantido ou pressão sustentada",
+      "final_state": "Reconstrução Construção",
+      "tactical_objective": "Reconstruir a jogada quando o smash não é viável; reorganizar a dupla",
+      "level": "Iniciante",
+      "source_reference": "CBT Verde 11.7",
+      "tags": {
+        "level_filter": "iniciante",
+        "source_filter": "verde"
+      }
+    },
+    {
+      "id": "T013",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Construção",
+      "game_situation": "Rali — necessidade de deslocar o adversário para frente",
+      "action_or_shot": "Curta (bola passando rente à rede e caindo próximo a ela)",
+      "expected_result": "Adversário forçado a se deslocar para frente; fundo de quadra desguarnecido; adversário em desequilíbrio",
+      "final_state": "Pressão",
+      "tactical_objective": "Deslocar o adversário para frente; criar dificuldade de execução em movimento; abrir o fundo da quadra",
+      "level": "Iniciante",
+      "source_reference": "CBT Verde 11.9",
+      "tags": {
+        "level_filter": "iniciante",
+        "source_filter": "verde"
+      }
+    },
+    {
+      "id": "T014",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Defesa Construção",
+      "game_situation": "Bola recebida em situação desfavorável; necessidade de empurrar adversários para trás",
+      "action_or_shot": "Lob (trajetória parabólica para o fundo da quadra)",
+      "expected_result": "Adversários recuam da posição de ataque; espaço e tempo recuperados",
+      "final_state": "Neutro Construção",
+      "tactical_objective": "Retirar adversários da condição ofensiva; reorganizar bases da dupla",
+      "level": "Iniciante",
+      "source_reference": "CBT Verde 11.10",
+      "tags": {
+        "level_filter": "iniciante",
+        "source_filter": "verde"
+      }
+    },
+    {
+      "id": "T015",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Pressão",
+      "game_situation": "Bola alta no backhand — Smash convencional difícil",
+      "action_or_shot": "Smash Top Spin (backhand)",
+      "expected_result": "Bola com rotação para frente; queda rápida após a rede; adversário com menos tempo",
+      "final_state": "Finalização Pressão",
+      "tactical_objective": "Converter situação de vantagem mesmo com bola no backhand; manter ataque com controle",
+      "level": "Intermediário",
+      "source_reference": "CBT Amarelo 8.1",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T016",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Pressão",
+      "game_situation": "Bola alta no forehand — zona de finalização disponível",
+      "action_or_shot": "Smash Slice (forehand lateral)",
+      "expected_result": "Bola com rotação lateral; trajetória cortada; adversário desequilibrado",
+      "final_state": "Finalização",
+      "tactical_objective": "Finalizar o ponto com efeito lateral quando bola está no forehand em zona de finalização",
+      "level": "Intermediário",
+      "source_reference": "CBT Amarelo 8.1",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T017",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Construção",
+      "game_situation": "Bola lenta e abaixo do nível da rede; contato possível com antecipação",
+      "action_or_shot": "Top Spin Forehand (movimento de \"escovar\" a bola para cima do eixo horizontal)",
+      "expected_result": "Bola com rotação para frente; queda acentuada; tempo de reorganização do adversário reduzido",
+      "final_state": "Pressão",
+      "tactical_objective": "Transformar momento neutro em pressão ofensiva; criar queda rápida da bola",
+      "level": "Intermediário",
+      "source_reference": "CBT Amarelo 4.1",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T018",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Construção",
+      "game_situation": "Bola lenta no backhand; contato possível abaixo do nível da rede",
+      "action_or_shot": "Top Spin Backhand (escovar a bola no lado não dominante)",
+      "expected_result": "Bola com rotação para frente; queda rápida; adversário com menos tempo de resposta",
+      "final_state": "Pressão",
+      "tactical_objective": "Transformar momento neutro em pressão ofensiva pelo lado não dominante",
+      "level": "Intermediário",
+      "source_reference": "CBT Amarelo 4.2",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T019",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Construção",
+      "game_situation": "Bola flutuante e lenta vindo do adversário; possível contato no backhand do executante",
+      "action_or_shot": "Forehand anômalo defensivo (contato com face forehand no quadrante superior do lado não dominante)",
+      "expected_result": "Bola devolvida com mais agressividade do que seria possível com backhand convencional",
+      "final_state": "Pressão Construção",
+      "tactical_objective": "Substituir backhand por forehand anômalo; manter ou criar vantagem",
+      "level": "Intermediário",
+      "source_reference": "CBT Amarelo 3.1",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T020",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Construção",
+      "game_situation": "Bola flutuante e lenta; ponto de encontro antecipado possível no lado não dominante",
+      "action_or_shot": "Forehand anômalo ofensivo (ir para a bola, contato forehand no lado não dominante)",
+      "expected_result": "Ataque mais agressivo; ângulo de cima para baixo; adversário com menos tempo",
+      "final_state": "Pressão Finalização",
+      "tactical_objective": "Ser mais ofensivo aproveitando bola lenta no backhand; surpreender o adversário",
+      "level": "Intermediário",
+      "source_reference": "CBT Amarelo 3.1.2",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T021",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Construção Pressão",
+      "game_situation": "Bola flutuante e lenta; contato no lado não dominante com possibilidade de gerar spin",
+      "action_or_shot": "Ventaglio ofensivo (leque — forehand no lado não dominante com movimento ascendente de punho + spin)",
+      "expected_result": "Bola com efeito e mudança de direção; adversário desequilibrado",
+      "final_state": "Pressão Finalização",
+      "tactical_objective": "Mudar a direção da bola de dentro para fora; surpreender o adversário",
+      "level": "Intermediário",
+      "source_reference": "CBT Amarelo 3.2",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T022",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Defesa Reconstrução",
+      "game_situation": "Lob adversário alto no lado backhand; bola profunda impossibilitando smash",
+      "action_or_shot": "Ventaglio defensivo (forehand no lado não dominante com spin, contato alto e atrás)",
+      "expected_result": "Bola devolvida com spin e profundidade; adversário forçado a recuar novamente",
+      "final_state": "Neutro Construção",
+      "tactical_objective": "Responder ao lob adversário de forma mais eficaz do que backhand defensivo; recuperar o jogo",
+      "level": "Intermediário",
+      "source_reference": "CBT Amarelo 3.2.1",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T023",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Saque",
+      "game_situation": "Dupla de dois destros, sacador do lado direito da quadra — saques direções 1, 2 e 3",
+      "action_or_shot": "Saque central (direções 1, 2 e 3)",
+      "expected_result": "Devolução tende a voltar pelo lado direito; ambos os jogadores com forehand disponível para a primeira bola do rali",
+      "final_state": "Construção",
+      "tactical_objective": "Criar vantagem tática na primeira bola; manter forehand dominante no rali",
+      "level": "Iniciante",
+      "source_reference": "CBT Verde 2.1.1",
+      "tags": {
+        "level_filter": "iniciante",
+        "source_filter": "verde"
+      }
+    },
+    {
+      "id": "T024",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Saque",
+      "game_situation": "Sacador com domínio de saque top spin (kick ou twist)",
+      "action_or_shot": "Saque Top Spin",
+      "expected_result": "Bola com mais velocidade e queda rápida; desarranjo da base de defesa do devolvedor",
+      "final_state": "Construção Pressão",
+      "tactical_objective": "Gerar dificuldade na devolução; obter ângulos que fujam do raio de ação do devolvedor",
+      "level": "Avançado",
+      "source_reference": "CBT Amarelo 8.1",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T025",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Saque",
+      "game_situation": "Condição de vento forte ou necessidade de esconder o tipo de saque",
+      "action_or_shot": "Saque com bola na subida",
+      "expected_result": "Dificuldade para o devolvedor identificar o tipo e direção do saque; mais controle em vento forte",
+      "final_state": "Construção",
+      "tactical_objective": "Esconder o tipo de saque; combinar potência e controle; adaptar ao vento",
+      "level": "Avançado",
+      "source_reference": "CBT Amarelo 8.2",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T026",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Saque",
+      "game_situation": "Sacador quer aprofundar o saque em lob com segurança",
+      "action_or_shot": "Saque top spin por baixo em lob",
+      "expected_result": "Lob com efeito e profundidade; adversário forçado ao fundo da quadra",
+      "final_state": "Construção Pressão",
+      "tactical_objective": "Aprofundar o lob de saque com maior controle e segurança",
+      "level": "Intermediário",
+      "source_reference": "CBT Amarelo 8.3.1",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T027",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Saque",
+      "game_situation": "Adversários dominam ganchos e smashes em saques em lob",
+      "action_or_shot": "Saque top spin por baixo direto",
+      "expected_result": "Bola de saque com trajetória direta e baixa; adversários com dificuldade para atacar no alto",
+      "final_state": "Neutro Construção",
+      "tactical_objective": "Evitar que adversários ataquem o saque em lob; neutralizar recursos ofensivos dos devolvedores",
+      "level": "Intermediário",
+      "source_reference": "CBT Amarelo 8.3.2",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T028",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Saque",
+      "game_situation": "Adversários preparados para saque de trajetória direta; momento de surpresa disponível",
+      "action_or_shot": "Saque top spin por cima em lob",
+      "expected_result": "Adversários desorganizados na base de devolução; surpresa na trajetória",
+      "final_state": "Pressão Construção",
+      "tactical_objective": "Surpreender adversários que esperam trajetória direta; desorganizar a base de devolução",
+      "level": "Avançado",
+      "source_reference": "CBT Amarelo 8.3.3",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T029",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Saque",
+      "game_situation": "Formação em I — sacador e parceiro alinhados no centro; combinação de direção pré-estabelecida",
+      "action_or_shot": "Saque nas direções 2, 3 e 4 (centro)",
+      "expected_result": "Devolvedores sem saber para qual lado vai o parceiro do sacador; confusão tática",
+      "final_state": "Pressão Construção",
+      "tactical_objective": "Causar confusão na dupla devolvedora; criar incerteza sobre a cobertura após o saque",
+      "level": "Avançado",
+      "source_reference": "CBT Verde 2.1.4",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "verde"
+      }
+    },
+    {
+      "id": "T030",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Saque",
+      "game_situation": "Devolução cria dificuldade para dupla sacadora; dupla devolvedora entra com ataque",
+      "action_or_shot": "Devolução baixa + entrada (esgrimada, top spin forehand/backhand ou curta)",
+      "expected_result": "Ponto finalizado ou pressão máxima criada pela dupla devolvedora na terceira bola",
+      "final_state": "Pressão Finalização",
+      "tactical_objective": "Combinar devolução difícil com entrada imediata; transformar devolução em plataforma ofensiva",
+      "level": "Avançado",
+      "source_reference": "CBT Azul 4.5.4",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "azul"
+      }
+    },
+    {
+      "id": "T031",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Saque",
+      "game_situation": "Devolução + entrada não finaliza — sacadores levantam a bola; dupla devolvedora finaliza com smash ou gancho",
+      "action_or_shot": "Devolução + entrada + smash ou gancho de ataque",
+      "expected_result": "Ponto finalizado após a sequência de três bolas",
+      "final_state": "Finalização",
+      "tactical_objective": "Construir o ponto em três bolas a partir da devolução; transformar dificuldade criada em finalização",
+      "level": "Avançado",
+      "source_reference": "CBT Azul 4.5.4",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "azul"
+      }
+    },
+    {
+      "id": "T032",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Defesa Reconstrução",
+      "game_situation": "Defesa executada na frente do jogador que executou o smash; adversário forçado a baixar e rebater bola lenta",
+      "action_or_shot": "Defesa na frente + entrada de ataque antecipada",
+      "expected_result": "Adversário em desequilíbrio; defensor antecipa e executa ataque de entrada",
+      "final_state": "Pressão Finalização",
+      "tactical_objective": "Sair rapidamente da defesa para o ataque aproveitando a bola lenta do adversário; inverter o papel de pressão",
+      "level": "Avançado",
+      "source_reference": "CBT Azul 4.5.4",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "azul"
+      }
+    },
+    {
+      "id": "T033",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Defesa",
+      "game_situation": "Adversários avançam após golpe de ataque; dupla defensora em situação muito adversa",
+      "action_or_shot": "Lob alto (1°) + Lob alto (2°) + entrada com arco superior de contra-ataque",
+      "expected_result": "Primeiro lob neutraliza; segundo lob força novo golpe defensivo; terceiro movimento é entrada ofensiva",
+      "final_state": "Pressão Finalização",
+      "tactical_objective": "Sair de defesa extrema usando dois lobs para ganhar tempo e espaço; converter para ataque no terceiro movimento",
+      "level": "Avançado",
+      "source_reference": "CBT Azul 4.5.4",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "azul"
+      }
+    },
+    {
+      "id": "T034",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Construção",
+      "game_situation": "Saque cria dificuldade para o devolvedor; parceiro do sacador entra finalizando na terceira bola",
+      "action_or_shot": "Saque + entrada do parceiro (3ª bola)",
+      "expected_result": "Ponto encerrado diretamente na terceira bola",
+      "final_state": "Finalização",
+      "tactical_objective": "Converter saque eficaz em finalização imediata do ponto; terceira bola como golpe terminal (combinação 1-2)",
+      "level": "Avançado",
+      "source_reference": "CBT Azul 4.6.1",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "azul"
+      }
+    },
+    {
+      "id": "T035",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Construção",
+      "game_situation": "Saque + entrada não finaliza — adversários levantam; dupla sacadora finaliza com nova ação ofensiva",
+      "action_or_shot": "Saque + entrada do parceiro + ação ofensiva final (smash, gancho ou acelerada)",
+      "expected_result": "Ponto encerrado na quinta bola após a construção em três ações",
+      "final_state": "Finalização",
+      "tactical_objective": "Construir o ponto com saque + entrada + finalização; aproveitar flutuação gerada no primeiro ingresso (combinação 1-2-3)",
+      "level": "Avançado",
+      "source_reference": "CBT Azul 4.6.1",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "azul"
+      }
+    },
+    {
+      "id": "T036",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Construção",
+      "game_situation": "Jogador avança durante o rali com top spin, esgrimada ou curta; adversário forçado a levantar a bola",
+      "action_or_shot": "Entrada (top spin, esgrimada ou curta) + smash ou ação ofensiva compatível",
+      "expected_result": "Adversário levanta a bola; smash ou ação ofensiva finaliza o ponto",
+      "final_state": "Finalização",
+      "tactical_objective": "Diminuir o tempo de reação do adversário com a entrada; criar condição para ação final de alta qualidade (combinação entrada-smash)",
+      "level": "Avançado",
+      "source_reference": "CBT Azul 4.6.1",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "azul"
+      }
+    },
+    {
+      "id": "T037",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Construção Pressão",
+      "game_situation": "Jogador opta por lob lento de preparação; adversário forçado a recuar e executar golpe defensivo",
+      "action_or_shot": "Lob de preparação + golpe de arco superior",
+      "expected_result": "Adversário recua; executante avança e executa arco superior para finalizar ou pressionar",
+      "final_state": "Pressão Finalização",
+      "tactical_objective": "Usar lob lento para criar condição de avanço; combinar lob de preparação com ataque de entrada (combinação lob-entrada)",
+      "level": "Avançado",
+      "source_reference": "CBT Azul 4.6.1",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "azul"
+      }
+    },
+    {
+      "id": "T038",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro",
+      "game_situation": "Dupla em proteção central — adversários induzidos a arriscar nas extremidades",
+      "action_or_shot": "Posicionamento central com expansão para as extremidades",
+      "expected_result": "Base de proteção sólida reduz erros adversários; adversários induzidos a arriscar nas extremidades",
+      "final_state": "Construção Pressão",
+      "tactical_objective": "Minimizar indecisões na devolução de saques centralizados; induzir erros do adversário nas extremidades",
+      "level": "Avançado",
+      "source_reference": "CBT Azul 4.5.1",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "azul"
+      }
+    },
+    {
+      "id": "T039",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro",
+      "game_situation": "Adversário com repertório de saque com tendência determinada para um lado",
+      "action_or_shot": "Proteção priorizada para uma extremidade com expansão para a outra",
+      "expected_result": "Base adaptada à tendência do sacador; espaço que o sacador tende a explorar reduzido",
+      "final_state": "Construção",
+      "tactical_objective": "Anular a tendência do sacador; forçar o sacador a arriscar o lado que domina menos",
+      "level": "Avançado",
+      "source_reference": "CBT Azul 4.5.2",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "azul"
+      }
+    },
+    {
+      "id": "T040",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Construção",
+      "game_situation": "Rali em simples — jogador faz bola de preparação cruzada baixa para o backhand do adversário",
+      "action_or_shot": "Bola cruzada de preparação (forehand) + continuidade com forehand dominante",
+      "expected_result": "Adversário no backhand; espaço aberto para finalização; mas ângulo lateral fica exposto para o executante",
+      "final_state": "Pressão",
+      "tactical_objective": "Preparar o ponto com forehand cruzado para criar oportunidade de finalização; compreender que abertura de ângulo gera risco",
+      "level": "Intermediário",
+      "source_reference": "CBT Amarelo 9.2",
+      "tags": {
+        "level_filter": "intermediario",
+        "source_filter": "amarelo"
+      }
+    },
+    {
+      "id": "T041",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Neutro Defesa",
+      "game_situation": "Bola com pouca velocidade e altura adequada; jogador no backhand opta por gancho inside out",
+      "action_or_shot": "Gancho inside out (pronação do punho, trajetória diagonal medial-lateral, efeito spin)",
+      "expected_result": "Bola com efeito e trajetória diagonal; adversário surpreendido com angulação incomum",
+      "final_state": "Pressão",
+      "tactical_objective": "Surpreender o adversário com variação de trajetória; aumentar eficiência em ações ofensivas e contra-ofensivas",
+      "level": "Avançado",
+      "source_reference": "CBT Azul 3.1",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "azul"
+      }
+    },
+    {
+      "id": "T042",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Pressão",
+      "game_situation": "Bola adversária bem abaixo do nível da rede e próxima a ela; executante em posição adiantada",
+      "action_or_shot": "Fast hand (base lateralizada, abertura do braço dominante, ataque rápido)",
+      "expected_result": "Ataque rápido aproveitando bola vulnerável próxima à rede; adversário sem tempo de reação",
+      "final_state": "Finalização Pressão",
+      "tactical_objective": "Aproveitar bola baixa e próxima à rede com ataque rápido antes que o adversário se reorganize",
+      "level": "Avançado",
+      "source_reference": "CBT Azul 3.2",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "azul"
+      }
+    },
+    {
+      "id": "T043",
+      "source_type": "cbt_transitions_html",
+      "initial_state": "Construção",
+      "game_situation": "Dupla mista — destro no esquerdo, canhota no direito; disputa cruzada entre as mulheres",
+      "action_or_shot": "Bola cruzada próxima ao centro (backhand da adversária, forehand da parceira)",
+      "expected_result": "Adversária forçada ao backhand; parceiro pode ocupar posição mais centralizada; paralela do parceiro protegida",
+      "final_state": "Construção Pressão",
+      "tactical_objective": "Manter o jogo cruzado próximo ao centro; explorar o backhand da adversária; proteger a paralela do parceiro",
+      "level": "Avançado",
+      "source_reference": "CBT Amarelo 10.1",
+      "tags": {
+        "level_filter": "avancado",
+        "source_filter": "amarelo"
+      }
+    }
+  ],
+  "pedagogical_rules": [
+    {
+      "id": "P001",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Avaliação Diagnóstica",
+      "rule_type": "pre-requisito",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "O professor deve identificar o nível do aluno antes de qualquer atividade — perguntas básicas e exercícios diagnósticos são obrigatórios antes de iniciar o ensino dos fundamentos.",
+      "source_reference": "CBT Verde 6.1 — Avaliação Diagnóstica"
+    },
+    {
+      "id": "P002",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Nível do Exercício",
+      "rule_type": "proibicao",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "Treinos muito avançados para alunos iniciantes podem frustrar o aluno e desmotivá-lo a praticar o esporte. O contrário também é prejudicial: treinos muito simples para alunos avançados não desenvolvem.",
+      "source_reference": "CBT Verde 6.1 — Avaliação Diagnóstica"
+    },
+    {
+      "id": "P003",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Estrutura do Exercício",
+      "rule_type": "progressao",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "A progressão pedagógica deve seguir: Exercício Fechado (100% previsível, sem decisão) → Semi-Aberto (ação definida + abertura para jogo) → Aberto (100% decisão do aluno, professor como mediador).",
+      "source_reference": "CBT Verde 6.2, 6.3, 6.4 — Estrutura de Aula"
+    },
+    {
+      "id": "P004",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Metodologia Ativa",
+      "rule_type": "tatico",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "O professor é mediador e coadjuvante. O aluno deve ser o protagonista do treinamento. O objetivo é que o aluno entenda como e por que se joga, antes de receber ênfase na técnica.",
+      "source_reference": "CBT Verde 7.0 — Metodologia Ativa TreinamentosBT"
+    },
+    {
+      "id": "P005",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Posição Inicial",
+      "rule_type": "pre-requisito",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "A posição inicial correta é pré-requisito para todos os golpes. Raquete centralizada na altura do nariz, visão completa à frente, retorno à posição inicial após cada golpe.",
+      "source_reference": "CBT Verde 11.1 — Posição Inicial"
+    },
+    {
+      "id": "P006",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Split Step",
+      "rule_type": "pre-requisito",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "O split step é ação motora de ativação — \"leve salto\" que incrementa a velocidade de reação. É base motora para a construção de todos os golpes e deve ser treinado desde o nível iniciante.",
+      "source_reference": "CBT Verde 2.0 — Bases Motoras / CBT Amarelo 2.0"
+    },
+    {
+      "id": "P007",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Mão Não Dominante",
+      "rule_type": "pre-requisito",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "O uso correto da mão não dominante é fundamento essencial para o controle da cabeça da raquete e para todos os gestos técnicos. Deve ser ensinado desde o início e cobrado em todos os golpes.",
+      "source_reference": "CBT Verde 2.0 — Bases Motoras / CBT Amarelo 2.0"
+    },
+    {
+      "id": "P008",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Raio de Ação",
+      "rule_type": "pre-requisito",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "O entendimento do raio de ação (alcance), passos de ajuste, ampliação do alcance e manutenção do equilíbrio são pré-requisitos para o aprimoramento de todos os golpes.",
+      "source_reference": "CBT Verde 2.0 — Bases Motoras / CBT Amarelo 2.0"
+    },
+    {
+      "id": "P009",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Elástico da Dupla",
+      "rule_type": "tatico",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "A cobertura de ângulos horizontal e vertical (elástico) deve ser ensinada desde o início: quando A vai para a bola e fecha a paralela, B deve fechar o meio — e vice-versa.",
+      "source_reference": "CBT Verde 8.1 — Elástico / Posicionamento"
+    },
+    {
+      "id": "P010",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Forehand Dinâmico",
+      "rule_type": "pre-requisito",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "O forehand dinâmico é golpe base do jogo e deve ser ensinado antes dos golpes avançados. O jogo de pernas é pré-requisito: um voleio eficaz depende de um bom deslocamento.",
+      "source_reference": "CBT Verde 11.2 — Forehand Dinâmico"
+    },
+    {
+      "id": "P011",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Backhand Dinâmico",
+      "rule_type": "erro",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "Erro mais comum no backhand dinâmico: trazer a raquete para trás (a ponta da raquete nunca deve passar por trás da visão). O movimento deve ser mais curto do que no tênis de quadra.",
+      "source_reference": "CBT Verde 11.3 — Backhand Dinâmico"
+    },
+    {
+      "id": "P012",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Forehand Estático",
+      "rule_type": "erro",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "Erros mais comuns no forehand estático: estar em deslocamento no momento do contato (base instável) e fazer efeitos que diminuem o ponto de contato com a raquete.",
+      "source_reference": "CBT Verde 11.4 — Forehand Estático"
+    },
+    {
+      "id": "P013",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Forehand Estático",
+      "rule_type": "correcao",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "Correção prioritária do forehand estático: manter base sólida e parada no momento do contato, face da raquete sempre apontando para a quadra adversária sem efeitos que reduzam a estabilidade.",
+      "source_reference": "CBT Verde 11.4 — Forehand Estático"
+    },
+    {
+      "id": "P014",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Backhand Estático",
+      "rule_type": "erro",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "Erro grave no backhand estático: não utilizar a mão não dominante no coração da raquete no momento do impacto. Sua ausência compromete equilíbrio e firmeza da execução.",
+      "source_reference": "CBT Verde 11.5 — Backhand Estático"
+    },
+    {
+      "id": "P015",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Smash",
+      "rule_type": "erro",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "Principal causa de erros excessivos no smash entre iniciantes: excesso de força. Quanto mais forte executado, menos controle o jogador terá. A movimentação de pernas para posicionamento sob a bola é igualmente crítica.",
+      "source_reference": "CBT Verde 11.6 — Smash"
+    },
+    {
+      "id": "P016",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Smash",
+      "rule_type": "criterio",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "O aluno está pronto para progressões avançadas de smash quando consegue executar o golpe sob a bola com equilíbrio consistente antes de buscar potência. Laçada e posicionamento corretos são critérios mínimos de evolução.",
+      "source_reference": "CBT Verde 11.6 / Manual CBT"
+    },
+    {
+      "id": "P017",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Gancho",
+      "rule_type": "erro",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "Principal causa de erros no gancho entre iniciantes: excesso de força e falta de movimentação de pernas. Quanto mais forte executado sem posicionamento correto, menos controle.",
+      "source_reference": "CBT Verde 11.7 — Gancho"
+    },
+    {
+      "id": "P018",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Gancho",
+      "rule_type": "progressao",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "O gancho deve ser ensinado primeiro em duas variações distintas: gancho de preparação (fundo de quadra, trajetória mais retilínea, menor potência) e gancho de definição (próximo à rede, contato mais alto, maior potência). A distinção entre eles é critério pedagógico fundamental.",
+      "source_reference": "CBT Verde 11.7 — Gancho"
+    },
+    {
+      "id": "P019",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Saque",
+      "rule_type": "progressao",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "Durante o aprendizado do saque, o professor deve dividir o movimento em etapas e treinar cada uma separadamente antes de juntar o gesto completo. Isso facilita o entendimento e a automatização.",
+      "source_reference": "CBT Verde 11.8 — Saque"
+    },
+    {
+      "id": "P020",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Saque — Toss",
+      "rule_type": "pre-requisito",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "O ponto fundamental para uma boa execução do saque está no lançamento da bola (toss). O cotovelo deve permanecer reto durante o lançamento. O toss deve ser dominado antes de trabalhar os efeitos e variações do saque.",
+      "source_reference": "CBT Verde 11.8 — Saque"
+    },
+    {
+      "id": "P021",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Curta",
+      "rule_type": "tatico",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "O ponto de contato da curta deve estar sempre próximo à altura da borda da rede. Deixar a bola cair demais antes do golpe aumenta o risco de antecipação pelo adversário e reduz a eficácia do deslocamento.",
+      "source_reference": "CBT Verde 11.9 — Bolas Curtas"
+    },
+    {
+      "id": "P022",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Lob",
+      "rule_type": "tatico",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "O ponto de contato do lob deve estar sempre próximo à altura da borda da rede. Deixar a bola cair demais aumenta o risco de antecipação do adversário, pois o golpe é alto e lento.",
+      "source_reference": "CBT Verde 11.10 — Lob"
+    },
+    {
+      "id": "P023",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Efeitos (Top Spin / Slice)",
+      "rule_type": "proibicao",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "Efeitos avançados como top spin devem ser deixados para um segundo momento. Para iniciantes, o uso de efeitos pode ser muito difícil e deve ser postergado até que o aluno tenha controle básico da execução dos golpes.",
+      "source_reference": "CBT Verde 2.3.4 — Efeitos"
+    },
+    {
+      "id": "P024",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Forehand Anômalo",
+      "rule_type": "proibicao",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "O forehand anômalo não deve ser ensinado no nível verde. O próprio material CBT Verde indica explicitamente que esse golpe será trabalhado \"no próximo nível, no curso amarelo\".",
+      "source_reference": "CBT Verde 11.2 — \"Esse golpe será trabalhado no próximo nível, no curso amarelo.\""
+    },
+    {
+      "id": "P025",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Critério de Evolução Verde → Amarelo",
+      "rule_type": "criterio",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "O aluno está pronto para o nível amarelo quando domina os fundamentos básicos (forehand/backhand estático e dinâmico, smash, gancho, saque, curta e lob) com controle mínimo de execução e entende as situações de jogo (saque, devolução, rali) sem precisar de instrução contínua.",
+      "source_reference": "CBT Verde — Estrutura de progressão implícita"
+    },
+    {
+      "id": "P026",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Volume antes de Agressividade",
+      "rule_type": "tatico",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "Alunos iniciantes frequentemente tentam ser agressivos demais e erram muito cedo no ponto. O professor deve priorizar o desenvolvimento do volume de jogo (manter a bola em jogo) antes da agressividade.",
+      "source_reference": "CBT Verde 2.3.1 — Controle e Direção"
+    },
+    {
+      "id": "P027",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Defesa — Ansiedade",
+      "rule_type": "correcao",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "A primeira correção a trabalhar na defesa é a ansiedade: muitos jogadores quando estão sendo atacados ficam ansiosos e tentam sair da situação com um contra-ataque precipitado, errando cedo no ponto.",
+      "source_reference": "CBT Verde 2.3.3 — Defesa"
+    },
+    {
+      "id": "P028",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Crianças — Adaptação",
+      "rule_type": "progressao",
+      "level": "iniciante",
+      "source_filter": "verde",
+      "rule": "Para crianças até 12 anos: quadra reduzida (14m × 7m), rede 1,50m, raquetes menores. Para 12–18 anos: quadra regulamentar (16m × 8m), rede 1,70m, raquetes normais. A progressão de materiais e espaço acompanha o desenvolvimento físico.",
+      "source_reference": "CBT Verde 12.0 — Beach Tennis para Crianças"
+    },
+    {
+      "id": "P029",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Golpes Avançados — Pré-requisito",
+      "rule_type": "pre-requisito",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "Os golpes avançados (forehand anômalo, ventaglio, top spin, arco superior, arco inferior) pressupõem domínio dos fundamentos básicos do nível verde. O aluno deve dominar o raio de ação, o split step e a mão não dominante como pré-requisitos.",
+      "source_reference": "CBT Amarelo 2.0 — Bases Motoras"
+    },
+    {
+      "id": "P030",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Forehand Anômalo Defensivo",
+      "rule_type": "pre-requisito",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "O forehand anômalo defensivo deve ser ensinado antes do ofensivo. É usado em momentos defensivos quando o adversário executa ataque direto (saque ou avanços durante o rali). O domínio do gesto defensivo é pré-requisito para o ofensivo.",
+      "source_reference": "CBT Amarelo 3.1 — Forehand Anômalo"
+    },
+    {
+      "id": "P031",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Forehand Anômalo Ofensivo",
+      "rule_type": "tatico",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "O forehand anômalo ofensivo só deve ser ensinado quando o aluno consegue perceber que a bola será lenta o suficiente para antecipar o contato (\"ir para a bola\"). A leitura da bola é pré-requisito tático para ensinar este golpe.",
+      "source_reference": "CBT Amarelo 3.1.2 — Forehand Anômalo Ofensivo"
+    },
+    {
+      "id": "P032",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Ventaglio Ofensivo",
+      "rule_type": "tatico",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "O ventaglio ofensivo deve ser ensinado somente quando o aluno já domina o forehand anômalo ofensivo. A condição de uso é a mesma: bola lenta e flutuante que permite antecipar o contato. O spin é elemento adicional, não a base do golpe.",
+      "source_reference": "CBT Amarelo 3.2 — Ventaglio Ofensivo"
+    },
+    {
+      "id": "P033",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Top Spin — Progressão",
+      "rule_type": "progressao",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "O top spin forehand e backhand são ferramentas para transformar momentos neutros em pressão ofensiva. Devem ser ensinados depois que o aluno domina o forehand/backhand dinâmico básico e compreende o objetivo tático de criar queda rápida da bola.",
+      "source_reference": "CBT Amarelo 4.0 — Top Spin"
+    },
+    {
+      "id": "P034",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Top Spin — Contextualização",
+      "rule_type": "tatico",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "O top spin só deve ser ensinado como recurso ofensivo em momentos muito específicos (bola acima da rede, grandes envergaduras) e como contra-ofensivo (bola desordenada). Não deve ser tratado como golpe padrão ou automático.",
+      "source_reference": "CBT Amarelo 4.1 / 4.2 — Top Spin Forehand e Backhand"
+    },
+    {
+      "id": "P035",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Arco Inferior — Pré-requisito",
+      "rule_type": "pre-requisito",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "O arco inferior pressupõe o entendimento dos momentos táticos: é usado apenas quando o oponente vai avançar em ataque potente e direto ao solo (smash ou gancho). O aluno deve aprender a recuar antecipadamente com base na leitura do lob curto adversário.",
+      "source_reference": "CBT Amarelo 5.0 / 5.1 — Defesas Avançadas / Arco Inferior"
+    },
+    {
+      "id": "P036",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Arco Superior — Pré-requisito",
+      "rule_type": "pre-requisito",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "O arco superior pressupõe que o aluno consiga ler que o lob adversário foi executado com eficiência e profundidade — condição de possibilidade de avanço para a rede. A leitura tática antecede a execução técnica.",
+      "source_reference": "CBT Amarelo 5.2 — Arco Superior"
+    },
+    {
+      "id": "P037",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Saque Kick / Top Spin",
+      "rule_type": "tatico",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "O saque top spin (kick ou twist) é encontrado em jogadores profissionais e de alto rendimento. Deve ser ensinado apenas quando o aluno já possui domínio técnico do saque convencional. O objetivo tático — gerar devolução vulnerável para a terceira bola — deve ser compreendido antes da progressão técnica.",
+      "source_reference": "CBT Amarelo 8.1 — Saque Top Spin"
+    },
+    {
+      "id": "P038",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Saque com Bola na Subida",
+      "rule_type": "progressao",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "O saque com bola na subida é ferramenta para jogadores de alto rendimento. Deve ser desenvolvido somente após domínio sólido do saque convencional — é a progressão mais exigente do fundamento saque neste nível.",
+      "source_reference": "CBT Amarelo 8.2 — Saque com Bola na Subida"
+    },
+    {
+      "id": "P039",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Saque Top Spin por Cima em Lob",
+      "rule_type": "progressao",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "O saque top spin por cima em lob requer alto domínio do gesto técnico e muita percepção de momento. Deve ser o último a ser ensinado na progressão dos tipos de saque — não deve ser ensinado antes do domínio dos saques mais básicos.",
+      "source_reference": "CBT Amarelo 8.3.3 — Saque Top Spin por Cima em Lob"
+    },
+    {
+      "id": "P040",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Simples na Paralela",
+      "rule_type": "tatico",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "O jogo em simples deve ser usado como ferramenta pedagógica antes do jogo em dupla. Na paralela, o aluno desenvolve volume, contenção de riscos laterais e gestão de tempo — pilares táticos que serão transferidos para o jogo em dupla.",
+      "source_reference": "CBT Amarelo 9.0 / 9.1 — Jogo em Simples"
+    },
+    {
+      "id": "P041",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Simples — Progressão de Formatos",
+      "rule_type": "progressao",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "A progressão do jogo em simples segue: (1) paralela → (2) cruzada com forehand no meio → (3) cruzada com backhand no meio. Cada formato desenvolve habilidades táticas específicas antes do jogo em dupla completo.",
+      "source_reference": "CBT Amarelo 9.1, 9.2, 9.3 — Simples"
+    },
+    {
+      "id": "P042",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Dupla Mista — Posicionamento",
+      "rule_type": "tatico",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "Na dupla mista com dois destros, o posicionamento padrão é homem no lado esquerdo e mulher no lado direito. Variações devem ser ensinadas apenas quando o aluno domina o padrão básico e entende os motivos táticos das variações.",
+      "source_reference": "CBT Amarelo 10.1 — Dupla Mista"
+    },
+    {
+      "id": "P043",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Estratégia vs Tática",
+      "rule_type": "progressao",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "O conceito de estratégia (objetivo de longo prazo) deve ser ensinado antes de trabalhar táticas específicas (decisões de médio prazo). O aluno deve entender que a estratégia define qual jogo jogar; a tática define como chegar lá em cada ponto.",
+      "source_reference": "CBT Amarelo 11.2 — Estratégia e Tática"
+    },
+    {
+      "id": "P044",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Critério de Evolução Amarelo → Azul",
+      "rule_type": "criterio",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "O aluno está pronto para o nível azul quando: domina os golpes avançados em contexto de jogo (não isolados), compreende estratégia e tática, consegue estabelecer plano de jogo e executar simples com os três formatos propostos.",
+      "source_reference": "CBT Amarelo — Estrutura de progressão implícita"
+    },
+    {
+      "id": "P045",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Preparação Física — Ordem",
+      "rule_type": "tatico",
+      "level": "intermediario",
+      "source_filter": "amarelo",
+      "rule": "A preparação física deve ser abordada como aspecto complementar — primeiro técnico, depois específico. Capacidades básicas (potência anaeróbia, capacidade aeróbia, flexibilidade, força) devem ser desenvolvidas antes das capacidades específicas do jogo.",
+      "source_reference": "CBT Amarelo 13.0 — Fisiologia do Exercício"
+    },
+    {
+      "id": "P046",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Nível Azul — Contexto",
+      "rule_type": "pre-requisito",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "O nível azul é o ponto mais alto de capacitação. O treinador neste nível deve ser capaz de: entender profundamente as demandas da modalidade, planejar ciclicamente, identificar carências individuais dos atletas e interagir com toda a comissão técnica multidisciplinar.",
+      "source_reference": "CBT Azul 1.0 — Introdução"
+    },
+    {
+      "id": "P047",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Gancho Inside Out — Pré-requisito",
+      "rule_type": "pre-requisito",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "O gancho inside out é técnica especial de alto rendimento. Exige alta capacidade de entendimento do jogo, reações rápidas e execuções precisas. Não deve ser ensinado antes do gancho convencional estar automatizado.",
+      "source_reference": "CBT Azul 3.1 — Gancho Inside Out"
+    },
+    {
+      "id": "P048",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Fast Hand — Pré-requisito",
+      "rule_type": "pre-requisito",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "O fast hand pressupõe domínio da posição inicial ofensiva e leitura antecipada de bolas abaixo do nível da rede próximas à rede. É gesto de utilização específica — não deve ser treinado como posição padrão.",
+      "source_reference": "CBT Azul 3.2 — Fast Hand"
+    },
+    {
+      "id": "P049",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Binômio Tudo ou Tudo",
+      "rule_type": "proibicao",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "O treinador não deve impor verdades absolutas no treinamento de beach tennis. O jogo é de situações abertas — \"a única certeza que o atleta terá é que tudo pode mudar a qualquer momento.\" Conceitos rígidos engessar o desenvolvimento.",
+      "source_reference": "CBT Azul 4.0 — Conceitos do Jogo de Beach Tennis"
+    },
+    {
+      "id": "P050",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Binômio Simplicidade e Eficácia",
+      "rule_type": "tatico",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "Devido ao baixo tempo de reação, gestos técnicos simples e de reação que facilitam a automatização tendem a ser mais eficazes. A progressão ocorre sempre dos conceitos mais simples aos mais complexos. Recursos especiais surgem naturalmente com o desenvolvimento.",
+      "source_reference": "CBT Azul 4.1.2 — Simplicidade e Eficácia"
+    },
+    {
+      "id": "P051",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Binômio Paciência e Competência",
+      "rule_type": "tatico",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "O treinador deve conduzir o atleta ao desenvolvimento da resiliência mental: paciência para \"jogar o jogo\" (defender, neutralizar, preparar, atacar) e competência para discernir o momento mais apropriado de tentar vencer o ponto. Este binômio pressupõe os dois anteriores.",
+      "source_reference": "CBT Azul 4.1.3 — Paciência e Competência"
+    },
+    {
+      "id": "P052",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Hierarquia dos Pontos",
+      "rule_type": "criterio",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "O treinador deve ensinar o atleta a diferenciar pontos por hierarquia: Pontos de Construção (0-0, 15-15) → Pontos Geradores (30-0, 15-30) → Pontos Finalizadores (40-x, x-40). O risco e a intenção devem variar conforme a hierarquia do ponto.",
+      "source_reference": "CBT Azul 7.0 — Hierarquia dos Pontos"
+    },
+    {
+      "id": "P053",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Hierarquia dos Games",
+      "rule_type": "criterio",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "O treinador deve ensinar o atleta a diferenciar games por hierarquia: Games de Construção (0-0, 1-1...) → Games Geradores (4-0, 4-1...) → Games Finalizadores (5-x, 6-5, TIEBREAK). A gestão do risco deve escalar com a hierarquia do game.",
+      "source_reference": "CBT Azul 8.0 — Hierarquia dos Games"
+    },
+    {
+      "id": "P054",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Combinações Táticas — Bloqueio",
+      "rule_type": "proibicao",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "As combinações táticas (1-2, 1-2-3, entrada-smash, lob-entrada, devolução-entrada-smash, lob-lob-entrada) são exclusivas do nível azul. Não devem ser ensinadas nos níveis verde e amarelo — pressupõem domínio completo dos fundamentos individuais e táticos dos níveis anteriores.",
+      "source_reference": "CBT Azul 4.5.4 / 4.6.1 — Combinações"
+    },
+    {
+      "id": "P055",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Combinações Defensivas — Pré-requisito",
+      "rule_type": "pre-requisito",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "O treinador deve criar sistemas de treinamento onde a dupla possa executar combinações defensivas (devolução-entrada, devolução-entrada-smash, defesa-entrada, lob-lob-entrada) para construir pontos. O pré-requisito é que o atleta já domine cada componente individualmente.",
+      "source_reference": "CBT Azul 4.5.4 — Combinações Defensivas"
+    },
+    {
+      "id": "P056",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Jogador Especialista vs Completo",
+      "rule_type": "tatico",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "O jogador especialista (restringe-se a um setor da quadra) é um perfil limitante. O objetivo pedagógico do nível azul é desenvolver o jogador completo — que domina amplo repertório e consegue atuar em qualquer setor. Isso exige longa trajetória de treinamento balizada na confiança mútua com o treinador.",
+      "source_reference": "CBT Azul 5.1 / 5.2 — Estilos e Características"
+    },
+    {
+      "id": "P057",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Trajetória da Bola — Ensino",
+      "rule_type": "tatico",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "O treinador deve ensinar o atleta a identificar e usar conscientemente as duas trajetórias: retilínea (bolas acima da rede, ações ofensivas/neutralização) e parabólica (bolas abaixo da rede, preparação/neutralização/defesa). A escolha da trajetória deve ser intencional, não acidental.",
+      "source_reference": "CBT Azul 6.1 — Trajetória da Bola"
+    },
+    {
+      "id": "P058",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Contenção de Ofensividade",
+      "rule_type": "tatico",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "O treinador deve ensinar dois princípios de contenção: (A) manter a bola abaixo do nível da rede reduz chances de ataque adversário; (B) bolas paralelas e ao centro (fechamento de ângulos) protegem as bases da dupla e valorizam a posição do parceiro.",
+      "source_reference": "CBT Azul 6.2 — Contenção de Ofensividade"
+    },
+    {
+      "id": "P059",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Treinamento Mental — Progressão",
+      "rule_type": "progressao",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "A inclusão gradual do treinamento mental deve acompanhar o nível do atleta: categorias iniciais têm necessidade muito maior de técnica; categorias intermediárias devem começar a igualar os 4 fatores (técnico, físico, tático, mental); fases avançadas devem priorizar o tático e mental, com físico e técnico em manutenção.",
+      "source_reference": "CBT Azul 10.1 — Treinamento Mental"
+    },
+    {
+      "id": "P060",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Ansiedade — Correção",
+      "rule_type": "correcao",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "Não é possível mudar emoções diretamente. A intervenção correta é no pensamento (gatilho): mostrar ao atleta que existem outras formas de interpretar cada fase do jogo e mantê-lo no presente com a pergunta \"O que eu tenho que fazer agora e que só depende de mim?\"",
+      "source_reference": "CBT Azul 10.5 — Como Ajudar os Atletas"
+    },
+    {
+      "id": "P061",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Fórmula de Performance",
+      "rule_type": "criterio",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "Performance = Potencial (ser 2, ação) — Interferência (ser 1, julgamento). Existem dois caminhos para incrementar a performance: aumentar o potencial ou diminuir as interferências internas. O treinador deve cuidar de ambos.",
+      "source_reference": "CBT Azul 9.3 — Fórmula para a Performance"
+    },
+    {
+      "id": "P062",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Mental Game — 3 Habilidades",
+      "rule_type": "tatico",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "O treinador deve conduzir o atleta ao desenvolvimento de 3 habilidades: (1) melhorar o \"não julgamento\" — reduzir autopunição; (2) clareza de objetivos e intenções; (3) autoconfiança — \"o indivíduo tem mais potencial do que acredita ter.\"",
+      "source_reference": "CBT Azul 9.2 — As 3 Habilidades"
+    },
+    {
+      "id": "P063",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Comunicação com o Atleta",
+      "rule_type": "correcao",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "O treinador deve identificar se cada atleta é predominantemente visual, cinestésico ou auditivo e adaptar a comunicação. Assumir a responsabilidade pelo resultado (não responsabilizar o atleta) é princípio fundamental de comunicação no alto rendimento.",
+      "source_reference": "CBT Azul 10.7 — Comunicação"
+    },
+    {
+      "id": "P064",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Diálogo Interno — Sobrecarga",
+      "rule_type": "proibicao",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "O treinador não deve sobrecarregar o atleta com informações e críticas durante o jogo. A mente inconsciente precisa receber ordens claras e específicas. Quanto menos informações forem dadas com mais intensidade, melhor será o aproveitamento.",
+      "source_reference": "CBT Azul 9.1 / 10.2 — Mental Game / Jogo Interior"
+    },
+    {
+      "id": "P065",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Integração dos Treinos",
+      "rule_type": "tatico",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "Cada sessão de treinamento deve correlacionar o máximo de fatores do jogo. O professor deve incluir desafios mentais em cada exercício: contagem, situações de conflito, stress controlado. Quanto mais específicos os treinos, maior a transferência para as competições.",
+      "source_reference": "CBT Azul 10.8 — Junção de Treinos Mentais com Táticos, Técnicos e Físicos"
+    },
+    {
+      "id": "P066",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Defesa — Raquete Firme",
+      "rule_type": "correcao",
+      "level": "todos",
+      "source_filter": "azul",
+      "rule": "Três erros principais na defesa e suas correções: (1) mão frouxa → raquete firme, trabalhar como bloco; (2) angulação errada → raquete levemente inclinada para cima; (3) colocar velocidade → raquete firme, menos movimento, menos explosiva.",
+      "source_reference": "CBT Manual / BeachFlow_Master_V1 — Erros comuns da defesa"
+    },
+    {
+      "id": "P067",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Gancho — Contra Smash",
+      "rule_type": "proibicao",
+      "level": "todos",
+      "source_filter": "azul",
+      "rule": "O gancho não é resposta a smash. O gancho é usado em bola alta e funda. Contra smash, a resposta correta é defesa em arco inferior ou estático de forehand/backhand. Confundir as situações é erro tático fundamental.",
+      "source_reference": "CBT Manual — Regra Técnica do Gancho"
+    },
+    {
+      "id": "P068",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Gancho — Erros Técnicos",
+      "rule_type": "erro",
+      "level": "todos",
+      "source_filter": "azul",
+      "rule": "Erros mais comuns no gancho: (1) tempo de bola — muito à frente faz a bola descer, muito atrás faz subir; (2) excesso de punho — instabilidade; (3) erro de escolha — gancho rápido longe da rede entrega bola alta ao adversário. Longe da rede: bola lenta, sem peso, com controle.",
+      "source_reference": "CBT Manual — Erros comuns do Gancho"
+    },
+    {
+      "id": "P069",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Smash — Proibições",
+      "rule_type": "proibicao",
+      "level": "todos",
+      "source_filter": "azul",
+      "rule": "O smash não deve ser usado: em Zona Vermelha, em bola baixa ou média-baixa, sem equilíbrio, quando o objetivo é sobreviver ou ganhar tempo, apenas porque a bola veio alta sem contexto de vantagem. Bola alta não é permissão automática para smash.",
+      "source_reference": "CBT Manual / Ontologia Oficial — Proibições do Smash"
+    },
+    {
+      "id": "P070",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Lob — Proibições",
+      "rule_type": "proibicao",
+      "level": "todos",
+      "source_filter": "azul",
+      "rule": "O lob curto é golpe funcionalmente proibido: entrega smash ou pressão imediata ao adversário. Erros mais comuns: lob curto, falta de profundidade, trajetória baixa, excesso de força sem controle, usar lob ofensivo em desvantagem, não recuperar posição após o lob.",
+      "source_reference": "CBT Manual — Regras do Lob"
+    },
+    {
+      "id": "P071",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Agilidade — Progressão",
+      "rule_type": "criterio",
+      "level": "todos",
+      "source_filter": "azul",
+      "rule": "A progressão do treinamento de agilidade deve seguir 4 níveis: Nível 1 (coordenação, técnica de corrida, padrão de movimento) → Nível 2 (footwork drills, quickness drills, simulações) → Nível 3 (treinamento de agilidade reativa — RAT) → Nível 4 (oclusão temporal). Não pular etapas.",
+      "source_reference": "CBT Azul 11.0 — Preparação Física / Agilidade"
+    },
+    {
+      "id": "P072",
+      "source_type": "cbt_pedagogical_rules_html",
+      "theme": "Parcerias — Ciclo Mínimo",
+      "rule_type": "tatico",
+      "level": "avancado",
+      "source_filter": "azul",
+      "rule": "Parcerias complementares devem permanecer por um período ideal de 9 a 18 meses para a construção dos ciclos de treinamento e avaliação de resultados. Parcerias formadas às vésperas das competições impedem planejamento cíclico efetivo.",
+      "source_reference": "CBT Azul 4.4 — Composição de Parcerias"
+    }
+  ],
+  "drill_library": [
+    {
+      "id": "D001",
+      "source_type": "cbt_drills_html",
+      "name": "Smash Ajoelhado com Toss",
+      "level": "iniciante",
+      "format": "fechado",
+      "shot_tags": [
+        "Smash",
+        "Posicionamento"
+      ],
+      "technical_objective": "Desenvolver o ponto de contato alto e a laçada sem a variável do deslocamento. O aluno sente o contato correto antes de adicionar movimento.",
+      "tactical_objective": "Criar consciência de que o smash exige posicionamento sob a bola antes da execução. Nenhum ponto é possível sem estar na posição correta.",
+      "shots": [
+        "Smash (principal)",
+        "Posicionamento"
+      ],
+      "game_states": [
+        "Pressão",
+        "Finalização"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "O aluno ajoelha-se na quadra, corpo de lado em relação à rede. Coloca-se em posição de troféu: braço dominante atrás com laçada, braço não dominante esticado apontando para cima."
+        },
+        {
+          "step": "02",
+          "instruction": "O aluno lança a própria bola (toss) e executa o smash ajoelhado. O objetivo é o contato mais alto possível com braço totalmente estendido."
+        },
+        {
+          "step": "03",
+          "instruction": "O professor observa: se o contato está alto e à frente; se a laçada está completa; se a pronação acontece no momento do impacto."
+        },
+        {
+          "step": "04",
+          "instruction": "Série: 10 repetições por aluno. Troca com o parceiro. Correção única: levantar o ombro e estender completamente o braço antes do contato."
+        },
+        {
+          "step": "05",
+          "instruction": "Progressão: adicionar levante em pé e depois deslocamento de 1 passo lateral antes da execução."
+        },
+        {
+          "step": "06",
+          "instruction": "Regressão: professor segura a bola parada no ar na altura correta para que o aluno apenas execute o gesto sem preocupação com o toss."
+        }
+      ],
+      "active_question": "Você atingiu a bola no ponto mais alto do seu braço ou esperou ela cair?"
+    },
+    {
+      "id": "D002",
+      "source_type": "cbt_drills_html",
+      "name": "Gancho — Marcador na Linha dos Três",
+      "level": "iniciante",
+      "format": "fechado",
+      "shot_tags": [
+        "Gancho",
+        "Posicionamento"
+      ],
+      "technical_objective": "Desenvolver controle de profundidade, tempo de bola e precisão no gancho. O aluno aprende a conduzir a bola e não a bater.",
+      "tactical_objective": "Fazer o gancho cair dentro da linha dos três metros — cair curto significa entregar bola favorável ao adversário. Profundidade é o critério de sucesso.",
+      "shots": [
+        "Gancho (principal)",
+        "Posicionamento"
+      ],
+      "game_states": [
+        "Reconstrução",
+        "Construção"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Colocar um marcador (cone) dentro da linha dos três metros do lado adversário. O aluno toca a rede com a raquete para marcar a posição inicial."
+        },
+        {
+          "step": "02",
+          "instruction": "O lançador fica no fundo da quadra adversária e lança bolas aleatórias (variando altura e posição lateral) para cima da cabeça do aluno. Não são saques — são bolas altas e flutuantes."
+        },
+        {
+          "step": "03",
+          "instruction": "O aluno executa o gancho com objetivo de fazer a bola cair dentro da linha dos três (entre a rede e o marcador). Corpo lateral à quadra. Braços altos. Movimento prioritariamente de ombro. Punho firme para controle."
+        },
+        {
+          "step": "04",
+          "instruction": "Critérios observados: (1) controle — bola não sai lateral; (2) profundidade — bola cai dentro dos três metros; (3) tempo de bola — contato no ponto correto (não muito à frente nem muito atrás); (4) precisão — direção intencional."
+        },
+        {
+          "step": "05",
+          "instruction": "Série: 12 bolas por aluno. Trocar executor a cada rodada. Professor conta quantas bolas caem dentro do alvo."
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: lançador varia mais a posição das bolas para obrigar deslocamento antes do gancho."
+        },
+        {
+          "step": "07",
+          "instruction": "Regressão: lançador entrega bolas mais previsíveis e na mesma altura. Alargar a zona-alvo (até 5 metros em vez de 3)."
+        }
+      ],
+      "active_question": "A bola foi controlada ou batida? Você sentiu que conduziu ou que empurrou?"
+    },
+    {
+      "id": "D003",
+      "source_type": "cbt_drills_html",
+      "name": "Saque por Etapas — Toss + Laçada + Contato",
+      "level": "iniciante",
+      "format": "fechado",
+      "shot_tags": [
+        "Saque"
+      ],
+      "technical_objective": "Automatizar cada componente do saque antes de juntar o movimento completo: toss, posição de troféu, laçada e pronação.",
+      "tactical_objective": "Construir a base técnica do saque que permitirá, futuramente, variar direção e tipo de saque com consistência.",
+      "shots": [
+        "Saque (principal)"
+      ],
+      "game_states": [
+        "Saque"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Etapa 1 — Toss: Aluno pratica apenas o lançamento da bola. Palma da mão voltada para cima. Cotovelo reto. Bola solta suavemente para cima sem apertar com pressão. Objetivo: bola sobe verticalmente, sem giro. 10 repetições."
+        },
+        {
+          "step": "02",
+          "instruction": "Etapa 2 — Posição de Troféu: Aluno para com a raquete na posição de troféu (atrás da cabeça, laçada formada) enquanto o braço não dominante aponta para cima. Sem bola. 5 pausas de 3 segundos."
+        },
+        {
+          "step": "03",
+          "instruction": "Etapa 3 — Toss + Troféu + Contato: Aluno combina o toss com o movimento de laçada, chegando ao contato mais alto possível. Pé dentro da quadra ao final (FOOT UP) ou manter pés na posição (FOOT BACK). 10 repetições."
+        },
+        {
+          "step": "04",
+          "instruction": "Etapa 4 — Saque Completo: Aluno encadeia tudo — posição inicial, toss, troféu, laçada, contato, pronação e finalização com perna não dominante à frente. 10 repetições."
+        },
+        {
+          "step": "05",
+          "instruction": "Correção única: o professor intervém com apenas uma instrução por etapa — não corrigir tudo ao mesmo tempo."
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: adicionar alvo na quadra adversária (cone central, cone lateral) para direcionar o saque."
+        }
+      ],
+      "active_question": "Em qual etapa você sentiu mais dificuldade — o toss, a laçada ou a pronação?"
+    },
+    {
+      "id": "D004",
+      "source_type": "cbt_drills_html",
+      "name": "Voleio Dinâmico — Duas Colunas",
+      "level": "iniciante",
+      "format": "fechado",
+      "shot_tags": [
+        "Forehand",
+        "Backhand",
+        "Posicionamento"
+      ],
+      "technical_objective": "Desenvolver o gesto do voleio dinâmico de forehand e backhand com transferência de peso correta e ponto de contato à frente do corpo.",
+      "tactical_objective": "Criar o reflexo de se projetar em direção à bola quando ela flutua lenta. O aluno aprende que ir para a bola eleva o ponto de contato e reduz o tempo do adversário.",
+      "shots": [
+        "Forehand dinâmico",
+        "Backhand dinâmico",
+        "Posicionamento"
+      ],
+      "game_states": [
+        "Neutro",
+        "Construção"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Alunos em duas colunas do mesmo lado da quadra. Professor no lado oposto com cesto de bolas. Coluna A bate forehand dinâmico, Coluna B bate backhand dinâmico. Depois troca."
+        },
+        {
+          "step": "02",
+          "instruction": "Professor lança bola flutuante e lenta, alta acima da borda da rede. O aluno da frente da fila se projeta em direção à bola, executa o golpe e retorna para o final da coluna."
+        },
+        {
+          "step": "03",
+          "instruction": "Critérios: raquete acima da linha dos ombros no contato; ponto de contato à frente do corpo; transferência de peso para a perna oposta ao golpe (esquerda para forehand de destros; direita para backhand de destros)."
+        },
+        {
+          "step": "04",
+          "instruction": "Backhand: a mão não dominante na fase de preparação apoia a raquete e se separa próximo ao ponto de contato. A ponta da raquete nunca passa por trás da linha de visão."
+        },
+        {
+          "step": "05",
+          "instruction": "Série: 4 bolas por aluno por rodada. 3 rodadas de cada golpe."
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: professor acelera ligeiramente a bola para reduzir tempo de reação. Depois mistura alturas."
+        },
+        {
+          "step": "07",
+          "instruction": "Regressão: professor lança bola mais lenta e mais alta para dar mais tempo ao aluno de se posicionar."
+        }
+      ],
+      "active_question": "Você se moveu em direção à bola ou esperou ela chegar em você?"
+    },
+    {
+      "id": "D005",
+      "source_type": "cbt_drills_html",
+      "name": "Voleio Estático — Escudo Forehand e Backhand",
+      "level": "iniciante",
+      "format": "fechado",
+      "shot_tags": [
+        "Forehand",
+        "Backhand",
+        "Defesa"
+      ],
+      "technical_objective": "Desenvolver a firmeza da raquete como \"escudo\" no impacto com bola acelerada. Base sólida, raquete firme, sem efeitos.",
+      "tactical_objective": "Criar o reflexo de usar o estático quando não há tempo de se projetar para a bola. O aluno aprende a diferença entre bola rápida (estático) e bola lenta (dinâmico).",
+      "shots": [
+        "Forehand estático",
+        "Backhand estático"
+      ],
+      "game_states": [
+        "Defesa",
+        "Neutro"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Alunos em coluna, cada um aguarda na posição inicial com raquete centralizada na altura do nariz. Professor no lado oposto com cesto."
+        },
+        {
+          "step": "02",
+          "instruction": "Professor lança bola acelerada e direta — simulando devolução de saque ou defesa sob pressão. O aluno posiciona a face da raquete na direção da bola à frente do corpo, base sólida e parada."
+        },
+        {
+          "step": "03",
+          "instruction": "Forehand estático: transferência coordenada do peso para o lado dominante. Face da raquete apontando para a quadra adversária — levemente inclinada para cima para evitar que a bola desça para a rede."
+        },
+        {
+          "step": "04",
+          "instruction": "Backhand estático: transferência para o lado não dominante. Mão não dominante obrigatória no coração da raquete no momento do impacto para firmeza e equilíbrio. Cotovelos próximos."
+        },
+        {
+          "step": "05",
+          "instruction": "O maior erro: a raquete se move no impacto (\"mão de alface\"). Correção: segurar firmemente; a raquete é uma parede."
+        },
+        {
+          "step": "06",
+          "instruction": "Série: 6 bolas de forehand + 6 de backhand por aluno. Professor alterna lados sem avisar para testar reação."
+        },
+        {
+          "step": "07",
+          "instruction": "Progressão: professor aumenta a velocidade das bolas. Aluno precisa estar parado antes do impacto independente da velocidade."
+        }
+      ],
+      "active_question": "Sua raquete ficou firme no impacto ou cedeu para a bola?"
+    },
+    {
+      "id": "D006",
+      "source_type": "cbt_drills_html",
+      "name": "Saque com Alvo Declarado + Devolução",
+      "level": "iniciante",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Saque",
+        "Devolução"
+      ],
+      "technical_objective": "Executar saque com alvo pré-definido (central ou lateral) e receber devolução com voleio estático ou dinâmico conforme a velocidade da bola.",
+      "tactical_objective": "Introduzir a consciência de que o saque tem uma intenção de direção — não é apenas \"colocar a bola em jogo\". O devolvedor aprende a seguir o sacador e cobrir o ângulo.",
+      "shots": [
+        "Saque",
+        "Devolução",
+        "Forehand estático",
+        "Backhand estático"
+      ],
+      "game_states": [
+        "Saque",
+        "Neutro"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Dois cones marcam a faixa central de queda do saque e outros dois marcam a faixa lateral. Antes de sacar, o sacador declara em voz alta: \"central\" ou \"lateral\"."
+        },
+        {
+          "step": "02",
+          "instruction": "Dupla devolvedora se posiciona atrás da linha dos 3 metros, deslocando-se para a direção do sacador."
+        },
+        {
+          "step": "03",
+          "instruction": "O devolvedor responde com voleio estático (bola acelerada) ou dinâmico (bola lenta) conforme a velocidade do saque. Após a devolução, o ponto não continua — é reiniciado."
+        },
+        {
+          "step": "04",
+          "instruction": "Série: 8 saques declarados por dupla sacadora, alternando central e lateral. Depois a dupla troca de função."
+        },
+        {
+          "step": "05",
+          "instruction": "Professor observa: sacador acertou o alvo declarado? Devolvedor se deslocou corretamente? A devolução foi um estático ou dinâmico correto para a velocidade?"
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: o ponto continua após a devolução para 2 bolas adicionais (rali de 3 bolas)."
+        }
+      ],
+      "active_question": "O sacador acertou onde declarou? O devolvedor chegou à bola ou esperou?"
+    },
+    {
+      "id": "D007",
+      "source_type": "cbt_drills_html",
+      "name": "Lob Defensivo + Reposicionamento",
+      "level": "iniciante",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Lob",
+        "Defesa"
+      ],
+      "technical_objective": "Executar lob com profundidade suficiente para empurrar os adversários ao fundo, com ponto de contato próximo à altura da borda da rede.",
+      "tactical_objective": "Usar o lob como ferramenta de recuperação quando a dupla está sob ataque, para tirar os adversários da posição de rede e ganhar tempo de reorganização.",
+      "shots": [
+        "Lob (principal)",
+        "Forehand estático",
+        "Backhand estático"
+      ],
+      "game_states": [
+        "Defesa",
+        "Reconstrução",
+        "Neutro"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Professor lança bola acelerada simulando um ataque. A dupla defensora (A) deve executar lob alto e profundo para o fundo da quadra da dupla adversária (B), que está na posição de rede."
+        },
+        {
+          "step": "02",
+          "instruction": "Após o lob, a dupla A se reposiciona: os dois jogadores recuam para a faixa de atuação (entre 2,5m e 4,5m da rede) cobrindo o centro. O ponto não continua — é reiniciado."
+        },
+        {
+          "step": "03",
+          "instruction": "Critérios de sucesso do lob: (1) bola passa pelo menos 1m acima da rede; (2) bola cai após a linha dos 4,5m da quadra adversária (zona de fundo); (3) ponto de contato da raquete com a bola está na altura da borda da rede — não mais baixo."
+        },
+        {
+          "step": "04",
+          "instruction": "Lob curto é contado como erro: professor aponta quando a bola cai na zona de transição adversária (entre 2,5m e 4,5m)."
+        },
+        {
+          "step": "05",
+          "instruction": "Série: professor lança 8 bolas para a dupla A. Depois a dupla B defende. 3 rodadas cada."
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: a bola do professor é mais acelerada, dando menos tempo para o lob. A dupla precisa reagir mais rápido e ainda assim priorizar a profundidade."
+        },
+        {
+          "step": "07",
+          "instruction": "Regressão: professor lança bola mais lenta para dar tempo suficiente de posicionamento antes do lob."
+        }
+      ],
+      "active_question": "Seu lob chegou ao fundo da quadra ou parou na zona de transição, entregando o ataque?"
+    },
+    {
+      "id": "D008",
+      "source_type": "cbt_drills_html",
+      "name": "Curta Baixa + Smash de Finalização",
+      "level": "iniciante",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Curta",
+        "Smash"
+      ],
+      "technical_objective": "Executar a curta com controle (amortecimento, pé no chão, sem punho) e depois o smash na bola levantada pelo adversário.",
+      "tactical_objective": "Entender a sequência: curta desloca o adversário para frente → adversário levanta a bola → smash finaliza. A curta não é o fim, é o meio.",
+      "shots": [
+        "Curta",
+        "Smash",
+        "Forehand dinâmico"
+      ],
+      "game_states": [
+        "Construção",
+        "Pressão",
+        "Finalização"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Professor lança bola média-baixa a 6–7 metros da rede para o aluno executor. Dupla adversária está posicionada na faixa de atuação (2,5–4,5m da rede)."
+        },
+        {
+          "step": "02",
+          "instruction": "O aluno executor executa a curta: pés no chão, corpo estabilizado ou parado, movimento prioritariamente de ombro, sem punho, sem cotovelo. O alvo é cair a 1 metro da rede do lado adversário."
+        },
+        {
+          "step": "03",
+          "instruction": "A dupla adversária corre para frente e levanta a bola (lob ou bola alta). O executor avança e executa o smash na bola levantada."
+        },
+        {
+          "step": "04",
+          "instruction": "O ponto para aqui — não continua. Professor avalia: a curta foi baixa e deslocou o adversário? O smash foi executado com equilíbrio e com a bola alta?"
+        },
+        {
+          "step": "05",
+          "instruction": "Série: 6 sequências por dupla executora. Alternância de lados (forehand e backhand na curta)."
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: o ponto fica vivo após o smash — dupla adversária pode defender e a dupla executora precisa fechar o ponto ou manter a pressão."
+        },
+        {
+          "step": "07",
+          "instruction": "Regressão: a dupla adversária não responde à curta — apenas posiciona a bola em lob predefinido para que o executor treine o smash sem pressa."
+        }
+      ],
+      "active_question": "A curta foi baixa o suficiente para obrigar o adversário a levantar a bola ou ele conseguiu contra-atacar direto?"
+    },
+    {
+      "id": "D009",
+      "source_type": "cbt_drills_html",
+      "name": "Jogo Diagnóstico — Situações Abertas",
+      "level": "iniciante",
+      "format": "aberto",
+      "shot_tags": [
+        "Forehand",
+        "Backhand",
+        "Lob",
+        "Smash"
+      ],
+      "technical_objective": "Observar quais golpes o aluno executa naturalmente em situação real de jogo, sem instrução. Levantamento do estado técnico real.",
+      "tactical_objective": "Identificar em qual estado do jogo a dupla trava: defesa, controle, ataque ou finalização. O professor observa sem corrigir — dados para o diagnóstico.",
+      "shots": [
+        "Todos os golpes básicos"
+      ],
+      "game_states": [
+        "Defesa",
+        "Neutro",
+        "Construção",
+        "Finalização"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Jogo livre. Quadra inteira. Pontos normais com saque. Professor não corrige, não orienta e não dá feedback durante o jogo."
+        },
+        {
+          "step": "02",
+          "instruction": "Professor observa 3 aspectos: (1) qual golpe é executado em cada situação; (2) quando o aluno erra — início do ponto, rali neutro ou momento de pressão; (3) se o aluno tenta atacar cedo demais ou muito tarde demais."
+        },
+        {
+          "step": "03",
+          "instruction": "Duração: 8 minutos de jogo livre. Professor faz perguntas rápidas (sem dar resposta) após cada game: \"Essa bola pedia um golpe diferente?\""
+        },
+        {
+          "step": "04",
+          "instruction": "O diagnóstico observado aqui orienta o drill principal da sessão."
+        }
+      ],
+      "active_question": "Em qual momento do ponto você acha que cometeu mais erros — no início, no meio ou quando tentou finalizar?"
+    },
+    {
+      "id": "D010",
+      "source_type": "cbt_drills_html",
+      "name": "Jogo com Regra de Volume — Manter a Bola",
+      "level": "iniciante",
+      "format": "aberto",
+      "shot_tags": [
+        "Saque",
+        "Devolução",
+        "Forehand",
+        "Backhand",
+        "Lob",
+        "Smash"
+      ],
+      "technical_objective": "Manter a bola em jogo com controle básico de direção antes de tentar atacar. Desenvolvimento do volume de jogo.",
+      "tactical_objective": "Entender que errar cedo é pior do que não atacar. Construir a base do jogo de beach tennis: consistência antes de agressividade.",
+      "shots": [
+        "Todos os golpes básicos"
+      ],
+      "game_states": [
+        "Neutro",
+        "Construção"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Jogo normal até 7 pontos. Regra adicional: a dupla que vencer com 4 ou mais trocas no rali antes de finalizar ganha ponto duplo (2 pontos em vez de 1)."
+        },
+        {
+          "step": "02",
+          "instruction": "Erros não forçados antes da 3ª troca do rali valem ponto simples para o adversário — sem punição extra. O objetivo é incentivar o volume, não punir a tentativa."
+        },
+        {
+          "step": "03",
+          "instruction": "Professor conta as trocas em voz alta. Alunos passam a gerir o risco naturalmente: percebem que tentar finalizar antes do 4º toque não vale a pena."
+        },
+        {
+          "step": "04",
+          "instruction": "Progressão: aumentar o número de trocas necessárias para o bônus (6 trocas, depois 8)."
+        },
+        {
+          "step": "05",
+          "instruction": "Regressão: reduzir para 3 trocas para o bônus quando os alunos ainda não sustentam o volume."
+        }
+      ],
+      "active_question": "Você tentou ganhar o ponto antes ou depois de criar uma situação de vantagem real?"
+    },
+    {
+      "id": "D011",
+      "source_type": "cbt_drills_html",
+      "name": "Simples na Paralela",
+      "level": "iniciante",
+      "format": "aberto",
+      "shot_tags": [
+        "Saque",
+        "Devolução"
+      ],
+      "technical_objective": "Desenvolver volume de jogo, gestão de tempo e consciência dos limites laterais da quadra em formato de jogo 1 contra 1.",
+      "tactical_objective": "Aprender a conter riscos com a linha lateral. Aprender a gerir o tempo: ganhar tempo quando deslocado, reduzir o tempo do adversário quando bem posicionado.",
+      "shots": [
+        "Todos os fundamentos"
+      ],
+      "game_states": [
+        "Neutro",
+        "Construção",
+        "Defesa"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Jogo 1×1 em quadra de simples (16m × 4,5m). Todos os golpes liberados. Pontuação normal. Sem instruções do professor durante o jogo."
+        },
+        {
+          "step": "02",
+          "instruction": "O jogo desenvolve naturalmente: volume (mais ralis do que em duplas), contenção de riscos laterais (quadra menor), gestão de tempo e encadeamento de golpes."
+        },
+        {
+          "step": "03",
+          "instruction": "Professor observa: quem erra lateralmente com mais frequência; quem consegue variar direção intencionalmente; quem ganha tempo após se deslocar."
+        },
+        {
+          "step": "04",
+          "instruction": "Sets curtos: melhor de 3 games até 4 pontos (ponto decisivo no 3-3)."
+        },
+        {
+          "step": "05",
+          "instruction": "Progressão: alternância de parceiros. Progressão para simples na cruzada (com forehand no meio, depois com backhand no meio)."
+        }
+      ],
+      "active_question": "Quando você estava deslocado, tentou recuperar a posição ou tentou ganhar o ponto naquele momento?"
+    },
+    {
+      "id": "D012",
+      "source_type": "cbt_drills_html",
+      "name": "Simples na Cruzada — Forehand no Meio",
+      "level": "iniciante",
+      "format": "aberto",
+      "shot_tags": [
+        "Forehand",
+        "Backhand"
+      ],
+      "technical_objective": "Desenvolver controle de ângulos na cruzada com forehand no centro da quadra. Aprender a usar bola de preparação para dominar o ponto.",
+      "tactical_objective": "Entender que bola cruzada baixa para o backhand do adversário cria oportunidade, mas abre o meio. Proteção de ângulos como consequência natural.",
+      "shots": [
+        "Forehand dinâmico",
+        "Backhand dinâmico",
+        "Curta",
+        "Lob"
+      ],
+      "game_states": [
+        "Neutro",
+        "Construção",
+        "Pressão"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Jogo 1×1 no diagonal da quadra, com os dois jogadores usando o forehand no centro (meio da quadra). A bola deve ser jogada preferencialmente cruzada."
+        },
+        {
+          "step": "02",
+          "instruction": "Regra: o jogador que jogar paralela perde o ponto automaticamente (ou recebe penalidade de ponto). Isso força o jogo cruzado com forehand no meio."
+        },
+        {
+          "step": "03",
+          "instruction": "Desenvolvimento natural: o jogador aprende que bola cruzada baixa para o backhand do adversário cria posição favorável mas expõe o próprio meio. Necessita de reposicionamento rápido."
+        },
+        {
+          "step": "04",
+          "instruction": "Pontuação normal: melhor de 3 games curtos (até 4 pontos). Alternância de lado a cada game."
+        },
+        {
+          "step": "05",
+          "instruction": "Progressão: liberar a paralela mas bonificar a cruzada que desorganiza o adversário (2 pontos se o adversário errar após a cruzada baixa)."
+        }
+      ],
+      "active_question": "Quando você abriu o ângulo com a bola cruzada, você cobriu o meio ou ficou parado?"
+    },
+    {
+      "id": "D013",
+      "source_type": "cbt_drills_html",
+      "name": "Gancho — Bola Alta + Cross-Step + Escolha de Saída",
+      "level": "intermediario",
+      "format": "fechado",
+      "shot_tags": [
+        "Gancho",
+        "Lob"
+      ],
+      "technical_objective": "Desenvolver o recuo correto em cross-step, o posicionamento sob a bola alta e funda, e a escolha entre duas saídas: gancho baixo no pé do adversário ou contra-lob profundo.",
+      "tactical_objective": "Entender que o gancho de bola alta é golpe de reconstrução — não de definição. A escolha entre baixo no pé ou contra-lob depende de onde estão os adversários.",
+      "shots": [
+        "Gancho",
+        "Contra-lob",
+        "Posicionamento"
+      ],
+      "game_states": [
+        "Reconstrução",
+        "Construção"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Aluno executor começa entre o meio e o fundo da quadra, corpo de lado em relação à rede. Parceiro fecha o meio da quadra."
+        },
+        {
+          "step": "02",
+          "instruction": "Professor fica no fundo oposto com cesto. Lança bola alta sobre o ombro dominante do executor. A bola não é smash — é alta e funda."
+        },
+        {
+          "step": "03",
+          "instruction": "Lançamento 1: Aluno recua em cross-step (passo cruzado), aponta a mão livre para a bola e executa gancho baixo cruzado no pé da posição adversária."
+        },
+        {
+          "step": "04",
+          "instruction": "Lançamento 2: Mesma bola — mas desta vez adversários simulam que estão avançados (professor avisa). Aluno responde com contra-lob profundo para o fundo."
+        },
+        {
+          "step": "05",
+          "instruction": "Na terceira bola, o ponto fica aberto com o parceiro fechando o meio. Professor avalia: o aluno leu a posição dos adversários? Escolheu a saída correta? O gancho ficou dentro da linha dos três metros?"
+        },
+        {
+          "step": "06",
+          "instruction": "Série: 8 lançamentos alternando as duas situações. Trocar executor a cada rodada."
+        },
+        {
+          "step": "07",
+          "instruction": "Regra crítica: se vier smash do adversário em vez de bola alta, o exercício para. A resposta ao smash é defesa em arco inferior ou estático — nunca gancho."
+        }
+      ],
+      "active_question": "Quando o adversário estava adiantado, a saída certa era baixa no pé ou contra-lob para o fundo?"
+    },
+    {
+      "id": "D014",
+      "source_type": "cbt_drills_html",
+      "name": "Arco Inferior — Antecipação e Recuo Rápido",
+      "level": "intermediario",
+      "format": "fechado",
+      "shot_tags": [
+        "Defesa"
+      ],
+      "technical_objective": "Desenvolver o recuo rápido com base frontal ao ataque, flexão de joelhos e o movimento pendular da raquete com face backhand abaixo da cintura.",
+      "tactical_objective": "Aprender a antecipar quando usar o arco inferior: lob curto e alto que permite ao adversário avançar em smash ou gancho potente. A leitura precede o gesto.",
+      "shots": [
+        "Arco inferior",
+        "Lob (saída após defesa)"
+      ],
+      "game_states": [
+        "Defesa",
+        "Reconstrução"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Professor (ou aluno avançado) posicionado à rede do lado oposto. Dupla defensora na faixa de atuação (2,5–4,5m). Professor sinaliza que vai atacar — dupla antecipa o arco inferior."
+        },
+        {
+          "step": "02",
+          "instruction": "Professor lança ou executa smash/gancho potente e direto ao solo. Dupla recua rapidamente: base frontal ao ataque, joelhos flexionados, raquete com face backhand em plano ligeiramente à frente do corpo."
+        },
+        {
+          "step": "03",
+          "instruction": "Movimento pendular da raquete descreve arco abaixo da cintura, interceptando a bola. No momento do recuo, pode apoiar um ou dois joelhos na areia."
+        },
+        {
+          "step": "04",
+          "instruction": "Saída preferencial após o arco inferior: lob alto no primeiro momento (ganhar tempo). Com o tempo, adicionar direção e tirar do meio."
+        },
+        {
+          "step": "05",
+          "instruction": "Série: 10 ataques por dupla defensora. Alternância: primeiro smash, depois gancho, depois bola mais lateral para forçar ajuste."
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: o ponto fica vivo após a defesa em arco inferior. A dupla defensora deve buscar o lob alto e reorganizar antes de contra-atacar."
+        },
+        {
+          "step": "07",
+          "instruction": "Regressão: o atacante avisa de onde vai bater para a dupla defensora antecipar sem ter que ler o gesto."
+        }
+      ],
+      "active_question": "Você antecipou o arco inferior antes do ataque ou reagiu depois que a bola passou?"
+    },
+    {
+      "id": "D015",
+      "source_type": "cbt_drills_html",
+      "name": "Arco Superior — Lob Profundo + Avanço para Interceptação",
+      "level": "intermediario",
+      "format": "fechado",
+      "shot_tags": [
+        "Defesa"
+      ],
+      "technical_objective": "Desenvolver o avanço rápido para a rede com raquete acima da cabeça (face forehand), interceptando a bola do adversário antes de ela cair.",
+      "tactical_objective": "Entender que o arco superior é ação ofensiva disfarçada de defesa: o lob profundo permite aproximação da rede; a interceptação alta reduz o tempo do oponente.",
+      "shots": [
+        "Arco superior",
+        "Lob (que precede o arco)"
+      ],
+      "game_states": [
+        "Defesa",
+        "Construção",
+        "Pressão"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Dupla A está no fundo e executa lob alto e profundo. Dupla B está à rede. Professor avalia se o lob de A foi profundo o suficiente para dar tempo ao avanço de B."
+        },
+        {
+          "step": "02",
+          "instruction": "Com o lob profundo, Dupla B avança rapidamente em direção à bola. Raquete com face forehand acima da cabeça, ligeiramente à frente do corpo. Movimento em arco acima da altura dos ombros."
+        },
+        {
+          "step": "03",
+          "instruction": "Se possível, o contato é realizado acima da altura da rede, aumentando o ângulo de ataque descendente. Joelhos flexionados durante o avanço para estabilidade."
+        },
+        {
+          "step": "04",
+          "instruction": "O ponto para aqui: professor avalia qualidade do lob (A) e do arco superior (B)."
+        },
+        {
+          "step": "05",
+          "instruction": "Série: 8 sequências por dupla (cada dupla pratica os dois papéis). Professor avisa quando o lob não foi profundo o suficiente para autorizar o avanço."
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: o ponto fica vivo após o arco superior."
+        }
+      ],
+      "active_question": "Seu lob foi profundo o suficiente para que seu parceiro pudesse avançar com segurança?"
+    },
+    {
+      "id": "D016",
+      "source_type": "cbt_drills_html",
+      "name": "Devolução Profunda no Sacador + Leitura da Terceira Bola",
+      "level": "intermediario",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Devolução",
+        "Saque"
+      ],
+      "technical_objective": "Executar devolução baixa e profunda no corpo do sacador, com firmeza de raquete e ajuste de pés para o lado do saque. Sem tentar winner automático.",
+      "tactical_objective": "A devolução não serve apenas para retornar o saque — serve para reduzir a qualidade da terceira bola do sacador. Profundidade e baixura são os critérios.",
+      "shots": [
+        "Devolução",
+        "Forehand estático",
+        "Backhand estático",
+        "Saque"
+      ],
+      "game_states": [
+        "Saque",
+        "Neutro"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Dupla A saca. Dupla B devolve. Após a devolução, o ponto para. Não continua em rali."
+        },
+        {
+          "step": "02",
+          "instruction": "A dupla devolvedora se posiciona atrás da linha dos 3 metros e se desloca para o lado do sacador para cobrir o ângulo."
+        },
+        {
+          "step": "03",
+          "instruction": "Critérios de devolução ideal: (1) bola passa abaixo da altura da rede (baixa); (2) cai profunda — após a linha dos 4,5m da quadra sacadora; (3) vai na direção do sacador (não para o parceiro que está avançado)."
+        },
+        {
+          "step": "04",
+          "instruction": "Professor dá feedback imediato após cada devolução: \"profunda e baixa\", \"subiu demais\", \"caiu na zona de ataque do parceiro\"."
+        },
+        {
+          "step": "05",
+          "instruction": "Variação: dupla A saca de posições diferentes (lado direito, lado esquerdo, centro/formação em I). Dupla B adapta posicionamento e devolução."
+        },
+        {
+          "step": "06",
+          "instruction": "Série: 10 saques por posição sacadora. Troca de função depois."
+        },
+        {
+          "step": "07",
+          "instruction": "Progressão: o ponto continua para 2 bolas adicionais após a devolução — a dupla sacadora joga a terceira bola e o ponto fecha."
+        }
+      ],
+      "active_question": "Sua devolução foi para o sacador ou para o parceiro que já estava avançado?"
+    },
+    {
+      "id": "D017",
+      "source_type": "cbt_drills_html",
+      "name": "Backhand — Sequência de 3 Bolas com Declaração de Intenção",
+      "level": "intermediario",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Forehand",
+        "Backhand"
+      ],
+      "technical_objective": "Distinguir três respostas distintas pelo backhand conforme a altura e velocidade da bola: controle (bola média), neutralização (bola baixa/rápida), pressão controlada (bola média-alta com equilíbrio).",
+      "tactical_objective": "Eliminar o backhand automático — cada bola exige uma intenção diferente. O aluno declara a intenção antes do contato, tornando a tomada de decisão consciente.",
+      "shots": [
+        "Backhand",
+        "Ventaglio / Anômalo",
+        "Controle de ritmo"
+      ],
+      "game_states": [
+        "Neutro",
+        "Defesa",
+        "Construção",
+        "Pressão"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Aluno A começa no fundo. Parceiro fecha o centro. Professor fica no corredor lateral com cesto. Marca com dois cones uma faixa profunda cruzada no fundo oposto."
+        },
+        {
+          "step": "02",
+          "instruction": "Bola 1 — Controle: Professor lança bola média com tempo. Aluno deve declarar em voz alta \"controlo\" antes do contato e executar backhand cruzado profundo."
+        },
+        {
+          "step": "03",
+          "instruction": "Bola 2 — Neutralização: Professor lança bola baixa e rápida (sob pressão). Aluno declara \"neutralizo\" e responde com margem — bola que passa com segurança, sem tentar pressionar."
+        },
+        {
+          "step": "04",
+          "instruction": "Bola 3 — Pressão: Professor lança bola média-alta com base organizada. Aluno declara \"pressiono\" e executa ventaglio, anômalo ou backhand direcionado de pressão controlada."
+        },
+        {
+          "step": "05",
+          "instruction": "Após a Bola 3, o ponto fica vivo. Professor avalia: a declaração foi coerente com a execução? O aluno tentou pressionar bola 2 (erro de leitura)?"
+        },
+        {
+          "step": "06",
+          "instruction": "Série: 3 sequências de 3 bolas por aluno. Trocar executor a cada rodada. Professor varia a ordem das 3 situações sem avisar."
+        },
+        {
+          "step": "07",
+          "instruction": "Progressão: o professor não avisa qual bola vem — o aluno lê a situação e declara. Depois o ponto fica vivo a partir da primeira bola."
+        }
+      ],
+      "active_question": "Você declarou antes do contato ou descobriu a intenção durante a execução?"
+    },
+    {
+      "id": "D018",
+      "source_type": "cbt_drills_html",
+      "name": "Curta Forehand + Curta Backhand com Alvo",
+      "level": "intermediario",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Curta",
+        "Smash",
+        "Forehand"
+      ],
+      "technical_objective": "Executar a curta de forehand e backhand com amortecimento correto (pé no chão, ombro, sem punho) e fazer a bola cair a 1 metro da rede.",
+      "tactical_objective": "A curta é uma ferramenta tática — não um golpe fraco. Objetivo: deslocar o adversário para frente, deixar o fundo de quadra desguarnecido e forçar bola levantada.",
+      "shots": [
+        "Curta forehand",
+        "Curta backhand",
+        "Smash (na bola levantada)"
+      ],
+      "game_states": [
+        "Construção",
+        "Pressão"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Professor fica no meio do fundo com cesto. Aluno executor começa a 6–7 metros da rede. O alvo é um quadrado de 1 metro marcado com cones a 1 metro da rede do lado adversário."
+        },
+        {
+          "step": "02",
+          "instruction": "3 bolas de forehand: professor lança média-baixa para o forehand. Aluno executa curta paralela ou central. Perna dominante à frente para ganhar alcance sem aproximar demais o corpo da rede."
+        },
+        {
+          "step": "03",
+          "instruction": "3 bolas de backhand: professor lança média-baixa para o backhand. Aluno executa curta cruzada ou central. Pode ser com uma ou duas mãos."
+        },
+        {
+          "step": "04",
+          "instruction": "Parceiro fecha o meio e avança apenas depois que a curta sair baixa (não antes — para não antecipar a intenção)."
+        },
+        {
+          "step": "05",
+          "instruction": "Critério: curta que passa baixa (abaixo da borda superior da rede) e cai no quadrado-alvo. Curta que passa alta não conta — o adversário pode atacar direto."
+        },
+        {
+          "step": "06",
+          "instruction": "Série: 3 forehand + 3 backhand por aluno. 3 rodadas."
+        },
+        {
+          "step": "07",
+          "instruction": "Progressão: após cada curta bem executada, professor lança bola levantada e o aluno executa smash de finalização."
+        }
+      ],
+      "active_question": "Sua curta foi uma solução tática — baixa e no alvo — ou apenas uma bola fraca que o adversário pode contra-atacar?"
+    },
+    {
+      "id": "D019",
+      "source_type": "cbt_drills_html",
+      "name": "Saque → Devolução → Terceira Bola",
+      "level": "intermediario",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Saque"
+      ],
+      "technical_objective": "Executar saque com alvo declarado, ler a devolução que ele gera e escolher a terceira bola correta: construção (devolução neutra) ou pressão (devolução curta/alta).",
+      "tactical_objective": "O saque não é um golpe isolado — é o início de uma sequência. A intenção é manipular a devolução para criar a terceira bola favorável.",
+      "shots": [
+        "Saque",
+        "Devolução",
+        "Terceira bola (construção ou pressão)"
+      ],
+      "game_states": [
+        "Saque",
+        "Neutro",
+        "Construção",
+        "Pressão"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Dupla A saca. O sacador declara o alvo (central ou lateral) antes de cada saque. Dupla B devolve profundo com controle."
+        },
+        {
+          "step": "02",
+          "instruction": "A dupla sacadora lê a devolução: se volta neutra e profunda → joga terceira bola de construção (profunda, com margem). Se volta curta ou alta com dupla equilibrada → executa pressão na terceira bola."
+        },
+        {
+          "step": "03",
+          "instruction": "Após a terceira bola, o ponto fica vivo até o final."
+        },
+        {
+          "step": "04",
+          "instruction": "Série: 8 pontos iniciados por cada dupla sacadora. Troca o sacador a cada 2 pontos."
+        },
+        {
+          "step": "05",
+          "instruction": "Regra de bônus: a sequência vale quando direção declarada, avanço da dupla e decisão da terceira bola são coerentes. Potência sem alvo declarado não conta bônus."
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: devolvedor varia cruzada ou paralela após o saque declarado, forçando adaptação da terceira bola."
+        },
+        {
+          "step": "07",
+          "instruction": "Regressão: devolução é fixada — sempre profunda central — para consolidar posicionamento e leitura da terceira bola antes de variar."
+        }
+      ],
+      "active_question": "O ponto nasceu da força do saque ou da devolução que vocês conseguiram provocar?"
+    },
+    {
+      "id": "D020",
+      "source_type": "cbt_drills_html",
+      "name": "Smash — Leitura do Lob e Escolha por Zona",
+      "level": "intermediario",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Smash",
+        "Gancho",
+        "Lob"
+      ],
+      "technical_objective": "Desenvolver a leitura da trajetória do lob para escolher o tipo de smash correto por zona: Flat (zona verde), Top Spin (backhand, zona amarela/vermelha), Slice (forehand, zona amarela/vermelha).",
+      "tactical_objective": "Entender que smash não é bater forte toda vez que a bola sobe. É converter vantagem em definição usando o tipo correto para a zona onde a bola está.",
+      "shots": [
+        "Smash Flat",
+        "Smash Top Spin",
+        "Smash Slice",
+        "Gancho (alternativa)",
+        "Lob (bola que chega)"
+      ],
+      "game_states": [
+        "Pressão",
+        "Finalização"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Professor marca 3 zonas na quadra do executor com cones: Zona Verde (próxima à rede, até 3m), Zona Amarela (3m a 6m), Zona Vermelha (além de 6m ou muito atrás da cabeça)."
+        },
+        {
+          "step": "02",
+          "instruction": "Zona Verde: Lob cai curto. Professor lança bola alta e próxima. Executor avança, usa Smash Flat (contato à frente, direto para baixo). Objetivo: definição."
+        },
+        {
+          "step": "03",
+          "instruction": "Zona Amarela — Backhand: Bola alta no lado não dominante. Professor lança lob para o backhand. Executor usa Smash Top Spin (contato mais lateral/acima da cabeça, rotação para frente). Objetivo: manter pressão."
+        },
+        {
+          "step": "04",
+          "instruction": "Zona Amarela — Forehand: Bola alta no lado dominante, um pouco atrás. Professor lança lob para o forehand fora do centro. Executor usa Smash Slice (contato lateral, corte para rotação horizontal). Objetivo: manter pressão."
+        },
+        {
+          "step": "05",
+          "instruction": "Zona Vermelha: Bola muito atrás da cabeça. Professor lança lob profundo. Executor NÃO usa smash — usa gancho de recuperação. Zona Vermelha = smash proibido."
+        },
+        {
+          "step": "06",
+          "instruction": "Série: 3 bolas por zona, alternando zonas. Executor deve declarar a zona em voz alta antes de executar."
+        },
+        {
+          "step": "07",
+          "instruction": "Progressão: professor lança sem avisar a zona. Executor lê e decide. Depois o ponto fica vivo."
+        }
+      ],
+      "active_question": "Essa bola de lob liberava smash ou pedia gancho? Qual zona você identificou?"
+    },
+    {
+      "id": "D021",
+      "source_type": "cbt_drills_html",
+      "name": "Tapa de Forehand — Aceleração com Contexto e Recuperação",
+      "level": "intermediario",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Forehand",
+        "Lob",
+        "Smash"
+      ],
+      "technical_objective": "Executar o tapa de forehand com preparação compacta, contato à frente e recuperação imediata da posição. No backhand, usar ventaglio/anômalo — nunca tapa de backhand como aceleração principal.",
+      "tactical_objective": "O tapa só é correto quando a bola está média-alta, à frente do corpo, no forehand e com aluno equilibrado. Aprender a não acelerar em bola baixa, atrasada ou no backhand.",
+      "shots": [
+        "Tapa forehand (acelerada)",
+        "Ventaglio / Anômalo (backhand)",
+        "Neutralização (bola baixa)"
+      ],
+      "game_states": [
+        "Pressão",
+        "Finalização"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "3 cones a 4m, 5m e 6m da rede marcam base, entrada e recuperação. Aluno começa em split no cone central (5m). Professor fica do outro lado da rede com 12 bolas."
+        },
+        {
+          "step": "02",
+          "instruction": "5 bolas médias-altas no forehand: Aluno dá passo curto para dentro, preparação compacta, contato à frente, tapa em direção ao espaço livre ou ao pé do adversário imaginário. Depois recupera para o cone central."
+        },
+        {
+          "step": "03",
+          "instruction": "3 bolas médias-altas no backhand: Aluno usa ventaglio, anômalo ou controle direcionado — nunca tapa de backhand. Parceiro fecha o centro após cada ação."
+        },
+        {
+          "step": "04",
+          "instruction": "2 bolas baixas: Aluno deve neutralizar sem acelerar. Se tenta tapa em bola baixa, a série zera e reinicia."
+        },
+        {
+          "step": "05",
+          "instruction": "Série: 10 bolas por rodada. 3 rodadas por aluno. Série zera se: tapa de backhand, acelerada de bola baixa, ou contato atrasado sem equilíbrio."
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: professor mistura a ordem das 3 situações sem avisar. O aluno decide antes do contato."
+        }
+      ],
+      "active_question": "Quando a bola veio no backhand, você usou ventaglio/anômalo ou tentou tapa automático?"
+    },
+    {
+      "id": "D022",
+      "source_type": "cbt_drills_html",
+      "name": "Lob Profundo + Reorganização da Dupla",
+      "level": "intermediario",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Lob",
+        "Gancho"
+      ],
+      "technical_objective": "Executar lob alto e profundo que empurra os adversários ao fundo e permite reorganização da dupla na faixa de atuação (2,5–4,5m).",
+      "tactical_objective": "O lob profundo é a principal ferramenta de reorganização. Lob curto entrega o ataque. Após o lob bem executado, a dupla deve recuperar posição e cobrir o centro — não correr para frente precipitadamente.",
+      "shots": [
+        "Lob profundo",
+        "Gancho (resposta adversária)",
+        "Posicionamento"
+      ],
+      "game_states": [
+        "Defesa",
+        "Reconstrução",
+        "Neutro"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Professor fica no fundo com cesto. Lança bola alta e profunda atrás do Aluno A (na Zona Vermelha). Parceiro B cobre o meio."
+        },
+        {
+          "step": "02",
+          "instruction": "Aluno A recua cruzando a perna externa (cross-step). Executa lob profundo ou bola baixa controlada (não gancho ofensivo). B cobre o meio durante o recuo de A."
+        },
+        {
+          "step": "03",
+          "instruction": "Critério de lob bem executado: bola cai além da linha dos 5m da quadra adversária. Professor coloca um marcador no fundo — a bola deve ultrapassar o marcador."
+        },
+        {
+          "step": "04",
+          "instruction": "Após o lob, professor coloca bola estática neutra para a dupla reorganizar o ponto (não continua com pressão imediata). A dupla deve voltar para a faixa de atuação antes de continuar."
+        },
+        {
+          "step": "05",
+          "instruction": "Série: 8 lançamentos para dupla A. Troca."
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: o ponto fica vivo após o lob — dupla adversária responde com gancho e o rali continua."
+        },
+        {
+          "step": "07",
+          "instruction": "Regressão: professor posiciona a bola mais próxima (Zona Amarela em vez de Vermelha) para dar mais tempo à execução."
+        }
+      ],
+      "active_question": "Seu lob comprou tempo para a dupla reorganizar ou ficou curto e entregou o ataque?"
+    },
+    {
+      "id": "D023",
+      "source_type": "cbt_drills_html",
+      "name": "Jogo com Regra — Construção Antes da Definição",
+      "level": "intermediario",
+      "format": "aberto",
+      "shot_tags": [
+        "Saque",
+        "Devolução",
+        "Forehand",
+        "Backhand",
+        "Lob",
+        "Smash",
+        "Curta"
+      ],
+      "technical_objective": "Aplicar em jogo real todos os fundamentos treinados: saque com alvo, devolução profunda, lob de saída, curta e smash de finalização.",
+      "tactical_objective": "Refletir a regra pedagógica central: construir vantagem antes de tentar definir. Winner antecipado sem construção vale ponto simples — com construção, vale ponto duplo.",
+      "shots": [
+        "Todos os fundamentos"
+      ],
+      "game_states": [
+        "Saque",
+        "Neutro",
+        "Construção",
+        "Pressão",
+        "Finalização"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Jogo até 11 pontos. Pontuação normal. Sacador declara alvo central ou lateral antes de cada saque."
+        },
+        {
+          "step": "02",
+          "instruction": "2 pontos: saque direcionado gera devolução identificável e a terceira bola mantém construção com profundidade ou cria pressão correta."
+        },
+        {
+          "step": "03",
+          "instruction": "3 pontos: a terceira bola correta gera erro forçado ou winner na sequência imediata."
+        },
+        {
+          "step": "04",
+          "instruction": "Ace: vale ponto normal (1 ponto). O foco é organizar o ponto, não potência isolada."
+        },
+        {
+          "step": "05",
+          "instruction": "Professor registra: qual alvo de saque gerou a devolução mais legível? Qual decisão da terceira bola aparece com mais frequência?"
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: devolvedor fica livre para escolher direção da devolução — a dupla sacadora precisa ler e adaptar a terceira bola."
+        }
+      ],
+      "active_question": "O ponto foi vencido porque vocês aceleraram na hora certa ou porque criaram a bola certa para acelerar?"
+    },
+    {
+      "id": "D024",
+      "source_type": "cbt_drills_html",
+      "name": "Jogo com Regra — Recuperar Antes de Acelerar",
+      "level": "intermediario",
+      "format": "aberto",
+      "shot_tags": [
+        "Forehand",
+        "Backhand",
+        "Lob",
+        "Gancho",
+        "Smash"
+      ],
+      "technical_objective": "Aplicar a sequência: lob ou gancho de recuperação na Zona Vermelha → construção com margem na Zona Amarela → aceleração somente na Zona Verde.",
+      "tactical_objective": "Corrigir a pressão precoce: a dupla aprende que atacar na Zona Vermelha é proibido. A aceleração só é liberada depois de recuperar base e construir vantagem.",
+      "shots": [
+        "Lob de recuperação",
+        "Gancho de recuperação",
+        "Tapa / Ventaglio (Zona Verde)",
+        "Smash (Zona Verde)"
+      ],
+      "game_states": [
+        "Defesa",
+        "Reconstrução",
+        "Construção",
+        "Pressão",
+        "Finalização"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Jogo até 11 pontos. Ponto começa com professor lançando bola profunda para a Zona Vermelha de um jogador. A outra dupla começa organizada à frente."
+        },
+        {
+          "step": "02",
+          "instruction": "2 pontos: a dupla recupera bola defensiva, reorganiza o centro e gera pressão contextualmente correta (Zona Verde)."
+        },
+        {
+          "step": "03",
+          "instruction": "3 pontos: a transição completa termina em winner ou erro forçado na Zona Verde."
+        },
+        {
+          "step": "04",
+          "instruction": "Winner direto após ação de alto risco em Zona Vermelha ou Amarela: vale apenas 1 ponto. O winner não valida a escolha prematura."
+        },
+        {
+          "step": "05",
+          "instruction": "Erro por aceleração na Zona Vermelha: dá 1 ponto extra ao adversário."
+        },
+        {
+          "step": "06",
+          "instruction": "Professor conta em voz alta: \"vermelha — ganhe tempo\", \"amarela — construa\", \"verde — você pode\"."
+        }
+      ],
+      "active_question": "Na bola em que você acelerou, você já tinha recuperado o ponto ou ainda estava sobrevivendo?"
+    },
+    {
+      "id": "D025",
+      "source_type": "cbt_drills_html",
+      "name": "Smash por Zonas — Verde / Amarela / Vermelha",
+      "level": "avancado",
+      "format": "fechado",
+      "shot_tags": [
+        "Smash"
+      ],
+      "technical_objective": "Automatizar a escolha do tipo de smash por zona: Flat (Zona Verde), Top Spin (backhand, Zona Amarela/Vermelha), Slice (forehand, Zona Amarela/Vermelha). Smash na Zona Vermelha é proibido — gancho.",
+      "tactical_objective": "O smash errado em situação favorável é um dos principais erros avançados. A zona determina a intenção (finalizar, pressionar, manter) — não a altura da bola sozinha.",
+      "shots": [
+        "Smash Flat",
+        "Smash Top Spin",
+        "Smash Slice",
+        "Gancho (Zona Vermelha)"
+      ],
+      "game_states": [
+        "Pressão",
+        "Finalização"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Cones marcam as 3 zonas na quadra do executor. Professor lança lobs variando intencionalmente a profundidade — às vezes curto (Verde), às vezes médio (Amarelo), às vezes profundo (Vermelho)."
+        },
+        {
+          "step": "02",
+          "instruction": "Executor deve: (1) identificar a zona em voz alta antes de executar; (2) escolher o tipo de smash correto para a zona; (3) para Zona Vermelha — parar e executar gancho de recuperação."
+        },
+        {
+          "step": "03",
+          "instruction": "Zona Verde + bola à frente: Smash Flat — contato mais à frente do corpo, pronação mais cedo, bola direto para baixo, mais velocidade."
+        },
+        {
+          "step": "04",
+          "instruction": "Zona Amarela + backhand: Smash Top Spin — contato mais acima da cabeça, rotação vertical, bola sobe e desce com velocidade."
+        },
+        {
+          "step": "05",
+          "instruction": "Zona Amarela + forehand: Smash Slice — contato mais lateral no lado do forehand, corte lateral, rotação horizontal."
+        },
+        {
+          "step": "06",
+          "instruction": "Zona Vermelha: gancho de recuperação. Não tenta smash. Professor anula o ponto se o executor forçar smash na Zona Vermelha."
+        },
+        {
+          "step": "07",
+          "instruction": "Série: 4 bolas por zona, alternadas aleatoriamente pelo professor. 3 rodadas. Parceiro cobre o meio após cada golpe."
+        }
+      ],
+      "active_question": "Você identificou a zona antes de executar ou tomou a decisão durante o golpe?"
+    },
+    {
+      "id": "D026",
+      "source_type": "cbt_drills_html",
+      "name": "Combinação 1-2 — Saque + Entrada do Parceiro",
+      "level": "avancado",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Saque",
+        "Devolução",
+        "Smash"
+      ],
+      "technical_objective": "Sincronizar o saque do Jogador 1 com a entrada imediata do Jogador 2 (parceiro do sacador) na terceira bola, finalizando o ponto.",
+      "tactical_objective": "A combinação 1-2: saque que cria dificuldade para o devolvedor + parceiro do sacador entra finalizando na terceira bola. A dupla deve pré-combinar direção e lado de entrada antes do saque.",
+      "shots": [
+        "Saque",
+        "Entrada (topa spin / esgrimada / curta)",
+        "Smash / Gancho (na bola levantada)"
+      ],
+      "game_states": [
+        "Saque",
+        "Construção",
+        "Finalização"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Antes de cada ponto, a dupla sacadora combina: onde vai o saque (direção 1–5) e para qual lado vai o parceiro após o saque (direita ou esquerda). A dupla devolvedora não sabe a combinação."
+        },
+        {
+          "step": "02",
+          "instruction": "Sacador executa o saque conforme combinado. Parceiro do sacador observa o parceiro até um pouco antes do contato e se reposiciona ligeiramente na direção combinada antes de avançar."
+        },
+        {
+          "step": "03",
+          "instruction": "Devolvedor recebe o saque e devolve. Se a devolução for vulnerável (curta ou alta), o parceiro do sacador entra atacando — com top spin de forehand/backhand, esgrimada ou curta baixa, forçando levantamento."
+        },
+        {
+          "step": "04",
+          "instruction": "Se a devolução for profunda e neutra, o parceiro ainda entra mas com golpe de construção — não de definição. O sacador fecha o lado oposto."
+        },
+        {
+          "step": "05",
+          "instruction": "Se a entrada forçar levantamento, o sacador (agora reposicionado) executa smash ou gancho para finalizar o ponto (combinação 1-2 completa)."
+        },
+        {
+          "step": "06",
+          "instruction": "Série: 8 pontos por dupla sacadora, alternando posição de saque. Troca."
+        },
+        {
+          "step": "07",
+          "instruction": "Progressão: dupla devolvedora varia a devolução (no sacador, na quadra aberta, lob sobre o parceiro) para forçar adaptação da combinação."
+        }
+      ],
+      "active_question": "Vocês combinaram antes do saque ou o parceiro improvisou a entrada?"
+    },
+    {
+      "id": "D027",
+      "source_type": "cbt_drills_html",
+      "name": "Combinação Lob-Lob-Entrada — Defesa Extrema",
+      "level": "avancado",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Lob",
+        "Defesa",
+        "Smash"
+      ],
+      "technical_objective": "Executar dois lobs consecutivos de alta qualidade (alto, profundo) em situação de defesa extrema e avançar para entrada ofensiva com arco superior na terceira ação.",
+      "tactical_objective": "A combinação lob-lob-entrada serve para situações onde os adversários estão muito avançados após golpe de ataque. O primeiro lob neutraliza, o segundo obriga recuo e abertura, o terceiro é a entrada ofensiva.",
+      "shots": [
+        "Lob alto 1° (neutralização)",
+        "Lob alto 2° (forçar recuo)",
+        "Arco superior (entrada)",
+        "Smash (pós-entrada)"
+      ],
+      "game_states": [
+        "Defesa",
+        "Reconstrução",
+        "Pressão"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Professor lança bola alta e profunda para a dupla defensora na Zona Vermelha — situação muito adversa. Dupla adversária posicionada muito à frente (colada à rede)."
+        },
+        {
+          "step": "02",
+          "instruction": "Primeiro lob: executado em situação de emergência. Alto, para ganhar tempo, profundo para o fundo da quadra adversária. Objetivo: anular o primeiro ataque e forçar os adversários a recuarem e executarem golpe alto do fundo."
+        },
+        {
+          "step": "03",
+          "instruction": "Dupla adversária executa gancho ou golpe alto do fundo e corre para frente novamente."
+        },
+        {
+          "step": "04",
+          "instruction": "Segundo lob: defensor opta por outro lob no fundo para obrigar mais uma vez o golpe alto do fundo e nova corrida dos adversários para frente."
+        },
+        {
+          "step": "05",
+          "instruction": "Terceiro movimento — entrada: defensor adianta sua posição para o meio da quadra e executa arco superior de contra-ataque na terceira bola, interceptando a bola alta dos adversários."
+        },
+        {
+          "step": "06",
+          "instruction": "Série: 4 sequências completas por dupla. Professor avalia qualidade dos dois lobs (profundidade) e timing da entrada."
+        },
+        {
+          "step": "07",
+          "instruction": "Progressão: ponto fica vivo após a entrada."
+        }
+      ],
+      "active_question": "O segundo lob forçou os adversários a recuarem novamente ou eles ficaram posicionados para a entrada?"
+    },
+    {
+      "id": "D028",
+      "source_type": "cbt_drills_html",
+      "name": "Combinação Defesa-Entrada — Inversão de Pressão",
+      "level": "avancado",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Defesa",
+        "Smash"
+      ],
+      "technical_objective": "Executar defesa baixa na frente do atacante (após o smash dele) forçando-o a abaixar e rebater bola lenta, e então antecipar com entrada de ataque.",
+      "tactical_objective": "A defesa baixa na frente do atacante inverte a pressão: ele é obrigado a bater uma bola lenta abaixo da cintura, enquanto o defensor antecipa e entra com ataque. A bola lenta do adversário é a oportunidade.",
+      "shots": [
+        "Defesa baixa (na frente do atacante)",
+        "Entrada de ataque antecipada",
+        "Arco inferior (defesa prévia)"
+      ],
+      "game_states": [
+        "Defesa",
+        "Reconstrução",
+        "Pressão",
+        "Finalização"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Dupla A está na posição de ataque (à rede). Professor lança bola alta para A executar smash ou gancho potente."
+        },
+        {
+          "step": "02",
+          "instruction": "Dupla B (defensora) antecipa em arco inferior. Ao invés de tentar devolver alto, executa defesa baixa e lenta na frente do jogador de A que acabou de atacar — o objetivo é fazê-lo abaixar e rebater bola abaixo da cintura."
+        },
+        {
+          "step": "03",
+          "instruction": "O atacante de A é obrigado a abaixar e bater bola lenta de cima para baixo do solo. Nesse momento, a dupla B antecipa sua posição e executa entrada de ataque nessa bola lenta."
+        },
+        {
+          "step": "04",
+          "instruction": "Série: 6 sequências por dupla defensora. Professor avalia: a defesa ficou baixa o suficiente para forçar o abaixamento? A entrada foi antecipada antes da bola do adversário subir?"
+        },
+        {
+          "step": "05",
+          "instruction": "Progressão: ponto fica vivo após a entrada."
+        }
+      ],
+      "active_question": "Sua defesa ficou baixa o suficiente para obrigar o adversário a abaixar, ou ele conseguiu contra-atacar direto?"
+    },
+    {
+      "id": "D029",
+      "source_type": "cbt_drills_html",
+      "name": "Combinação Devolução-Entrada-Smash",
+      "level": "avancado",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Saque",
+        "Devolução",
+        "Smash",
+        "Lob"
+      ],
+      "technical_objective": "Executar a sequência de 3 bolas: devolução difícil para o sacador → entrada do parceiro do devolvedor → smash ou gancho de finalização.",
+      "tactical_objective": "Transformar a devolução em plataforma ofensiva de 3 bolas. A devolução baixa cria dificuldade → entrada força levantamento → smash finaliza. A dupla precisa pré-combinar quem entra após a devolução.",
+      "shots": [
+        "Devolução baixa",
+        "Entrada (topa spin / esgrimada / curta)",
+        "Smash / Gancho de ataque",
+        "Saque"
+      ],
+      "game_states": [
+        "Saque",
+        "Construção",
+        "Pressão",
+        "Finalização"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Antes do ponto, a dupla devolvedora combina: o Devolvedor 1 faz devolução baixa para criar dificuldade, e o Devolvedor 2 entra na bola seguinte com esgrimada, top spin ou curta."
+        },
+        {
+          "step": "02",
+          "instruction": "Dupla sacadora saca. Devolvedor 1 executa devolução baixa no sacador (não winner — apenas dificultar). Parceiro (D2) observa a posição do sacador."
+        },
+        {
+          "step": "03",
+          "instruction": "A devolução baixa cria dificuldade: sacadores ficam com bola baixa ou devolução que sobe devagar. D2 entra imediatamente com entrada que força levantamento."
+        },
+        {
+          "step": "04",
+          "instruction": "Se a entrada forçou levantamento, D1 (agora reposicionado) executa smash ou gancho de ataque para finalizar. Combinação completa."
+        },
+        {
+          "step": "05",
+          "instruction": "Se a entrada não finalizou mas criou pressão (bola flutuante), dupla devolvedora mantém pressão com smash ou outra ação ofensiva (combinação 1-2-3 da devolução)."
+        },
+        {
+          "step": "06",
+          "instruction": "Série: 8 pontos por dupla devolvedora. Troca funções. Professor avalia: a combinação foi pré-estabelecida ou improvisada?"
+        }
+      ],
+      "active_question": "A devolução criou dificuldade real para o sacador ou apenas voltou para o jogo?"
+    },
+    {
+      "id": "D030",
+      "source_type": "cbt_drills_html",
+      "name": "Combinação Lob-Entrada — Lob de Preparação + Arco Superior",
+      "level": "avancado",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Lob",
+        "Smash",
+        "Forehand"
+      ],
+      "technical_objective": "Executar lob lento de preparação (não de defesa), reconhecer que o adversário recuou e avançar rapidamente para arco superior de contra-ataque.",
+      "tactical_objective": "O lob de preparação não é defesa — é construção. Bola lenta obriga o adversário a recuar e executar golpe alto do fundo, enquanto o executante avança para interceptar com golpe de arco superior. Timing é crítico.",
+      "shots": [
+        "Lob lento (preparação)",
+        "Arco superior (entrada)",
+        "Smash (pós-arco superior)"
+      ],
+      "game_states": [
+        "Construção",
+        "Pressão",
+        "Finalização"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Rali em andamento. Dupla A (com bola) joga lob lento intencionalmente para o fundo da dupla B. O lob não é fuga — é preparação."
+        },
+        {
+          "step": "02",
+          "instruction": "Dupla B recua e executa golpe alto do fundo (gancho de preparação ou smash do fundo). Nesse momento, dupla A já está avançando para o meio da quadra."
+        },
+        {
+          "step": "03",
+          "instruction": "Dupla A intercepta a bola alta com arco superior — raquete com face forehand acima da cabeça, ligeiramente à frente, contato o mais alto possível. Objetivo: pressionar ou finalizar com golpe descendente."
+        },
+        {
+          "step": "04",
+          "instruction": "Sequência completa: lob lento → adversário recua e bate golpe alto do fundo → arco superior de interceptação → ponto finalizado ou em grande pressão."
+        },
+        {
+          "step": "05",
+          "instruction": "Série: 6 sequências por dupla. Professor avalia: o lob foi lento e profundo o suficiente para forçar o recuo? O avanço foi no momento certo (quando o adversário estava recuado)?"
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: ponto fica completamente vivo após o arco superior."
+        }
+      ],
+      "active_question": "Você avançou porque o adversário estava recuado ou avançou antes do momento certo?"
+    },
+    {
+      "id": "D031",
+      "source_type": "cbt_drills_html",
+      "name": "Proteção de Ângulos — Elástico Horizontal e Vertical",
+      "level": "avancado",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Forehand",
+        "Smash",
+        "Posicionamento"
+      ],
+      "technical_objective": "Executar cobertura de ângulos sincronizada: quando jogador A se move para a bola, jogador B espelha o movimento fechando o meio (horizontal). Quando A vai ao fundo, B fica no meio (vertical).",
+      "tactical_objective": "A dupla que joga como unidade fecha os ângulos antes que o adversário explore. O elástico é o mecanismo: cada ação de um obriga reação do outro.",
+      "shots": [
+        "Posicionamento (elástico)",
+        "Forehand dinâmico",
+        "Backhand dinâmico",
+        "Lob (vertical)"
+      ],
+      "game_states": [
+        "Neutro",
+        "Construção",
+        "Defesa"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Jogo normal com professor observando posicionamento. Dupla A joga contra Dupla B. Após cada golpe, professor grita \"ângulo!\" se algum jogador não fechou o espaço correto."
+        },
+        {
+          "step": "02",
+          "instruction": "Horizontal — regra: quando A vai para a bola lateral esquerda, B deve se deslocar para a esquerda fechando o meio. Quando A vai para a direita, B fecha o meio para a direita. Se B fica parado, professor conta erro."
+        },
+        {
+          "step": "03",
+          "instruction": "Vertical — regra: quando A recua para lob, B permanece no meio da quadra (não recua junto). Quando A avança para bola curta, B permanece no meio (não avança junto sem razão)."
+        },
+        {
+          "step": "04",
+          "instruction": "Dupla que cobre todos os ângulos do game sem o professor chamar \"ângulo!\" recebe ponto bônus a cada game."
+        },
+        {
+          "step": "05",
+          "instruction": "Série: 3 games de 7 pontos por dupla. Alternância de adversários."
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: professor para de chamar \"ângulo!\" — a dupla precisa se auto-corrigir e comunicar entre si."
+        }
+      ],
+      "active_question": "Quando seu parceiro foi para a bola, você fechou o espaço dele ou ficou olhando?"
+    },
+    {
+      "id": "D032",
+      "source_type": "cbt_drills_html",
+      "name": "Hierarquia de Pontos — Score com Gestão de Risco",
+      "level": "avancado",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Forehand",
+        "Backhand",
+        "Smash",
+        "Lob"
+      ],
+      "technical_objective": "Aplicar intenção tática diferente conforme a hierarquia do ponto: construção em pontos 0-0/15-15, maior risco em pontos 40-0/30-15, máxima atenção em pontos finalizadores 40-x/x-40.",
+      "tactical_objective": "O placar muda a intenção correta em cada bola. O atleta de alto rendimento gerencia risco diferente em cada score — não joga igual em 0-0 e em 40-30.",
+      "shots": [
+        "Todos os golpes"
+      ],
+      "game_states": [
+        "Saque",
+        "Neutro",
+        "Construção",
+        "Pressão",
+        "Finalização"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Jogo normal com pontuação completa (15/30/40/game). Professor anuncia em voz alta a categoria do ponto antes de cada saque: \"Construção\" (0-0, 15-15, 30-30), \"Gerador\" (30-0, 15-30, 40-30), \"Finalizador\" (40-x, x-40)."
+        },
+        {
+          "step": "02",
+          "instruction": "Ponto de Construção: a dupla pode ser mais criativa e arrojada. Erro permitido sem grande consequência. Objetivo: manter o ponto e desenvolver variações."
+        },
+        {
+          "step": "03",
+          "instruction": "Ponto Gerador: risco calculado. A dupla com vantagem no score tenta construir vantagem. A dupla em desvantagem joga para empatar — sem tentar winner precipitado."
+        },
+        {
+          "step": "04",
+          "instruction": "Ponto Finalizador: simplicidade e eficácia máximas. A dupla na frente joga seguro para fechar o game. A dupla atrás não pode errar não forçado — joga apenas o necessário."
+        },
+        {
+          "step": "05",
+          "instruction": "Após cada ponto finalizador, professor pergunta: \"A escolha foi coerente com o score?\""
+        },
+        {
+          "step": "06",
+          "instruction": "Série: sets completos de 6 games. Professor anota os erros não forçados em pontos finalizadores."
+        }
+      ],
+      "active_question": "Em ponto decisivo, você mudou sua intenção ou jogou igual ao ponto anterior?"
+    },
+    {
+      "id": "D033",
+      "source_type": "cbt_drills_html",
+      "name": "Formação em I — Saque Central + Confusão Tática",
+      "level": "avancado",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Saque",
+        "Devolução",
+        "Forehand",
+        "Backhand"
+      ],
+      "technical_objective": "Executar saque do centro da quadra com parceiro alinhado à frente, pré-combinando direção do saque e lado de movimentação do parceiro após o saque.",
+      "tactical_objective": "A Formação em I causa confusão na dupla devolvedora porque não sabem para qual lado vai o parceiro do sacador. A combinação pré-saque é obrigatória — sem ela a formação não funciona.",
+      "shots": [
+        "Saque (central)",
+        "Devolução",
+        "Terceira bola"
+      ],
+      "game_states": [
+        "Saque",
+        "Construção",
+        "Pressão"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Antes de cada saque: dupla sacadora combina em segredo a direção do saque (priorizar direções 2, 3 e 4 — mais seguras) e para qual lado vai o parceiro do sacador após o saque (direita ou esquerda). Sacador vai para o lado oposto."
+        },
+        {
+          "step": "02",
+          "instruction": "Sacador se posiciona no centro da quadra atrás da linha. Parceiro do sacador se posiciona à sua frente, também no centro."
+        },
+        {
+          "step": "03",
+          "instruction": "Saque é executado. Nesse exato momento, o parceiro do sacador se desloca para o lado combinado. O sacador ocupa o lado oposto, fechando a quadra inteira."
+        },
+        {
+          "step": "04",
+          "instruction": "Dupla devolvedora (cada um no centro de sua metade) tenta devolver sem saber para qual lado foi o parceiro — criam oportunidade de winner ou erro forçado se a devolução for previsível."
+        },
+        {
+          "step": "05",
+          "instruction": "Série: 10 pontos em formação em I. Professor avalia: a combinação foi executada no timing certo? A dupla ocupou os dois lados da quadra sem deixar espaço central?"
+        },
+        {
+          "step": "06",
+          "instruction": "Regra: saques nas direções 1 e 5 (abertos) são mais arriscados — o professor monitora se a dupla sacadora consegue se reposicionar a tempo."
+        }
+      ],
+      "active_question": "Vocês combinaram antes ou o parceiro improvisou a direção de movimento?"
+    },
+    {
+      "id": "D034",
+      "source_type": "cbt_drills_html",
+      "name": "Jogo de Alta Performance — Mental + Tático Integrado",
+      "level": "avancado",
+      "format": "aberto",
+      "shot_tags": [
+        "Forehand",
+        "Backhand",
+        "Lob",
+        "Smash",
+        "Gancho",
+        "Saque"
+      ],
+      "technical_objective": "Aplicar todos os conceitos avançados em situação competitiva real: combinações táticas, hierarquia de pontos, gestão de risco, bases de proteção e mental game.",
+      "tactical_objective": "Simular condições de pressão competitiva com rituais entre pontos (4 passos: feedback rápido → estratégia do próximo ponto → respiração → ritual de saque). A equipe executa combinações pré-estabelecidas.",
+      "shots": [
+        "Todos os golpes",
+        "Combinações táticas"
+      ],
+      "game_states": [
+        "Saque",
+        "Defesa",
+        "Reconstrução",
+        "Neutro",
+        "Construção",
+        "Pressão",
+        "Finalização"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Partida completa: melhor de 3 sets, último set super tie-break até 10 pontos. Regras oficiais de beach tennis."
+        },
+        {
+          "step": "02",
+          "instruction": "Ritual obrigatório entre pontos: (1) Feedback rápido sobre o ponto anterior — apenas uma frase; (2) Estratégia do próximo ponto — direção de saque ou combinação; (3) Respiração consciente; (4) Ritual de saque. Máximo 20 segundos."
+        },
+        {
+          "step": "03",
+          "instruction": "Cada dupla pré-define 2 combinações que tentará executar ao longo da partida. Professor registra quantas vezes a combinação foi executada e qual o resultado."
+        },
+        {
+          "step": "04",
+          "instruction": "Proibido: criticar o parceiro verbalmente durante o jogo. Comunicação apenas sobre estratégia (próxima combinação, posicionamento, ritmo)."
+        },
+        {
+          "step": "05",
+          "instruction": "Ao final de cada set, treinador tem 60 segundos para uma instrução tática — apenas uma. A dupla discute e decide como implementar."
+        },
+        {
+          "step": "06",
+          "instruction": "Após a partida: roda de fechamento. Cada jogador responde: qual foi o momento de maior pressão e como reagiu mentalmente?"
+        }
+      ],
+      "active_question": "Em qual momento você perdeu o fio da estratégia combinada e jogou no improviso?"
+    },
+    {
+      "id": "D035",
+      "source_type": "cbt_drills_html",
+      "name": "Saque Solo — Treino do Toss sem Bola",
+      "level": "iniciante",
+      "format": "fechado",
+      "shot_tags": [
+        "Saque"
+      ],
+      "technical_objective": "Dominar o toss (lançamento da bola) de forma consistente antes de juntar ao gesto completo do saque. Palma voltada para cima, cotovelo reto, bola solta suavemente.",
+      "tactical_objective": "O toss consistente é o pré-requisito de todos os tipos de saque. Sem toss estável, o gesto varia e a direção do saque fica imprevisível.",
+      "shots": [
+        "Saque — componente toss"
+      ],
+      "game_states": [
+        "Saque"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "O aluno pode treinar este exercício sozinho, sem professor, lançando a própria bola repetidamente. Nenhum material adicional necessário além de uma bola."
+        },
+        {
+          "step": "02",
+          "instruction": "Posição inicial de saque. Palma da mão voltada para cima, bola descansando sem pressão. Cotovelo do braço não dominante totalmente reto."
+        },
+        {
+          "step": "03",
+          "instruction": "Levantar o braço pra cima sem dobrar o cotovelo. A bola se separa naturalmente da palma pelo impulso — não é jogada, é solta."
+        },
+        {
+          "step": "04",
+          "instruction": "Critério de sucesso: bola sobe verticalmente sem rotação lateral. Deve cair no mesmo ponto que subiu. O aluno testa: consegue pegar a bola de volta na mesma palma sem se mover?"
+        },
+        {
+          "step": "05",
+          "instruction": "Série: 20 toss consecutivos. O aluno conta quantos são verticais e consistentes."
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: adicionar o passo de troféu após o toss — braço dominante vai para posição de troféu enquanto o braço não dominante lança."
+        }
+      ],
+      "active_question": "A bola caiu no mesmo lugar que subiu ou foi para o lado a cada lançamento?"
+    },
+    {
+      "id": "D036",
+      "source_type": "cbt_drills_html",
+      "name": "Gancho Solo — Lançamento Próprio sem Ponto de Contato Forçado",
+      "level": "iniciante",
+      "format": "fechado",
+      "shot_tags": [
+        "Gancho"
+      ],
+      "technical_objective": "Desenvolver o gesto do gancho sem pressa de tempo de bola. O aluno lança a própria bola e executa o gancho, mantendo contato sem baixar o braço antes do golpe.",
+      "tactical_objective": "Treino individual autônomo que o aluno pode fazer sem professor. Foco em conduzir a bola (movimento de ombro, sem excesso de punho) antes de adicionar potência.",
+      "shots": [
+        "Gancho — componente técnico básico"
+      ],
+      "game_states": [
+        "Reconstrução"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Aluno se posiciona lateral à rede. Lança a própria bola para cima com o braço não dominante — bola deve subir acima da cabeça."
+        },
+        {
+          "step": "02",
+          "instruction": "Enquanto a bola sobe, braços ficam altos. O aluno acompanha a bola com os olhos. Ao atingir o pico, executa o gancho: movimento prioritariamente de ombro, braço alto, punho firme para controle."
+        },
+        {
+          "step": "03",
+          "instruction": "Objetivo: entrar em contato com a bola sem baixar o braço antes do golpe. O braço deve estar totalmente estendido no contato."
+        },
+        {
+          "step": "04",
+          "instruction": "Empunhadura: continental (mais versátil). Para posição mais próxima da rede, pode usar semi-western."
+        },
+        {
+          "step": "05",
+          "instruction": "Série: 15 repetições. O aluno se autoavalia: o braço estava alto no contato? A bola foi conduzida ou batida?"
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: executar próximo da rede com alvo — fazer a bola cair dentro dos 3 metros (adaptação do D002 para treino solo)."
+        }
+      ],
+      "active_question": "Você conduziu a bola ou bateu nela?"
+    },
+    {
+      "id": "D037",
+      "source_type": "cbt_drills_html",
+      "name": "Simples na Cruzada — Backhand no Meio",
+      "level": "avancado",
+      "format": "aberto",
+      "shot_tags": [
+        "Forehand",
+        "Backhand",
+        "Lob",
+        "Smash"
+      ],
+      "technical_objective": "Desenvolver posicionamento de pernas, jogo no meio da quadra com backhand e entendimento de que o backhand exposto é ponto fraco a ser explorado.",
+      "tactical_objective": "A dupla que mais explora o backhand do adversário controla os pontos. Jogando simples com backhand no meio, o aluno sente na pele o que significa ter o backhand explorado — e aprende como usar isso no jogo em dupla.",
+      "shots": [
+        "Backhand",
+        "Forehand",
+        "Lob",
+        "Curta"
+      ],
+      "game_states": [
+        "Neutro",
+        "Construção",
+        "Defesa"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Jogo 1×1 no diagonal, com os dois jogadores usando o backhand no centro da quadra (meio da quadra). Bola deve ser jogada preferencialmente cruzada."
+        },
+        {
+          "step": "02",
+          "instruction": "Regra: o jogador que jogar paralela perde o ponto automaticamente. Isso força o jogo cruzado com backhand no meio."
+        },
+        {
+          "step": "03",
+          "instruction": "Desenvolvimento natural: o aluno percebe como é difícil jogar beach tennis principalmente com o backhand. Aprende a importância do posicionamento das pernas e dos ajustes de base no backhand."
+        },
+        {
+          "step": "04",
+          "instruction": "O aluno aprende: a dupla que mais explora o backhand adversário tem controle das ações do ponto — mesmo que perca alguns pontos, controla o ritmo."
+        },
+        {
+          "step": "05",
+          "instruction": "Pontuação normal. Sets curtos: melhor de 3 games (até 4 pontos)."
+        },
+        {
+          "step": "06",
+          "instruction": "Progressão: liberar a paralela mas bonificar a cruzada que desorganiza o adversário no backhand (2 pontos se o adversário errar após a cruzada)."
+        }
+      ],
+      "active_question": "Quando você tinha o backhand no meio, você conseguiu controlar o ponto ou perdeu o ritmo do jogo?"
+    },
+    {
+      "id": "D038",
+      "source_type": "cbt_drills_html",
+      "name": "Proteção do Centro — Base 4.5.1 com Expansão Induzida",
+      "level": "avancado",
+      "format": "semi-aberto",
+      "shot_tags": [
+        "Forehand",
+        "Backhand",
+        "Lob",
+        "Smash",
+        "Gancho"
+      ],
+      "technical_objective": "Executar a proteção centralizada como base de devolução, expandindo para as extremidades conforme o saque, e retornando ao centro entre as ações.",
+      "tactical_objective": "A proteção do centro com expansão para as extremidades é a barreira defensiva mais eficiente: minimiza indecisões, reduz espaços e induz o sacador a arriscar nos cantos — aumentando as chances de erro.",
+      "shots": [
+        "Posicionamento / Cobertura central",
+        "Devolução",
+        "Forehand estático",
+        "Backhand estático"
+      ],
+      "game_states": [
+        "Saque",
+        "Defesa",
+        "Neutro"
+      ],
+      "operational_steps": [
+        {
+          "step": "01",
+          "instruction": "Dupla devolvedora começa em proteção centralizada — os dois jogadores juntos no centro, com espaços iguais para esquerda e direita. Linha imaginária vertical divide a quadra ao meio."
+        },
+        {
+          "step": "02",
+          "instruction": "Sacador saca. Dupla devolvedora expande apenas na direção do saque — o devolvedor do lado do saque vai em direção à bola, o parceiro fecha o meio."
+        },
+        {
+          "step": "03",
+          "instruction": "Após a devolução, os dois retornam imediatamente à proteção centralizada antes da terceira bola do sacador chegar."
+        },
+        {
+          "step": "04",
+          "instruction": "Sacador tenta explorar as extremidades (saques 4 e 5). Professor conta: quantas vezes a proteção central foi mantida? Quantas vezes o centro ficou descoberto?"
+        },
+        {
+          "step": "05",
+          "instruction": "Bônus para dupla devolvedora: cada ponto ganho com retorno ao centro antes da terceira bola vale 2."
+        },
+        {
+          "step": "06",
+          "instruction": "Série: 10 pontos por dupla devolvedora. Troca funções."
+        },
+        {
+          "step": "07",
+          "instruction": "Progressão: sacador usa formação em I para aumentar a confusão no posicionamento."
+        }
+      ],
+      "active_question": "Depois da devolução, vocês voltaram ao centro ou ficaram do lado onde a bola foi?"
+    }
+  ],
+  "decision_rules": {
+    "mandatory_reasoning_order": [
+      "diagnose_gap",
+      "identify_broken_state",
+      "check_dependencies",
+      "find_root_cause",
+      "select_corrective_transition",
+      "select_allowed_shots",
+      "select_situation_pattern",
+      "select_drills",
+      "generate_teacher_facing_output"
+    ],
+    "never_do": [
+      "generate_training_directly_from_theme",
+      "ignore_level_constraints",
+      "teach_advanced_combinations_to_beginner",
+      "use_smash_in_red_zone",
+      "use_gancho_as_response_to_smash",
+      "use_lob_short_as_valid_solution"
+    ],
+    "level_constraints": {
+      "iniciante": {
+        "allow": [
+          "fundamentos_basicos",
+          "exercicios_fechados",
+          "semi_abertos_simples",
+          "volume_antes_agressividade"
+        ],
+        "block": [
+          "ventaglio",
+          "forehand_anomalo",
+          "top_spin_avancado",
+          "combinacoes_taticas_azul"
+        ]
+      },
+      "intermediario": {
+        "allow": [
+          "golpes_avancados_com_contexto",
+          "decisao_simples",
+          "situacoes_semi_abertas"
+        ],
+        "block": [
+          "combinacoes_taticas_complexas_sem_pre_requisito"
+        ]
+      },
+      "avancado": {
+        "allow": [
+          "combinacoes_taticas",
+          "hierarquia_de_pontos",
+          "gestao_de_risco",
+          "situacoes_abertas_complexas"
+        ],
+        "block": []
+      }
+    },
+    "format_progression": [
+      "fechado",
+      "semi-aberto",
+      "aberto"
+    ],
+    "root_cause_examples": {
+      "smash_fail": [
+        "lob_quality",
+        "reading_lob",
+        "positioning",
+        "base_adjustment",
+        "contact_height",
+        "decision_zone"
+      ],
+      "gancho_fail": [
+        "time_of_ball",
+        "cross_step",
+        "depth_control",
+        "excess_force",
+        "wrong_use_against_smash"
+      ],
+      "lob_fail": [
+        "contact_too_low",
+        "short_depth",
+        "trajectory_too_low",
+        "no_reposition_after_lob"
+      ],
+      "devolucao_fail": [
+        "wrong_target",
+        "ball_too_high",
+        "no_lateral_adjustment",
+        "returns_to_advanced_partner"
+      ]
+    }
+  },
+  "engine_contract": {
+    "input_schema": {
+      "level": "iniciante|intermediario|avancado",
+      "observed_gap": "string",
+      "scores": "optional map shot_or_skill -> 1..5",
+      "class_context": "optional description",
+      "goal": "optional teacher goal"
+    },
+    "output_schema": {
+      "diagnosis": {
+        "gap_observed": "string",
+        "broken_state": "state",
+        "root_cause": "string",
+        "confidence": "low|medium|high"
+      },
+      "pedagogical_route": {
+        "target_transition": "transition_id",
+        "required_dependencies": [
+          "strings"
+        ],
+        "allowed_shots": [
+          "strings"
+        ],
+        "blocked_shots": [
+          "strings"
+        ]
+      },
+      "recommended_structure": {
+        "format_order": [
+          "fechado",
+          "semi-aberto",
+          "aberto"
+        ],
+        "situation_patterns": [
+          "strings"
+        ],
+        "candidate_drill_ids": [
+          "strings"
+        ]
+      },
+      "teacher_message": "compact explanation in Portuguese"
+    },
+    "selection_logic": [
+      "Match observed gap against shots and states.",
+      "Check dependencies of the target shot.",
+      "If dependency score is lower than target shot score, prioritize dependency as root cause.",
+      "Apply level constraints and blocked shots.",
+      "Select transition that moves class one state closer to the desired state.",
+      "Only then select drills tagged with required states, shots, level, and format progression."
+    ]
+  }
+}
