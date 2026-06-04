@@ -6,7 +6,7 @@ import { listPartidas, getPartida, criarPartida, salvarPonto, encerrarPartida, s
 import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutDeciding, tennis, modeLabel, nextScoutServe } from './data/scoutScore.js';
 import { DEMO_ALUNOS as ALUNOS, DEMO_TURMAS, DEMO_RADAR_LABELS as RLAB } from './data/demo.js';
 import { prepararConfirmacoesTurma, atualizarStatusConfirmacoes, getConfirmacao, responderConfirmacao, confirmationUrl, whatsappUrl, statusLabel, statusTone } from './data/confirmacoes.js';
-import { AUTO_FUNDAMENTOS, prepararAutoavaliacaoAluno, salvarAutoavaliacaoToken } from './data/autoavaliacao.js';
+import { AUTO_FUNDAMENTOS, prepararAutoavaliacaoAluno, prepararFeedbackAluno, salvarAutoavaliacaoToken } from './data/autoavaliacao.js';
 import { PUBLIC_FEEDBACK_FUNDAMENTOS, getPublicStudentFeedback } from './data/alunoFeedback.js';
 import { analyzeStudentFeedback, practicalIssueText } from './data/ontology.js';
 
@@ -989,7 +989,7 @@ function ScreenAlunos({ nav }) {
   };
   // mensagem de feedback COM o link da tela do aluno (radar + leitura visual)
   const mensagemFeedbackComLink = async (a)=>{
-    const { link } = await prepararAutoavaliacaoAluno(a); // garante token + link /aluno/:token
+    const { link } = await prepararFeedbackAluno(a); // garante link /aluno/:token sem reabrir autoavaliacao
     return `${feedbackAlunoTexto(a)}\n\n📊 Veja seu radar e os detalhes aqui:\n${link}`;
   };
   const enviarFeedback = async (a, viaWhats)=>{
@@ -1205,13 +1205,34 @@ function feedbackAlunoTexto(a) {
 function ScreenAluno({ nav, params }) {
   const a = params.aluno || ALUNOS[0];
   const [tab,setTab] = React.useState('tecnico');
+  const [feedbackMsg,setFeedbackMsg] = React.useState('');
   const canFeedback = !!(a.scoutResumo && a.notasAuto && Object.keys(a.notasAuto).length);
-  const enviarFeedback = ()=>{
-    const text = feedbackAlunoTexto(a);
-    if(a.phone) window.open(whatsappUrl(a.phone, text), '_blank', 'noopener,noreferrer');
-    else navigator.clipboard?.writeText(text);
+  const feedbackComLink = async ()=>{
+    const { link } = await prepararFeedbackAluno(a);
+    return `${feedbackAlunoTexto(a)}\n\n📊 Veja seu radar e os detalhes aqui:\n${link}`;
   };
-  const copiarFeedback = ()=>navigator.clipboard?.writeText(feedbackAlunoTexto(a));
+  const enviarFeedback = async ()=>{
+    setFeedbackMsg('');
+    try {
+      const text = await feedbackComLink();
+      if(a.phone) window.open(whatsappUrl(a.phone, text), '_blank', 'noopener,noreferrer');
+      else {
+        await navigator.clipboard?.writeText(text);
+        setFeedbackMsg('Feedback copiado com link. Sem WhatsApp no cadastro.');
+      }
+    } catch(e) {
+      setFeedbackMsg(e.message || 'Não foi possível gerar o link do aluno.');
+    }
+  };
+  const copiarFeedback = async ()=>{
+    setFeedbackMsg('');
+    try {
+      await navigator.clipboard?.writeText(await feedbackComLink());
+      setFeedbackMsg('Feedback copiado com link.');
+    } catch(e) {
+      setFeedbackMsg(e.message || 'Não foi possível copiar o feedback.');
+    }
+  };
   return (
     <Screen>
       <Header onBack={nav.back} kicker={a.turma} title={a.nome}
@@ -1266,14 +1287,15 @@ function ScreenAluno({ nav, params }) {
             <button className="bf-tap" onClick={enviarFeedback}
               style={{ flex:1, border:0, borderRadius:9, padding:'9px 10px',
                 background:'rgba(22,194,163,.14)', color:C.turq, fontSize:12.5, fontWeight:700 }}>
-              Enviar feedback
+              {a.phone?'Enviar no WhatsApp':'Copiar feedback'}
             </button>
             <button className="bf-tap" onClick={copiarFeedback}
               style={{ border:`1px solid ${C.line2}`, borderRadius:9, padding:'9px 10px',
                 background:'transparent', color:C.inkDim, fontSize:12.5, fontWeight:700 }}>
-              Copiar
+              Copiar link
             </button>
           </div>}
+          {feedbackMsg && <div style={{ fontSize:11.5, color:feedbackMsg.includes('Não foi')?C.err:C.turq, lineHeight:1.35, marginTop:8 }}>{feedbackMsg}</div>}
           {!canFeedback && <div style={{ fontSize:11.5, color:C.inkDim, lineHeight:1.35, marginTop:10, paddingTop:10, borderTop:`1px solid ${C.line}` }}>
             O feedback para WhatsApp aparece quando este aluno tiver Scout e autoavaliação.
           </div>}

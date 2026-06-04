@@ -34,6 +34,21 @@ export async function prepararAutoavaliacaoAluno(aluno) {
   return { token, link, message: selfAssessmentMessage(aluno, link) };
 }
 
+export async function prepararFeedbackAluno(aluno) {
+  if (!supabase || !aluno?.id) throw new Error('Supabase não configurado.');
+  const teacherId = await currentTeacherId();
+  if (!teacherId) throw new Error('Entre novamente na conta antes de enviar feedbacks.');
+  const { data, error } = await supabase.rpc('ensure_student_feedback_token', {
+    p_student_id: aluno.id,
+    p_teacher_id: teacherId,
+  });
+  if (error) throw error;
+  const token = typeof data === 'string' ? data : data?.token;
+  if (!token) throw new Error('Não foi possível gerar o link de feedback.');
+  const link = selfAssessmentUrl(token, aluno);
+  return { token, link };
+}
+
 export async function salvarAutoavaliacaoToken(token, scores) {
   if (!supabase || !token) throw new Error('Link inválido.');
   const { data, error } = await supabase.rpc('save_self_assessment', {
