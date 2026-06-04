@@ -1,10 +1,16 @@
 # Edge Function — `gerar-plano`
 
-Proxy seguro entre o app e a Claude API. A `ANTHROPIC_API_KEY` fica como secret no
+Proxy seguro entre o app e o provedor de IA. A chave fica como secret no
 Supabase, nunca no app (o navegador só fala com a função).
 
+Provedores suportados:
+- Gemini: `GEMINI_API_KEY` + `AI_PROVIDER=gemini`
+- Claude: `ANTHROPIC_API_KEY` + `AI_PROVIDER=anthropic`
+
 ## Pré-requisitos
-- Conta Anthropic com **ANTHROPIC_API_KEY** (https://console.anthropic.com → API Keys)
+- Chave do Gemini em Google AI Studio: **GEMINI_API_KEY** (https://aistudio.google.com/app/apikey)
+  - O Gemini API tem tier gratuito para testes com limites menores, segundo a página oficial de preços do Google AI.
+- Opcional: conta Anthropic com **ANTHROPIC_API_KEY** (https://console.anthropic.com → API Keys)
 - Supabase CLI: `brew install supabase/tap/supabase`
 - Projeto Supabase já existe: `btjsweysefmbceqqlyxx`
 
@@ -16,7 +22,10 @@ cd beachflow-app
 supabase login
 supabase link --project-ref btjsweysefmbceqqlyxx
 
-# 2. guardar a chave da Anthropic como secret (NÃO vai pro git)
+# 2. guardar a chave do Gemini como secret (NÃO vai pro git)
+supabase secrets set AI_PROVIDER=gemini GEMINI_API_KEY=AIza...
+
+# opcional: manter Claude como fallback manual/troca futura
 supabase secrets set ANTHROPIC_API_KEY=sk-ant-xxxxxxxx
 
 # 3. publicar a função
@@ -32,7 +41,7 @@ Crie `beachflow-app/.env` (copie de `.env.example`) com:
 VITE_GERAR_PLANO_ENDPOINT=https://btjsweysefmbceqqlyxx.supabase.co/functions/v1/gerar-plano
 VITE_SUPABASE_ANON_KEY=<sua anon key>
 ```
-Sem essas variáveis, a tela Plano usa um **plano de exemplo** (não chama a IA).
+Sem essas variáveis, a tela Plano gera um plano local com os dados disponíveis (não chama a IA).
 
 ## Testar
 Diagnóstico rápido do app, tabelas REST e Edge Function:

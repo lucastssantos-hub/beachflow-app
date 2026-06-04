@@ -1,12 +1,15 @@
-// BeachFlow — Edge Function: gera diagnóstico + plano de treino via Claude API.
-// A API key fica como secret no Supabase (ANTHROPIC_API_KEY), nunca no app.
+// BeachFlow — Edge Function: gera diagnóstico + plano de treino via IA.
+// As API keys ficam como secrets no Supabase, nunca no app.
 // Regras pedagógicas = docs/ia-treinos-spec.md + casos em src/ia/testCasesBeachFlow.ts.
 // Deploy: ver beachflow-app/supabase/README.md
 
 const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
+const AI_PROVIDER = (Deno.env.get("AI_PROVIDER") || (GEMINI_KEY ? "gemini" : "anthropic")).toLowerCase();
 // Default: Sonnet 4.6 — empatou com Opus 4.8 nos 5 casos de teste, mais barato/rápido.
 // Override por requisição (body.model) restrito à allowlist abaixo.
 const MODEL = "claude-sonnet-4-6";
+const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
 
 const SYSTEM_PROMPT = `Você é a inteligência pedagógica do BeachFlow, copiloto de PROFESSORES de beach tennis. Não é um gerador genérico de treinos. Responda, com clareza e aplicabilidade na quadra: "Qual é o principal problema pedagógico desta turma/aluno agora, e qual treino resolve esse problema?"
 
@@ -186,6 +189,74 @@ function normalizePlano(plano: any): any {
   return plano;
 }
 
+async function callAnthropic(userContent: string, model?: string): Promise<{ text: string; usage: unknown; provider: string; model: string }> {
+  if (!ANTHROPIC_KEY) throw new Error("ANTHROPIC_API_KEY não configurada no Supabase");
+  const ALLOWED = ["claude-opus-4-8", "claude-sonnet-4-6"];
+  const chosen = ALLOWED.includes(model || "") ? model! : MODEL;
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": ANTHROPIC_KEY,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: chosen,
+      max_tokens: 2600,
+      temperature: 0.35,
+      system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: userContent }],
+    }),
+  });
+
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(`Anthropic ${r.status}: ${t.slice(0, 400)}`);
+  }
+
+  const data = await r.json();
+  const text: string = (data.content || [])
+    .filter((b: { type: string }) => b.type === "text")
+    .map((b: { text: string }) => b.text)
+    .join("");
+  return { text, usage: data.usage, provider: "anthropic", model: chosen };
+}
+
+async function callGemini(userContent: string, model?: string): Promise<{ text: string; usage: unknown; provider: string; model: string }> {
+  if (!GEMINI_KEY) throw new Error("GEMINI_API_KEY não configurada no Supabase");
+  const chosen = model && /^gemini-[a-z0-9.\-]+$/i.test(model) ? model : GEMINI_MODEL;
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${chosen}:generateContent?key=${GEMINI_KEY}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: [{ role: "user", parts: [{ text: userContent }] }],
+      generationConfig: {
+        temperature: 0.35,
+        maxOutputTokens: 2600,
+        responseMimeType: "application/json",
+      },
+    }),
+  });
+
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(`Gemini ${r.status}: ${t.slice(0, 400)}`);
+  }
+
+  const data = await r.json();
+  const text = (data.candidates || [])
+    .flatMap((c: any) => c?.content?.parts || [])
+    .map((p: any) => p.text || "")
+    .join("");
+  return { text, usage: data.usageMetadata, provider: "gemini", model: chosen };
+}
+
+async function callAi(userContent: string, model?: string): Promise<{ text: string; usage: unknown; provider: string; model: string }> {
+  if (AI_PROVIDER === "gemini") return await callGemini(userContent, model);
+  return await callAnthropic(userContent, model);
+}
+
 // Deriva o id do professor do JWT (o gateway do Supabase já valida o token).
 // Logado => auth.uid() (sub); anônimo => fallback (id local do cliente).
 function teacherFromReq(req: Request, fallback?: string): string {
@@ -308,51 +379,20 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ planos }), { headers: { ...cors, "content-type": "application/json" } });
     }
 
-    if (!ANTHROPIC_KEY) throw new Error("ANTHROPIC_API_KEY não configurada no Supabase");
-    // allowlist de modelos (evita override arbitrário a partir do cliente)
-    const ALLOWED = ["claude-opus-4-8", "claude-sonnet-4-6"];
-    const chosen = ALLOWED.includes(model) ? model : MODEL;
-
     // monta a mensagem: dados + exemplos aprovados + roteiro metodológico (RAG)
     const fundamentos = pickFundamentos(context || {});
     const conhecimento = await dbKnowledge(uid);
     const userContent = buildUserMessage(context || {})
       + exemplosBlock(await dbRecentEdicoes(3))
       + knowledgeBlock(conhecimento, fundamentos);
-
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": ANTHROPIC_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: chosen,
-        max_tokens: 2600,
-        temperature: 0.35,
-        system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-        messages: [{ role: "user", content: userContent }],
-      }),
-    });
-
-    if (!r.ok) {
-      const t = await r.text();
-      throw new Error(`Anthropic ${r.status}: ${t.slice(0, 400)}`);
-    }
-
-    const data = await r.json();
-    const text: string = (data.content || [])
-      .filter((b: { type: string }) => b.type === "text")
-      .map((b: { text: string }) => b.text)
-      .join("");
+    const ai = await callAi(userContent, model);
 
     let plano: any;
     let parseOk = true;
     try {
-      plano = normalizePlano(JSON.parse(extractJsonObject(text)));
+      plano = normalizePlano(JSON.parse(extractJsonObject(ai.text)));
     } catch {
-      plano = { _raw: text, _parseError: true };
+      plano = { _raw: ai.text, _parseError: true };
       parseOk = false;
     }
 
@@ -366,12 +406,12 @@ Deno.serve(async (req: Request) => {
           nome: context?.nome ?? null,
           contexto: context ?? null,
           plano,
-          modelo: chosen,
+          modelo: `${ai.provider}:${ai.model}`,
         });
       } catch { /* persistência é best-effort */ }
     }
 
-    return new Response(JSON.stringify({ plano, id: savedId, usage: data.usage }), {
+    return new Response(JSON.stringify({ plano, id: savedId, usage: ai.usage, provider: ai.provider, model: ai.model }), {
       headers: { ...cors, "content-type": "application/json" },
     });
   } catch (e) {

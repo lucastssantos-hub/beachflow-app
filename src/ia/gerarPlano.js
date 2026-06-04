@@ -235,6 +235,12 @@ function friendlyAiError(message = '') {
   if (/ANTHROPIC_API_KEY/i.test(text)) {
     return 'IA indisponível: falta configurar a ANTHROPIC_API_KEY nos Secrets do Supabase.';
   }
+  if (/GEMINI_API_KEY/i.test(text)) {
+    return 'IA indisponível: falta configurar a GEMINI_API_KEY nos Secrets do Supabase.';
+  }
+  if (/Gemini\s+429|quota|rate limit|resource_exhausted/i.test(text)) {
+    return 'IA indisponível: o Gemini atingiu o limite gratuito/cota. Use o plano local e tente novamente depois.';
+  }
   if (/HTTP 404|not found/i.test(text)) {
     return 'IA indisponível: a função gerar-plano não foi publicada no Supabase.';
   }
