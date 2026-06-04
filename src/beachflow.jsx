@@ -7,7 +7,7 @@ import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutD
 import { DEMO_ALUNOS as ALUNOS, DEMO_TURMAS, DEMO_RADAR_LABELS as RLAB } from './data/demo.js';
 import { prepararConfirmacoesTurma, atualizarStatusConfirmacoes, getConfirmacao, responderConfirmacao, confirmationUrl, whatsappUrl, statusLabel, statusTone } from './data/confirmacoes.js';
 import { AUTO_FUNDAMENTOS, prepararAutoavaliacaoAluno, salvarAutoavaliacaoToken } from './data/autoavaliacao.js';
-import { practicalIssueText } from './data/ontology.js';
+import { analyzeStudentFeedback, practicalIssueText } from './data/ontology.js';
 
 
 /* ===== app/ios-frame.jsx ===== */
@@ -1125,103 +1125,6 @@ function formatScoutList(entries = []) {
   if (parts.length <= 1) return parts[0] || '';
   return `${parts.slice(0,-1).join(', ')} e ${parts.at(-1)}`;
 }
-function praticaFundamento(fundamento = '') {
-  const f = String(fundamento || '').toLowerCase();
-  if (f.includes('tapa')) return 'o ponto a melhorar é escolher melhor o momento de acelerar. Nem toda bola pede ataque; algumas pedem controle para continuar o ponto.';
-  if (f.includes('devol')) return 'o ponto a melhorar é devolver com mais profundidade, para começar o ponto sem entregar vantagem.';
-  if (f.includes('lob')) return 'o ponto a melhorar é usar o lob com mais altura e profundidade para ganhar tempo, não apenas para passar a bola.';
-  if (f.includes('gancho')) return 'o ponto a melhorar é usar o gancho para recuperar a posição antes de tentar resolver o ponto.';
-  if (f.includes('curta')) return 'o ponto a melhorar é usar a bola curta com intenção clara, não como solução automática.';
-  if (f.includes('smash')) return 'o ponto a melhorar é finalizar só quando a bola estiver realmente confortável.';
-  if (f.includes('saque')) return 'o ponto a melhorar é sacar já pensando na próxima bola, não apenas em colocar a bola em jogo.';
-  if (f.includes('backhand')) return 'o ponto a melhorar é controlar melhor o lado do backhand antes de tentar acelerar.';
-  if (f.includes('forehand')) return 'o ponto a melhorar é usar o forehand com mais controle de direção e recuperação depois do golpe.';
-  if (f.includes('bandeja')) return 'o ponto a melhorar é manter controle e profundidade sem transformar toda bola alta em definição.';
-  if (f.includes('consist')) return 'o ponto a melhorar é manter mais bolas vivas antes de tentar acelerar.';
-  if (f.includes('posicion')) return 'o ponto a melhorar é recuperar melhor a posição depois da batida para não abrir espaço.';
-  return `o ponto a melhorar é usar ${fundamento || 'esse fundamento'} com mais escolha, controle e regularidade.`;
-}
-function positivoFundamento(fundamento = '') {
-  const f = String(fundamento || '').toLowerCase();
-  if (f.includes('lob')) return 'o lob apareceu bem e ajudou você a ganhar tempo no ponto';
-  if (f.includes('saque')) return 'o saque apareceu como uma bola de confiança para iniciar melhor o ponto';
-  if (f.includes('devol')) return 'a devolução ajudou a começar alguns pontos com mais segurança';
-  if (f.includes('tapa')) return 'o tapa apareceu bem quando a bola estava confortável para acelerar';
-  if (f.includes('gancho')) return 'o gancho ajudou a recuperar bolas difíceis sem perder completamente o ponto';
-  if (f.includes('curta')) return 'a curta criou dúvida no adversário quando foi usada com intenção';
-  if (f.includes('smash')) return 'o smash apareceu bem quando havia bola clara para finalizar';
-  return `${fundamento || 'esse fundamento'} apareceu como um recurso positivo no jogo`;
-}
-function leituraSaqueDoScout(scout, erroPrincipal) {
-  const erro = String(erroPrincipal?.fundamento || '').toLowerCase();
-  if (!erro.includes('saque')) return null;
-  const eventos = scout?.eventosRecentes || [];
-  const errosDeSaque = eventos.filter(e=>{
-    const fund = String(e.fundamento || e.tecnica || '').toLowerCase();
-    const desfecho = String(e.desfecho || e.tipo || '').toLowerCase();
-    return fund.includes('saque') && /erro/.test(desfecho);
-  }).length;
-  if (errosDeSaque) {
-    return {
-      texto: 'No jogo, o ajuste apareceu no próprio saque. Antes de pensar em atacar a próxima bola, precisamos garantir uma bola inicial mais segura e com margem.',
-      foco: 'o ponto a melhorar é reduzir o erro de saque: toss mais estável, contato mais limpo e alvo simples para começar o ponto com segurança.',
-    };
-  }
-  return {
-    texto: 'No jogo, o saque apareceu como principal ajuste, mas vale observar se o problema está no golpe inicial ou na organização logo depois dele.',
-    foco: 'o ponto a melhorar é sacar com direção simples e já recuperar a base para jogar a próxima bola.',
-  };
-}
-function leituraCadeiaDoPonto(autoFraco, erroPrincipal) {
-  const percebido = String(autoFraco?.[0] || '').toLowerCase();
-  const erro = String(erroPrincipal?.fundamento || '').toLowerCase();
-  if (!percebido || !erro) return null;
-  const erroRali = ['forehand', 'backhand', 'neutra', 'consistência', 'consistencia', 'posicionamento'].some(x=>erro.includes(x));
-  if (percebido.includes('saque') && erroRali) {
-    return {
-      texto: `No jogo, o ajuste mais claro apareceu depois do início do ponto: ${erroPrincipal.fundamento}. Isso pode mostrar que a sensação de dificuldade no saque não está só no saque, mas na bola seguinte, na entrada no rali ou na recuperação depois de sacar.`,
-      foco: 'o ponto a melhorar é sacar e já se organizar para a terceira bola, entrando no rali com mais controle antes de tentar acelerar.',
-    };
-  }
-  if (percebido.includes('devol') && erroRali) {
-    return {
-      texto: `No jogo, o ajuste mais claro apareceu logo depois da devolução: ${erroPrincipal.fundamento}. Isso pode mostrar que a dificuldade não está só em devolver, mas em entrar organizada no rali depois da resposta ao saque.`,
-      foco: 'o ponto a melhorar é devolver e já recuperar a base para jogar a bola seguinte com mais controle.',
-    };
-  }
-  if ((percebido.includes('lob') || percebido.includes('gancho')) && ['tapa', 'smash', 'acelerada', 'ventaglio', 'anômalo', 'anomalo'].some(x=>erro.includes(x))) {
-    return {
-      texto: `No jogo, o ajuste apareceu na tentativa de acelerar. Isso pode mostrar que a bola de recuperação ainda não está dando tempo suficiente para preparar um ataque com segurança.`,
-      foco: 'o ponto a melhorar é ganhar tempo primeiro e só acelerar quando a bola vier realmente confortável.',
-    };
-  }
-  return null;
-}
-function interpretacaoAutoScout({ notasAuto = {}, autoFraco, erroPrincipal, erros = [], positivos = [], usePositive = true }) {
-  const fraco = autoFraco?.[0];
-  const principal = erroPrincipal?.fundamento;
-  const frases = [];
-
-  if (principal && fraco && principal === fraco) {
-    frases.push(`Isso bate com o que você sentiu: ${fraco} apareceu como ponto de atenção para você e também no jogo.`);
-  } else if (principal && fraco) {
-    frases.push(`Aqui apareceu uma diferença interessante: você sentiu mais dificuldade em ${fraco}, mas no jogo o ajuste mais claro apareceu em ${principal}.`);
-  } else if (principal) {
-    frases.push(`O jogo mostrou um ponto claro para ajustar em ${principal}.`);
-  }
-
-  const bomApesarAutoBaixa = usePositive ? positivos.find(([f,n])=>{
-    const auto = Number(notasAuto[f]);
-    if (!Number.isFinite(auto) || auto > 3) return false;
-    const errosNoFund = scoutCount(erros, f);
-    return Number(n) > errosNoFund;
-  }) : null;
-  if (bomApesarAutoBaixa) {
-    frases.push(`E tem uma boa notícia: mesmo com insegurança em ${bomApesarAutoBaixa[0]}, esse fundamento também teve boas ações.`);
-  }
-
-  return frases.slice(0, 2).join(' ');
-}
 function feedbackAlunoTexto(a) {
   const autoFraco = topNota(a.notasAuto, true);
   const autoForte = topNota(a.notasAuto, false);
@@ -1240,31 +1143,19 @@ function feedbackAlunoTexto(a) {
   const extraTatico = (scout?.problemasTaticos || []).find(p=>p?.texto);
   const textoTatico = extraTatico?.pratica || scout?.leituraPratica || (extraTatico?.texto ? practicalIssueText(extraTatico.texto) : '');
   const textoTaticoLimpo = textoTatico ? String(textoTatico).replace(/\s+/g,' ').slice(0,190) : '';
-  const leituraSaque = leituraSaqueDoScout(scout, erro);
-  const cadeia = leituraSaque || leituraCadeiaDoPonto(autoFraco, erro);
-  const mesmaNota = autoForte && autoFraco && (autoForte[0] === autoFraco[0] || Number(autoForte[1]) === Number(autoFraco[1]));
-  const autoTexto = mesmaNota
-    ? `na sua autoavaliação, suas respostas ficaram bem próximas entre os fundamentos.`
-    : `na sua autoavaliação, você marcou ${autoForte ? autoForte[0] : 'alguns fundamentos'} como ponto de mais confiança e ${autoFraco ? autoFraco[0] : foco} como ponto que pede mais atenção.`;
-  const leituraCruzada = interpretacaoAutoScout({
-    notasAuto: a.notasAuto,
-    autoFraco,
-    erroPrincipal: erro,
-    erros: errosSignificativos,
-    positivos: positivosOrdenados,
-    usePositive: !positivosFund.length,
+  const analise = analyzeStudentFeedback({
+    autoWeak: autoFraco?.[0],
+    autoStrong: autoForte?.[0],
+    scoutError: erro,
+    scout,
+    positives: positivosFund.map(([f])=>f),
+    tacticalText: textoTaticoLimpo,
   });
-  const positivoTexto = positivosFund.length ? positivoFundamento(positivosFund[0][0]) + '.' : '';
-  const jogoTexto = cadeia?.texto || (erro
-    ? `No jogo, ${erro.fundamento} apareceu como o principal ajuste. ${textoTaticoLimpo ? textoTaticoLimpo + '.' : 'Em algumas bolas, a escolha ou a execução ainda precisa ficar mais tranquila.'}`
-    : textoTaticoLimpo
-      ? `No jogo, o ponto mais claro foi este: ${textoTaticoLimpo}.`
-      : 'No jogo, ainda não apareceu um padrão forte o bastante para cravar um diagnóstico, mas já dá para orientar o próximo ajuste.');
-  const focoPratico = cadeia?.foco || praticaFundamento(foco);
+  const focoPratico = analise.focusText || `o ponto a melhorar é usar ${foco} com mais controle e escolha.`;
   return [
     `Oi, ${nome}! Passando um retorno rápido do treino.`,
-    `Pelo que você respondeu, ${autoTexto}`,
-    [positivoTexto, jogoTexto, leituraCruzada].filter(Boolean).join(' '),
+    `Pelo que você respondeu, ${analise.autoText}`,
+    [analise.positiveText, analise.gameText, analise.bridgeText].filter(Boolean).join(' '),
     `${focoPratico.charAt(0).toUpperCase()}${focoPratico.slice(1)}`,
     'Vamos evoluir um ajuste por vez, sem complicar.'
   ].filter(Boolean).join('\n\n');

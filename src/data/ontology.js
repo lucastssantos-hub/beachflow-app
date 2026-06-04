@@ -134,21 +134,257 @@ export function focusCardFromIssue(issue = '') {
   return { foco: 'Escolher a bola certa.', regra: 'Decisão antes da execução.' };
 }
 
+const FUNDAMENTAL_ALIASES = {
+  recepcao: 'Devolução',
+  devolucao: 'Devolução',
+  devolução: 'Devolução',
+  constancia: 'Consistência',
+  constância: 'Consistência',
+  consistencia: 'Consistência',
+  consistência: 'Consistência',
+  acelerada: 'Tapa',
+  espetada: 'Tapa',
+  'tapa/acelerada/espetada': 'Tapa',
+  'bolas curtas': 'Curta',
+  curta: 'Curta',
+  'bandeja/controle': 'Bandeja',
+  bandeja: 'Bandeja',
+  posicao: 'Posicionamento',
+  posição: 'Posicionamento',
+  posicionamento: 'Posicionamento',
+  neutra: 'Neutra',
+};
+
+const PRACTICAL_FOCUS = {
+  Saque: 'começar o ponto com direção simples e já se preparar para a bola seguinte.',
+  Devolução: 'devolver com profundidade suficiente para entrar no ponto organizado.',
+  Forehand: 'usar o forehand com direção e recuperar a base depois da batida.',
+  Backhand: 'controlar o lado do backhand antes de tentar mudar ritmo ou direção.',
+  Lob: 'usar o lob alto e profundo para ganhar tempo de verdade.',
+  Smash: 'finalizar só quando a bola estiver confortável, à frente e com equilíbrio.',
+  Bandeja: 'usar a bandeja para manter controle e continuidade, sem transformar tudo em definição.',
+  Gancho: 'usar o gancho para reorganizar o ponto quando a bola alta ficou funda ou desconfortável.',
+  Tapa: 'escolher melhor o momento de acelerar, sem atacar bola baixa ou atrasada.',
+  Curta: 'usar a curta quando ela realmente desloca o adversário, não como solução automática.',
+  Posicionamento: 'recuperar melhor a posição depois da batida para não abrir espaço.',
+  Consistência: 'manter mais bolas vivas com margem antes de tentar acelerar.',
+  Neutra: 'usar bola neutra com profundidade para continuar o ponto sem entregar vantagem.',
+};
+
+const POSITIVE_FOCUS = {
+  Saque: 'o saque apareceu como uma bola de confiança para iniciar o ponto.',
+  Devolução: 'a devolução ajudou a começar alguns pontos com mais segurança.',
+  Forehand: 'o forehand apareceu como um recurso positivo para manter ou acelerar a troca.',
+  Backhand: 'o backhand apareceu como um recurso útil para controlar o lado não dominante.',
+  Lob: 'o lob ajudou a ganhar tempo e manter o ponto vivo.',
+  Smash: 'o smash apareceu bem quando havia bola clara para finalizar.',
+  Bandeja: 'a bandeja ajudou a controlar bolas altas sem precipitar.',
+  Gancho: 'o gancho ajudou a recuperar bolas difíceis sem perder completamente o ponto.',
+  Tapa: 'o tapa apareceu bem quando a bola estava confortável para acelerar.',
+  Curta: 'a curta criou dúvida no adversário quando foi usada com intenção.',
+};
+
+const STRUCTURE_BY_FUNDAMENTAL = {
+  Saque: { family: 'inicio', chain: 'saque', student: 'início do ponto', next: ['Forehand', 'Backhand', 'Neutra', 'Consistência', 'Posicionamento'] },
+  Devolução: { family: 'inicio', chain: 'devolucao', student: 'resposta ao saque', next: ['Forehand', 'Backhand', 'Neutra', 'Consistência', 'Posicionamento'] },
+  Forehand: { family: 'neutro', chain: 'rali', student: 'troca de fundo' },
+  Backhand: { family: 'neutro', chain: 'rali', student: 'lado do backhand' },
+  Neutra: { family: 'neutro', chain: 'rali', student: 'bola de continuidade' },
+  Consistência: { family: 'neutro', chain: 'rali', student: 'regularidade da troca' },
+  Posicionamento: { family: 'espacial', chain: 'dupla', student: 'recuperação de posição' },
+  Lob: { family: 'defesa', chain: 'recuperacao', student: 'ganhar tempo' },
+  Gancho: { family: 'reconstrucao', chain: 'recuperacao', student: 'reorganizar depois de bola alta/funda' },
+  Bandeja: { family: 'controle', chain: 'continuidade', student: 'continuidade com bola alta' },
+  Curta: { family: 'construcao', chain: 'construcao', student: 'deslocar o adversário' },
+  Tapa: { family: 'pressao', chain: 'pressao', student: 'acelerar bola favorável' },
+  Smash: { family: 'finalizacao', chain: 'finalizacao', student: 'finalizar bola favorável' },
+};
+
+const RALLY_FAMILIES = new Set(['neutro', 'espacial']);
+const ATTACK_FAMILIES = new Set(['pressao', 'finalizacao']);
+const RECOVERY_FAMILIES = new Set(['defesa', 'reconstrucao']);
+
+function normalizeKey(value = '') {
+  return String(value || '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+export function canonicalFundamental(value = '') {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const key = normalizeKey(raw);
+  return FUNDAMENTAL_ALIASES[key] || Object.keys(STRUCTURE_BY_FUNDAMENTAL).find((f) => normalizeKey(f) === key) || raw;
+}
+
+function familyOf(value = '') {
+  return STRUCTURE_BY_FUNDAMENTAL[canonicalFundamental(value)]?.family || 'neutro';
+}
+
+function eventLooksLikeServeError(event = {}) {
+  const fund = canonicalFundamental(event.fundamento || event.tecnica || event.technique || event.shot);
+  const outcome = `${event.desfecho || ''} ${event.tipo || ''} ${event.outcome || ''} ${event.kind || ''}`.toLowerCase();
+  return fund === 'Saque' && /erro|error|falta|dupla/.test(outcome);
+}
+
+function hasRecentServeError(events = []) {
+  return events.some(eventLooksLikeServeError);
+}
+
+export function practicalFundamentalFocus(fundamental = '') {
+  const f = canonicalFundamental(fundamental);
+  return PRACTICAL_FOCUS[f] || `usar ${fundamental || 'esse fundamento'} com mais escolha, controle e regularidade.`;
+}
+
+export function positiveFundamentalText(fundamental = '') {
+  const f = canonicalFundamental(fundamental);
+  return POSITIVE_FOCUS[f] || `${fundamental || 'esse recurso'} apareceu como ponto positivo no jogo.`;
+}
+
+function autoPhrase(autoStrong, autoWeak) {
+  if (!autoStrong && !autoWeak) return 'a autoavaliação ainda não mostrou um ponto muito claro.';
+  if (autoStrong && autoWeak && autoStrong === autoWeak) {
+    return `suas respostas ficaram próximas, com ${autoWeak} aparecendo como referência inicial.`;
+  }
+  return `você colocou ${autoStrong || 'alguns fundamentos'} como ponto de confiança e ${autoWeak || 'um fundamento'} como ponto que pede mais atenção.`;
+}
+
+function bridgeAutoAndScout({ autoWeak, scoutError, scout, tacticalText }) {
+  const weak = canonicalFundamental(autoWeak);
+  const error = canonicalFundamental(scoutError?.fundamento || scoutError);
+  const weakFamily = familyOf(weak);
+  const errorFamily = familyOf(error);
+  const recentEvents = scout?.eventosRecentes || [];
+
+  if (!error) {
+    return {
+      gameText: tacticalText
+        ? `No jogo, o ponto mais claro foi este: ${tacticalText}.`
+        : 'No jogo, ainda não apareceu um padrão forte o bastante para cravar o ajuste.',
+      bridgeText: '',
+      focusText: practicalFundamentalFocus(weak),
+      trainingTopic: weak || 'Controle',
+    };
+  }
+
+  if (error === 'Saque') {
+    const directServeError = hasRecentServeError(recentEvents);
+    return {
+      gameText: directServeError
+        ? 'No jogo, o ajuste apareceu no próprio saque: a primeira bola ainda precisa entrar com mais margem e direção.'
+        : 'No jogo, o saque apareceu como ajuste, mas precisamos separar o erro do golpe inicial da organização logo depois dele.',
+      bridgeText: weak && weak !== error
+        ? `Você sentiu ${weak}; isso pode começar já na primeira bola, porque um saque sem direção deixa o ponto mais difícil desde o início.`
+        : 'Isso combina com a sua percepção: o início do ponto precisa ficar mais estável.',
+      focusText: directServeError
+        ? 'o ponto a melhorar é reduzir o erro de saque: toss mais estável, contato limpo e alvo simples.'
+        : 'o ponto a melhorar é sacar com direção simples e recuperar a base para jogar a próxima bola.',
+      trainingTopic: 'Saque + entrada no rali',
+    };
+  }
+
+  if (weak === 'Saque' && RALLY_FAMILIES.has(errorFamily)) {
+    return {
+      gameText: `No jogo, o ajuste mais claro apareceu depois do saque: ${error}.`,
+      bridgeText: 'Isso não contradiz sua percepção do saque; pode ser a bola seguinte, a entrada no rali ou a recuperação depois de sacar.',
+      focusText: 'o ponto a melhorar é sacar e já se organizar para a terceira bola, entrando no rali com mais controle.',
+      trainingTopic: 'Saque + terceira bola',
+    };
+  }
+
+  if (weak === 'Devolução' && RALLY_FAMILIES.has(errorFamily)) {
+    return {
+      gameText: `No jogo, o ajuste mais claro apareceu logo depois da devolução: ${error}.`,
+      bridgeText: 'Isso pode mostrar que a dificuldade não está só em devolver, mas em entrar organizada no rali depois da resposta ao saque.',
+      focusText: 'o ponto a melhorar é devolver com profundidade e recuperar a base para jogar a bola seguinte.',
+      trainingTopic: 'Devolução + entrada no rali',
+    };
+  }
+
+  if (RECOVERY_FAMILIES.has(weakFamily) && ATTACK_FAMILIES.has(errorFamily)) {
+    return {
+      gameText: `No jogo, o erro apareceu na tentativa de acelerar com ${error}.`,
+      bridgeText: `Isso pode estar ligado ao ${weak}: a bola de recuperação ainda não está comprando tempo suficiente para atacar com segurança.`,
+      focusText: 'o ponto a melhorar é ganhar tempo primeiro e só acelerar quando a bola vier realmente confortável.',
+      trainingTopic: 'Recuperar antes de acelerar',
+    };
+  }
+
+  if (ATTACK_FAMILIES.has(errorFamily) && /finaliza|winner|aceler|vantagem|cedo/i.test(tacticalText || '')) {
+    return {
+      gameText: `No jogo, ${error} apareceu como ajuste, principalmente na escolha do momento de acelerar.`,
+      bridgeText: weak === error
+        ? `Isso confirma sua percepção: ${weak} pediu atenção na autoavaliação e também apareceu no jogo.`
+        : weak ? `Você sentiu ${weak}, mas o jogo mostrou que a aceleração com ${error} precisa nascer de uma bola melhor construída.` : '',
+      focusText: 'o ponto a melhorar é criar vantagem antes de acelerar, sem tentar resolver bola neutra como ataque.',
+      trainingTopic: 'Construir antes de finalizar',
+    };
+  }
+
+  if (weak && error && weak === error) {
+    return {
+      gameText: `No jogo, ${error} também apareceu como principal ajuste.`,
+      bridgeText: `Isso bate com o que você sentiu: ${weak} pediu atenção na autoavaliação e no jogo.`,
+      focusText: `o ponto a melhorar é ${practicalFundamentalFocus(error)}`,
+      trainingTopic: error,
+    };
+  }
+
+  return {
+    gameText: `No jogo, ${error} apareceu como o principal ajuste.${tacticalText ? ` ${tacticalText}.` : ''}`,
+    bridgeText: weak
+      ? `Você sentiu mais dificuldade em ${weak}, mas o jogo apontou ${error}; a leitura agora é entender onde essa diferença nasce dentro do ponto.`
+      : '',
+    focusText: `o ponto a melhorar é ${practicalFundamentalFocus(error)}`,
+    trainingTopic: error,
+  };
+}
+
+export function analyzeStudentFeedback({
+  autoWeak,
+  autoStrong,
+  scoutError,
+  scout,
+  positives = [],
+  tacticalText = '',
+} = {}) {
+  const weak = canonicalFundamental(autoWeak);
+  const strong = canonicalFundamental(autoStrong);
+  const positive = positives.map(canonicalFundamental).find((f) => f && f !== canonicalFundamental(scoutError?.fundamento || scoutError));
+  const chain = bridgeAutoAndScout({ autoWeak: weak, scoutError, scout, tacticalText });
+
+  return {
+    autoText: autoPhrase(strong, weak),
+    positiveText: positive ? positiveFundamentalText(positive) : '',
+    gameText: chain.gameText,
+    bridgeText: chain.bridgeText,
+    focusText: chain.focusText,
+    trainingTopic: chain.trainingTopic,
+  };
+}
+
 export const ONTOLOGY_PROMPT_BLOCK = `
 ONTOLOGIA CANÔNICA INVISÍVEL DO BEACHFLOW:
-- O jogo vem antes do golpe. O golpe é consequência da situação.
+- O jogo vem antes do golpe. O golpe é consequência final da cadeia: situação -> intenção -> decisão -> execução.
 - Decisão vem antes da execução. Resultado positivo fora de contexto não valida a decisão.
+- Posicionamento da dupla vem antes da execução.
 - Estados internos: Saque, Defesa, Reconstrução, Neutro, Construção, Pressão, Finalização.
 - Não exponha esses estados para alunos; traduza para linguagem prática.
-- Saque: direção -> devolução previsível -> terceira bola.
-- Devolução: reduzir qualidade da terceira bola adversária; evitar winner automático.
+- Saque e Devolução são estruturas de entrada no ponto. Terceira bola inicia a leitura real do rali.
+- Saque: direção -> devolução previsível -> terceira bola organizada. Se o scout aponta erro na bola seguinte, diagnostique entrada no rali, não só saque.
+- Devolução: reduzir qualidade da terceira bola adversária; evitar winner automático. Se o scout aponta erro logo depois, diagnostique recuperação pós-devolução.
 - Defesa -> Reconstrução: ganhar tempo com lob profundo, gancho com margem ou defesa estática.
+- Reconstrução -> Neutro: recuperar faixa de atuação antes de acelerar.
 - Neutro -> Construção: criar desequilíbrio antes de pressionar.
 - Construção -> Pressão -> Finalização: finalizar apenas com vantagem clara.
+- Pular estados é proibido: não transformar bola neutra em winner como padrão.
 - Proibições: smash em zona vermelha; tapa de backhand como aceleração principal; lob curto; curta com adversário adiantado.
 - Tapa é prioritariamente forehand em bola média-alta, à frente, com equilíbrio. Backhand usa ventaglio/anômala ou controle.
 - Bandeja é controle/continuidade, não semi-smash.
 REGRA DE SAÍDA:
 - Para o professor, entregue ação curta e executável.
 - Para aluno, nunca usar termos como Neutro, Reconstrução, Pressão ou transição. Traduza para o que ele errou na prática.
+- Se autoavaliação e scout divergirem, não trate como contradição simples: explique a cadeia prática do ponto.
 `;

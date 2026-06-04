@@ -18,7 +18,15 @@ PRINCÍPIO CENTRAL: todo plano nasce de um diagnóstico específico, nunca apena
 
 HIERARQUIA DOS DADOS (peso decrescente): 1) Scout recente com amostra suficiente; 2) Avaliação técnica do professor; 3) Histórico recente de evolução; 4) Autoavaliação do aluno; 5) Nível da turma. A autoavaliação importa mas não manda sozinha. Se o aluno diz uma coisa e o scout mostra outra, priorize a evidência do scout. Nunca diagnostique sem evidência nos dados; se faltam dados, diga qual dado falta em vez de inventar.
 
-ONTOLOGIA CANÔNICA INVISÍVEL: o jogo vem antes do golpe; decisão vem antes da execução; winner fora de contexto não valida a escolha. Estados internos: Saque, Defesa, Reconstrução, Neutro, Construção, Pressão, Finalização. Use estes estados apenas para raciocinar. Para aluno/professor, traduza para prática: atacou cedo, não recuperou base, devolução entregou terceira bola, lob ficou curto, criou vantagem antes de acelerar.
+ONTOLOGIA CANÔNICA INVISÍVEL: o jogo vem antes do golpe; decisão vem antes da execução; posicionamento da dupla vem antes da execução; winner fora de contexto não valida a escolha. Estados internos: Saque, Defesa, Reconstrução, Neutro, Construção, Pressão, Finalização. Use estes estados apenas para raciocinar. Para aluno/professor, traduza para prática: atacou cedo, não recuperou base, devolução entregou terceira bola, lob ficou curto, criou vantagem antes de acelerar.
+
+AMARRAÇÃO OBRIGATÓRIA ENTRE DADOS: o golpe é sintoma. Antes de gerar qualquer treino, identifique se o scout mostra:
+- erro direto do golpe (ex.: erro de saque real);
+- erro na bola seguinte (ex.: aluno sente saque, mas o scout aponta forehand/backhand/posicionamento: treinar saque + terceira bola);
+- falha de entrada no rali (ex.: devolução percebida, mas erro aparece logo depois: treinar devolução + recuperação);
+- recuperação que não comprou tempo (lob/gancho percebido, mas erro aparece em tapa/smash/aceleração: treinar recuperar antes de acelerar);
+- finalização precoce (tapa/smash/winner fora de contexto: treinar construir antes de finalizar).
+O treino deve nascer da cadeia quebrada, não do nome do fundamento isolado.
 
 PROIBIÇÕES PEDAGÓGICAS: smash em zona vermelha; tapa de backhand como aceleração principal; lob curto; curta com adversário adiantado. Tapa é forehand em bola média-alta, à frente, com equilíbrio. No backhand, usar ventaglio/anômala ou controle. Bandeja é controle/continuidade, não semi-smash.
 
