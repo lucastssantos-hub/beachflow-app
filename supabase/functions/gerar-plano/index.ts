@@ -78,7 +78,12 @@ REGRAS TÉCNICAS OBRIGATÓRIAS:
 
 CICLO PEDAGÓGICO: sugira só quando o problema claramente exige mais de uma aula (ex.: saque + organização de terceira bola), com duração ~2 semanas e justificativa. NUNCA crie ciclo sem necessidade nem com confiança muito baixa.
 
-ESTILO: compacto, legível na quadra em < 60s. Sem texto acadêmico, sem "melhorar performance". Cada campo: 1-2 frases diretas, sem repetir o que já está em outro campo.
+ESTILO: modo quadra. O professor precisa bater o olho e entender em segundos.
+- Cada campo deve ter 1 frase curta.
+- Não transforme o plano em relatório, apostila ou explicação longa.
+- A tela principal do app mostrará apenas comando + regra de cada bloco; portanto esses campos precisam ser muito claros.
+- Detalhes como organização, rotação e alvo devem ser objetivos, sem justificativa pedagógica extensa.
+- Progressão, regressão, scoutValidacao e cicloPedagogico devem ter no máximo 1 frase curta cada.
 
 SAÍDA: responda SOMENTE com JSON válido (sem markdown, sem texto fora do JSON):
 {
@@ -99,10 +104,10 @@ SAÍDA: responda SOMENTE com JSON válido (sem markdown, sem texto fora do JSON)
   },
   "objetivo": "o que a aula precisa melhorar",
   "blocos": [
-    { "nome": "Bloco 1 — Aquecimento específico", "tempo": "10'", "organizacao": "inclua posições/duplas/filas", "bola_inicial": "como começa", "alvo_setor": "setor/alvo", "rotacao": "como roda", "comando": "string", "criterio_qualidade": "métrica observável" },
-    { "nome": "Bloco 2 — Exercício principal", "tempo": "25'", "organizacao": "inclua posição do professor", "bola_inicial": "como começa", "alvo_setor": "setor/alvo", "rotacao": "como roda", "regra": "string", "correcao_principal": "string", "erro_a_observar": "string" },
-    { "nome": "Bloco 3 — Jogo condicionado", "tempo": "15'", "organizacao": "duplas/lados/entrada e saída", "bola_inicial": "como começa", "alvo_setor": "setor/alvo", "rotacao": "como roda", "regra": "string", "pontuacao_especial": "string", "observar": "string" },
-    { "nome": "Bloco 4 — Fechamento", "tempo": "10'", "organizacao": "como reunir/validar", "bola_inicial": "se houver bola, como começa; senão diga sem bola", "alvo_setor": "o que validar", "rotacao": "quem executa/observa", "pergunta_final": "string", "registro_professor": "string", "proximo_passo": "string" }
+    { "nome": "Bloco 1 — Aquecimento específico", "tempo": "10'", "organizacao": "posição em 1 frase", "bola_inicial": "como começa em 1 frase", "alvo_setor": "setor/alvo em 1 frase", "rotacao": "como roda em 1 frase", "comando": "comando principal curto", "criterio_qualidade": "métrica observável curta" },
+    { "nome": "Bloco 2 — Exercício principal", "tempo": "25'", "organizacao": "posição do professor em 1 frase", "bola_inicial": "como começa em 1 frase", "alvo_setor": "setor/alvo em 1 frase", "rotacao": "como roda em 1 frase", "regra": "regra principal curta", "correcao_principal": "1 correção principal", "erro_a_observar": "1 erro a observar" },
+    { "nome": "Bloco 3 — Jogo condicionado", "tempo": "15'", "organizacao": "duplas/lados em 1 frase", "bola_inicial": "como começa em 1 frase", "alvo_setor": "setor/alvo em 1 frase", "rotacao": "como roda em 1 frase", "regra": "regra principal curta", "pontuacao_especial": "bônus curto", "observar": "1 coisa a observar" },
+    { "nome": "Bloco 4 — Fechamento", "tempo": "10'", "organizacao": "como reunir em 1 frase", "bola_inicial": "sem bola ou como começa", "alvo_setor": "o que validar em 1 frase", "rotacao": "quem fala/observa em 1 frase", "pergunta_final": "1 pergunta final", "registro_professor": "1 registro curto", "proximo_passo": "1 próximo passo" }
   ],
   "progressao": "quando aumentar a complexidade",
   "regressao": "quando simplificar",
@@ -121,7 +126,8 @@ function buildUserMessage(ctx: Record<string, unknown> = {}): string {
     "Instruções:",
     "- Siga a hierarquia de dados e calibre a confiança pela amostra do scout (pontosAnalisados).",
     "- Se houver alunos/avaliações/scout no JSON, use esses dados no diagnóstico; não gere plano apenas pelo nível.",
-    "- Cada bloco precisa trazer bola inicial, alvo/setor, rotação e critério mensurável.",
+    "- Cada bloco precisa trazer bola inicial, alvo/setor, rotação e critério mensurável, mas tudo em frases curtas.",
+    "- Priorize comandos executáveis em quadra: evite listas longas e explicações.",
     "- Respeite as técnicas permitidas/bloqueadas para o nível da turma.",
     "- Gere o diagnóstico e o plano SOMENTE no formato JSON exigido.",
   ].join("\n");

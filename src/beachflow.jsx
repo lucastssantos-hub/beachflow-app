@@ -1496,6 +1496,20 @@ function PlanoField({ label, value }){
     <div style={{ fontSize:12.5, color:C.inkDim, marginTop:2, lineHeight:1.35 }}>{value}</div>
   </div>;
 }
+function shortText(value, max = 150){
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if(text.length <= max) return text;
+  return text.slice(0, max - 1).trimEnd() + '…';
+}
+function cleanBlockTitle(name){
+  return String(name || '').replace(/^Bloco\s*\d+\s*[—-]\s*/i, '').trim() || 'Bloco';
+}
+function compactBlockCommand(b){
+  return b.comando || b.regra || b.organizacao || b.bola_inicial || b.alvo_setor || '';
+}
+function compactBlockRule(b){
+  return b.criterio_qualidade || b.pontuacao_especial || b.correcao_principal || b.observar || b.erro_a_observar || '';
+}
 function EditField({ label, value, onChange, area = true }){
   const base = { width:'100%', marginTop:4, background:'rgba(255,255,255,.05)', color:C.ink,
     border:`1px solid ${C.line2}`, borderRadius:10, padding:'9px 11px', fontFamily:'var(--ff-u)',
@@ -1526,6 +1540,7 @@ function ScreenPlano({ nav, params }) {
   const [editing,setEditing] = React.useState(false);
   const [draft,setDraft] = React.useState(null);
   const [saved,setSaved] = React.useState(false);
+  const [showDetails,setShowDetails] = React.useState(false);
   React.useEffect(()=>{
     let alive=true;
     if(params.plano){ setSt({ loading:false, plano:params.plano, fonte:params.fonte||'ia', id:params.id||null, erro:params.erro||'' }); return; }
@@ -1656,41 +1671,59 @@ function ScreenPlano({ nav, params }) {
         </div>
         {blocos.map((b,i)=>{
           const coral = /condicionado/i.test(b.nome||'');
+          const command = compactBlockCommand(b);
+          const rule = compactBlockRule(b);
           return <Card key={i} style={{ marginTop:8, borderColor: coral?'rgba(255,106,69,.3)':C.line }}>
             <div style={{ display:'flex', alignItems:'baseline', gap:10 }}>
               <span style={{ fontFamily:'var(--ff-m)', fontSize:12, color: coral?C.coral:C.turq }}>{b.tempo}</span>
-              <span style={{ fontSize:13.5, color:C.ink, fontWeight:600 }}>{b.nome}</span>
+              <span style={{ fontSize:13.5, color:C.ink, fontWeight:600 }}>{cleanBlockTitle(b.nome)}</span>
             </div>
-            {BLOCO_FIELDS.map(([k,l])=> <PlanoField key={k} label={l} value={b[k]}/>)}
+            {command && <div style={{ marginTop:8, fontSize:12.5, color:C.inkDim, lineHeight:1.35 }}>
+              {shortText(command, 155)}
+            </div>}
+            {rule && <div style={{ marginTop:9, padding:'8px 10px', borderRadius:10,
+              background:'rgba(255,255,255,.045)', border:`1px solid ${C.line}`,
+              fontSize:11.5, color:C.ink, lineHeight:1.3 }}>
+              <span style={{ color:coral?C.coral:C.turq, fontWeight:800 }}>Regra: </span>{shortText(rule, 125)}
+            </div>}
+            {showDetails && <div style={{ marginTop:10, paddingTop:8, borderTop:`1px solid ${C.line}` }}>
+              {BLOCO_FIELDS.map(([k,l])=> <PlanoField key={k} label={l} value={b[k]}/>)}
+            </div>}
           </Card>;
         })}
 
-        {/* progressão / regressão */}
-        <div style={{ display:'flex', gap:10, marginTop:12 }}>
-          <Card style={{ flex:1, padding:13 }}>
-            <Mini color={C.ok}>↑ Progressão</Mini>
-            <div style={{ fontSize:11.5, color:C.inkDim, marginTop:6, lineHeight:1.35 }}>{p.progressao}</div>
-          </Card>
-          <Card style={{ flex:1, padding:13 }}>
-            <Mini color={C.warn}>↓ Regressão</Mini>
-            <div style={{ fontSize:11.5, color:C.inkDim, marginTop:6, lineHeight:1.35 }}>{p.regressao}</div>
-          </Card>
-        </div>
+        <Btn kind="ghost" style={{ width:'100%', marginTop:12 }} onClick={()=>setShowDetails(v=>!v)}>
+          {showDetails ? 'Esconder detalhes' : 'Ver detalhes do treino'}
+        </Btn>
 
-        {/* scout de validação */}
-        {p.scoutValidacao && <Card style={{ marginTop:10 }}>
-          <Mini color={C.turq}>◎ Validar no próximo scout</Mini>
-          <div style={{ fontSize:12.5, color:C.inkDim, marginTop:6, lineHeight:1.4 }}>{p.scoutValidacao}</div>
-        </Card>}
-
-        {/* ciclo pedagógico */}
-        {ciclo.necessario && <Card style={{ marginTop:10, borderColor:'rgba(30,114,224,.3)' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <Mini color={C.ocean}>↻ Ciclo pedagógico sugerido</Mini>
-            {ciclo.duracaoSemanas>0 && <Badge tone="info">{ciclo.duracaoSemanas} semanas</Badge>}
+        {showDetails && <>
+          {/* progressão / regressão */}
+          <div style={{ display:'flex', gap:10, marginTop:12 }}>
+            <Card style={{ flex:1, padding:13 }}>
+              <Mini color={C.ok}>↑ Progressão</Mini>
+              <div style={{ fontSize:11.5, color:C.inkDim, marginTop:6, lineHeight:1.35 }}>{p.progressao}</div>
+            </Card>
+            <Card style={{ flex:1, padding:13 }}>
+              <Mini color={C.warn}>↓ Regressão</Mini>
+              <div style={{ fontSize:11.5, color:C.inkDim, marginTop:6, lineHeight:1.35 }}>{p.regressao}</div>
+            </Card>
           </div>
-          {ciclo.justificativa && <div style={{ fontSize:12, color:C.inkDim, marginTop:7, lineHeight:1.4 }}>{ciclo.justificativa}</div>}
-        </Card>}
+
+          {/* scout de validação */}
+          {p.scoutValidacao && <Card style={{ marginTop:10 }}>
+            <Mini color={C.turq}>◎ Validar no próximo scout</Mini>
+            <div style={{ fontSize:12.5, color:C.inkDim, marginTop:6, lineHeight:1.4 }}>{p.scoutValidacao}</div>
+          </Card>}
+
+          {/* ciclo pedagógico */}
+          {ciclo.necessario && <Card style={{ marginTop:10, borderColor:'rgba(30,114,224,.3)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <Mini color={C.ocean}>↻ Ciclo pedagógico sugerido</Mini>
+              {ciclo.duracaoSemanas>0 && <Badge tone="info">{ciclo.duracaoSemanas} semanas</Badge>}
+            </div>
+            {ciclo.justificativa && <div style={{ fontSize:12, color:C.inkDim, marginTop:7, lineHeight:1.4 }}>{ciclo.justificativa}</div>}
+          </Card>}
+        </>}
       </Body>
       <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'12px 20px 30px',
         background:'linear-gradient(transparent,'+C.navy900+' 30%)', display:'flex', gap:10 }}>
