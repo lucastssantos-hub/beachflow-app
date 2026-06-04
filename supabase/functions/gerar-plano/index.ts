@@ -233,7 +233,7 @@ async function callGemini(userContent: string, model?: string): Promise<{ text: 
       contents: [{ role: "user", parts: [{ text: userContent }] }],
       generationConfig: {
         temperature: 0.35,
-        maxOutputTokens: 2600,
+        maxOutputTokens: 5200,
         responseMimeType: "application/json",
       },
     }),
