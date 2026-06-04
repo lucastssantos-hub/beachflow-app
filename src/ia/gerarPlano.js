@@ -1,7 +1,7 @@
 // BeachFlow — cliente da IA de treinos.
 // Chama a Edge Function do Supabase (que guarda a API key e fala com a Claude).
-// Se o endpoint não estiver configurado/acessível, cai num PLANO DE EXEMPLO
-// (caso §13 do spec) para a interface continuar funcionando.
+// Se o endpoint não estiver configurado/acessível, gera um plano local com os
+// dados disponíveis para a interface continuar funcionando em quadra.
 
 const ENDPOINT = import.meta.env.VITE_GERAR_PLANO_ENDPOINT || '';
 const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -227,6 +227,26 @@ function isExamplePlan(plan) {
     || plan.titulo === SAMPLE_PLAN.titulo;
 }
 
+function friendlyAiError(message = '') {
+  const text = String(message || '');
+  if (/credit balance is too low|purchase credits|plans? & billing|billing/i.test(text)) {
+    return 'IA indisponível: a conta Anthropic está sem créditos. Use o plano local ou adicione créditos no painel da Anthropic.';
+  }
+  if (/ANTHROPIC_API_KEY/i.test(text)) {
+    return 'IA indisponível: falta configurar a ANTHROPIC_API_KEY nos Secrets do Supabase.';
+  }
+  if (/HTTP 404|not found/i.test(text)) {
+    return 'IA indisponível: a função gerar-plano não foi publicada no Supabase.';
+  }
+  if (/HTTP 401|HTTP 403|unauthorized|forbidden/i.test(text)) {
+    return 'IA indisponível: autorização da função Supabase recusada.';
+  }
+  if (/failed to fetch|network|timeout/i.test(text)) {
+    return 'IA indisponível: falha de conexão com a função Supabase.';
+  }
+  return text || 'IA indisponível. Plano local gerado com os dados disponíveis.';
+}
+
 // Plano de exemplo no contrato JSON aninhado (espelha a Edge Function).
 export const SAMPLE_PLAN = {
   titulo: 'Devolução cruzada estável',
@@ -392,8 +412,9 @@ export async function gerarPlano(ctx) {
     _cache.set(key, out);
     return { ...out, fonte: 'ia' };
   } catch (e) {
-    console.warn('[gerarPlano] usando plano local (edge function indisponível):', e.message);
-    return { plano: localPlanFromContext(ctx, e.message), id: null, fonte: 'local', erro: e.message };
+    const friendly = friendlyAiError(e.message);
+    console.warn('[gerarPlano] usando plano local:', friendly);
+    return { plano: localPlanFromContext(ctx, friendly), id: null, fonte: 'local', erro: friendly };
   }
 }
 

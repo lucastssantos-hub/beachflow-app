@@ -1519,19 +1519,19 @@ function LoadingSteps(){
 
 function ScreenPlano({ nav, params }) {
   const a = params.aluno || null;
-  const [st,setSt] = React.useState({ loading:true, plano:null, fonte:null, id:null });
+  const [st,setSt] = React.useState({ loading:true, plano:null, fonte:null, id:null, erro:'' });
   const [editing,setEditing] = React.useState(false);
   const [draft,setDraft] = React.useState(null);
   const [saved,setSaved] = React.useState(false);
   React.useEffect(()=>{
     let alive=true;
-    if(params.plano){ setSt({ loading:false, plano:params.plano, fonte:params.fonte||'ia', id:params.id||null }); return; }
-    setSt({ loading:true, plano:null, fonte:null, id:null });
+    if(params.plano){ setSt({ loading:false, plano:params.plano, fonte:params.fonte||'ia', id:params.id||null, erro:params.erro||'' }); return; }
+    setSt({ loading:true, plano:null, fonte:null, id:null, erro:'' });
     (async ()=>{
       const ctx = params.contexto || (params.turmaObj?.id ? await contextoTurmaParaIA(params.turmaObj) : contextFromParams(params));
       const r = await gerarPlano(ctx);
-      if(alive) setSt({ loading:false, plano:r.plano, fonte:r.fonte, id:r.id });
-    })().catch(e=>{ if(alive) setSt({ loading:false, plano:{ titulo:'Erro ao gerar plano', diagnostico:{ gapPrincipal:e.message, confianca:'muito baixa' }, blocos:[] }, fonte:'erro', id:null }); });
+      if(alive) setSt({ loading:false, plano:r.plano, fonte:r.fonte, id:r.id, erro:r.erro||'' });
+    })().catch(e=>{ if(alive) setSt({ loading:false, plano:{ titulo:'Erro ao gerar plano', diagnostico:{ gapPrincipal:e.message, confianca:'muito baixa' }, blocos:[] }, fonte:'erro', id:null, erro:e.message||'' }); });
     return ()=>{ alive=false; };
   }, [a && a.id, params.contexto, params.turmaObj?.id]);
 
@@ -1607,7 +1607,9 @@ function ScreenPlano({ nav, params }) {
         {st.fonte==='local' &&
           <div style={{ marginBottom:12, padding:'9px 12px', borderRadius:10, fontSize:11.5,
             background:'rgba(22,194,163,.10)', border:'1px solid rgba(22,194,163,.25)', color:C.turq }}>
-            Plano local gerado com os dados disponíveis.</div>}
+            Plano local gerado com os dados disponíveis.
+            {st.erro && <span style={{ display:'block', marginTop:4, color:C.inkDim }}>{st.erro}</span>}
+          </div>}
         {saved &&
           <div style={{ marginBottom:12, padding:'9px 12px', borderRadius:10, fontSize:12, animation:'bf-in .25s ease',
             background:'rgba(39,192,138,.12)', border:'1px solid rgba(39,192,138,.3)', color:C.ok }}>
