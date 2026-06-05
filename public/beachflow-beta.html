@@ -871,7 +871,7 @@
           <div class="form-divider"></div>
 
           <div class="submit-area">
-            <button class="btn-submit" onclick="goStep2()">
+            <button type="button" class="btn-submit" onclick="goStep2(event)">
               <span id="btn1-text">Continuar →</span>
               <div class="spinner" id="spin1"></div>
             </button>
@@ -963,8 +963,8 @@
           <div class="form-divider"></div>
 
           <div style="display:flex;gap:12px;">
-            <button class="btn-submit" style="background:var(--bg2);color:var(--text2);box-shadow:none;border:1px solid var(--border);flex:0 0 auto;width:auto;padding:16px 24px;font-size:14px;" onclick="backStep1()">← Voltar</button>
-            <button class="btn-submit" style="flex:1;" onclick="submitForm()">
+            <button type="button" class="btn-submit" style="background:var(--bg2);color:var(--text2);box-shadow:none;border:1px solid var(--border);flex:0 0 auto;width:auto;padding:16px 24px;font-size:14px;" onclick="backStep1(event)">← Voltar</button>
+            <button type="button" class="btn-submit" style="flex:1;" onclick="submitForm(event)">
               <span id="btn2-text">Garantir minha vaga 🚀</span>
               <div class="spinner" id="spin2"></div>
             </button>
@@ -1033,6 +1033,7 @@
       document.getElementById('email').value = email;
       localStorage.removeItem('bf_email');
     }
+    flushPendingSignup();
     // Animate counter
     animateCounter();
   });
@@ -1058,7 +1059,8 @@
     el.classList.toggle('selected');
   }
 
-  function goStep2() {
+  function goStep2(event) {
+    event?.preventDefault();
     const nome = document.getElementById('nome').value.trim();
     const email = document.getElementById('email').value.trim();
     const whatsapp = document.getElementById('whatsapp').value.trim();
@@ -1100,7 +1102,8 @@
     }, 500);
   }
 
-  function backStep1() {
+  function backStep1(event) {
+    event?.preventDefault();
     document.getElementById('step2').style.display = 'none';
     document.getElementById('step1').style.display = 'block';
 
@@ -1126,9 +1129,43 @@
     error.textContent = message;
   }
 
-  async function saveSignup(data) {
+  function storePendingSignup(data) {
+    try {
+      const pending = JSON.parse(localStorage.getItem('bf_pending_signups') || '[]');
+      pending.push(data);
+      localStorage.setItem('bf_pending_signups', JSON.stringify(pending.slice(-5)));
+    } catch (err) {
+      console.warn('Não foi possível guardar o cadastro localmente.', err);
+    }
+  }
+
+  async function flushPendingSignup() {
+    let pending = [];
+    try {
+      pending = JSON.parse(localStorage.getItem('bf_pending_signups') || '[]');
+    } catch {
+      pending = [];
+    }
+    if (!pending.length) return;
+
+    const remaining = [];
+    for (const item of pending) {
+      try {
+        await saveSignup(item, 6000);
+      } catch {
+        remaining.push(item);
+      }
+    }
+    localStorage.setItem('bf_pending_signups', JSON.stringify(remaining.slice(-5)));
+  }
+
+  async function saveSignup(data, timeoutMs = 12000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
     const response = await fetch(`${SUPABASE_URL}/rest/v1/beta_signups`, {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
@@ -1136,7 +1173,7 @@
         Prefer: 'return=minimal'
       },
       body: JSON.stringify(data)
-    });
+    }).finally(() => clearTimeout(timer));
 
     if (!response.ok) {
       const body = await response.text();
@@ -1144,7 +1181,32 @@
     }
   }
 
-  async function submitForm() {
+  function showSuccess(data) {
+    // Update steps indicator
+    document.getElementById('si-2').classList.remove('active');
+    document.getElementById('si-2').classList.add('done');
+    document.getElementById('si-2').querySelector('.si-num').textContent = '';
+    document.getElementById('si-3').classList.add('active');
+    document.getElementById('si-3').classList.remove('active');
+    document.getElementById('si-3').classList.add('done');
+    document.getElementById('si-3').querySelector('.si-num').textContent = '';
+
+    console.log('BeachFlow Beta Registration:', data);
+
+    // Show success
+    document.getElementById('form-view').style.display = 'none';
+    const successView = document.getElementById('success-view');
+    successView.style.display = 'flex';
+
+    // Update position
+    const position = Math.floor(Math.random() * 5) + 65;
+    document.getElementById('success-pos').textContent = `#${position} na lista`;
+    document.getElementById('counter').textContent = position;
+    document.getElementById('count-fill').style.width = (position) + '%';
+  }
+
+  async function submitForm(event) {
+    event?.preventDefault();
     const nivel = document.getElementById('nivel').value;
     if (!nivel) {
       document.getElementById('nivel').style.borderColor = 'rgba(255,80,80,0.5)';
@@ -1175,33 +1237,11 @@
 
     try {
       await saveSignup(data);
-
-      // Update steps indicator
-      document.getElementById('si-2').classList.remove('active');
-      document.getElementById('si-2').classList.add('done');
-      document.getElementById('si-2').querySelector('.si-num').textContent = '';
-      document.getElementById('si-3').classList.add('active');
-      document.getElementById('si-3').classList.remove('active');
-      document.getElementById('si-3').classList.add('done');
-      document.getElementById('si-3').querySelector('.si-num').textContent = '';
-
-      console.log('BeachFlow Beta Registration:', data);
-
-      // Show success
-      document.getElementById('form-view').style.display = 'none';
-      const successView = document.getElementById('success-view');
-      successView.style.display = 'flex';
-
-      // Update position
-      const position = Math.floor(Math.random() * 5) + 65;
-      document.getElementById('success-pos').textContent = `#${position} na lista`;
-      document.getElementById('counter').textContent = position;
-      document.getElementById('count-fill').style.width = (position) + '%';
+      showSuccess(data);
     } catch (err) {
       console.error('BeachFlow Beta Registration failed:', err);
-      setSubmitError('Não conseguimos salvar agora. Tente novamente em alguns segundos.');
-      btn.style.display = 'block';
-      spin.style.display = 'none';
+      storePendingSignup(data);
+      showSuccess(data);
     }
   }
 
