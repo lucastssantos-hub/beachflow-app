@@ -12,6 +12,7 @@ const ANON = ENV.VITE_SUPABASE_ANON_KEY || '';
 const FORCE_DEMO = ENV.VITE_FORCE_DEMO === 'true';
 
 const FUNDAMENTOS = ['Saque', 'Devolução', 'Forehand', 'Backhand', 'Lob', 'Smash', 'Bandeja', 'Gancho', 'Tapa', 'Curta', 'Posicionamento', 'Consistência', 'Decisão'];
+const LEITURA_GAPS = new Set(['Decisão']);
 
 const FUND_CONFIG = {
   Saque: {
@@ -123,6 +124,10 @@ function sortedScores(obj = {}) {
     .sort((a, b) => a[1] - b[1]);
 }
 
+function sortedTechnicalScores(obj = {}) {
+  return sortedScores(obj).filter(([f]) => !LEITURA_GAPS.has(canonicalFund(f)));
+}
+
 function mergeScoreSources(ctx = {}) {
   const out = {};
   for (const [f, v] of Object.entries(ctx.autoavaliacao || {})) out[f] = { score: num(v), source: 'autoavaliação' };
@@ -150,14 +155,42 @@ function canonicalFund(f = '') {
 
 function chooseFocus(ctx = {}) {
   const merged = mergeScoreSources(ctx);
-  const worst = sortedScores(Object.fromEntries(Object.entries(merged).map(([f, v]) => [f, v.score])))[0];
+  const sourcePref = ctx.preferredFocusSource || '';
+  const autoWorst = sortedTechnicalScores(ctx.autoavaliacao || {})[0];
+  const profWorst = sortedTechnicalScores(ctx.avaliacaoProfessor || {})[0];
+  const scoutWorst = sortedTechnicalScores(ctx.avaliacaoScout || {})[0];
+  const mergedWorst = sortedTechnicalScores(Object.fromEntries(Object.entries(merged).map(([f, v]) => [f, v.score])))[0];
   const scoutFund = ctx.scout?.erroPrincipal?.fundamento;
-  const fund = canonicalFund(scoutFund || worst?.[0] || ctx.foco || 'Consistência');
+  const preferred =
+    sourcePref === 'auto' ? autoWorst :
+    sourcePref === 'prof' ? profWorst :
+    sourcePref === 'scout' ? (scoutWorst || (scoutFund ? [scoutFund, null] : null)) :
+    null;
+  const picked = preferred || (scoutFund ? [scoutFund, null] : null) || mergedWorst || autoWorst || profWorst;
+  const usedPreferred = !!preferred && picked === preferred;
+  const fund = canonicalFund(picked?.[0] || ctx.foco || 'Consistência');
   return {
     fund,
-    score: worst?.[1] ?? null,
-    source: scoutFund ? 'scout' : (merged[worst?.[0]]?.source || 'dados locais'),
+    score: picked?.[1] ?? merged[fund]?.score ?? null,
+    source: usedPreferred && sourcePref === 'auto' ? 'autoavaliação'
+      : usedPreferred && sourcePref === 'prof' ? 'avaliação do professor'
+      : usedPreferred && sourcePref === 'scout' ? 'scout'
+      : scoutFund ? 'scout'
+      : (merged[picked?.[0]]?.source || 'dados locais'),
+    autoWorst,
+    profWorst,
+    scoutFund,
   };
+}
+
+function gameSituationTitle(planoPedagogico = {}, cfg = {}, focus = {}) {
+  const transition = planoPedagogico.transicoesSelecionadas?.[0] || cfg.tatico || '';
+  if (/saque|terceira bola/i.test(`${transition} ${focus.fund}`)) return 'Entrar no rali com iniciativa — saque e terceira bola';
+  if (/devolu/i.test(`${transition} ${focus.fund}`)) return 'Entrar no ponto sem entregar a terceira bola';
+  if (/finaliza|press|aceler|tapa|smash/i.test(`${transition} ${focus.fund}`)) return 'Criar vantagem antes de acelerar';
+  if (/defesa|lob|gancho|recuper/i.test(`${transition} ${focus.fund}`)) return 'Recuperar espaço antes de atacar';
+  if (/posicion|cobertura|centro/i.test(`${transition} ${focus.fund}`)) return 'Bater e recuperar o espaço da dupla';
+  return cfg.titulo || 'Treino contextual de jogo';
 }
 
 function localPlanFromContext(ctx = {}, erro = '') {
@@ -210,7 +243,7 @@ function localPlanFromContext(ctx = {}, erro = '') {
     'Bloco 4 — Jogo condicionado',
   ][i] || `Bloco ${i + 1}`)) : fallbackBlocks);
   return {
-    titulo: cfg.titulo,
+    titulo: gameSituationTitle(planoPedagogico, cfg, focus),
     diagnostico: {
       gapPrincipal: `${planoPedagogico.diagnostico?.gapPrincipal || cfg.gap}${scoreText}`,
       contexto: planoPedagogico.diagnostico?.justificativa || scoutContext || cfg.contexto,
@@ -219,6 +252,12 @@ function localPlanFromContext(ctx = {}, erro = '') {
       justificativaConfianca: scout
         ? `Plano local gerado com ${scout.totalEventos || 0} ação(ões) de scout e dados de avaliação disponíveis.`
         : `Plano local gerado a partir de ${source}.`,
+      prioridadeDados: focus.source === 'scout' && focus.autoWorst?.[0] && focus.scoutFund && focus.scoutFund !== focus.autoWorst[0]
+        ? `Autoavaliação indica ${focus.autoWorst[0]} (${focus.autoWorst[1]}/5), mas o scout apontou ${focus.scoutFund} como comportamento mais evidente em jogo.`
+        : '',
+      gapLeitura: sortedScores(ctx.autoavaliacao || {}).find(([f]) => LEITURA_GAPS.has(canonicalFund(f)))
+        ? 'Decisão aparece como leitura de jogo; o treino trata isso por contexto, não como golpe isolado.'
+        : '',
     },
     nivel: ctx.nivel || 'Intermediário',
     decisaoPedagogica: {

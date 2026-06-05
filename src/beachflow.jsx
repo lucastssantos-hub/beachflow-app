@@ -1512,6 +1512,11 @@ function ScreenTurma({ nav, params }) {
   const scout = ctx.scout || null;
   const topSource = topProf.length ? 'professor' : topAuto.length ? 'autoavaliação' : '';
   const topRows = topProf.length ? topProf : topAuto;
+  const totalDiag = ctx.alunosMatriculados || alunosCtx.length || turma.alunos || 0;
+  const autoWorst = topAuto[0];
+  const scoutFund = scout?.erroPrincipal?.fundamento;
+  const scoutOverridesAuto = scoutFund && autoWorst?.[0] && scoutFund !== autoWorst[0];
+  const planParams = (preferredFocusSource)=>({ turma:turma.nome, nivel:turma.nivel, turmaObj:turma, preferredFocusSource });
   return <Screen>
     <Header onBack={nav.back} kicker="Turma" title={turma.nome}/>
     <Body top={16} bottom={96}>
@@ -1540,12 +1545,12 @@ function ScreenTurma({ nav, params }) {
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:12 }}>
             <div style={{ padding:10, borderRadius:12, background:'rgba(255,255,255,.04)', border:`1px solid ${C.line}` }}>
               <Mini>Autoavaliações</Mini>
-              <div style={{ fontSize:16, color:C.ink, fontWeight:800, marginTop:4 }}>{autoCount}/{ctx.alunosMatriculados || alunosCtx.length || turma.alunos || 0}</div>
+              <div style={{ fontSize:16, color:C.ink, fontWeight:800, marginTop:4 }}>{autoCount}/{totalDiag}</div>
               <div style={{ fontSize:11.5, color:C.inkDim, marginTop:2 }}>base de percepção</div>
             </div>
             <div style={{ padding:10, borderRadius:12, background:'rgba(255,255,255,.04)', border:`1px solid ${C.line}` }}>
               <Mini>Avaliação prof.</Mini>
-              <div style={{ fontSize:16, color:C.ink, fontWeight:800, marginTop:4 }}>{profCount}/{ctx.alunosMatriculados || alunosCtx.length || turma.alunos || 0}</div>
+              <div style={{ fontSize:16, color:C.ink, fontWeight:800, marginTop:4 }}>{profCount}/{totalDiag}</div>
               <div style={{ fontSize:11.5, color:C.inkDim, marginTop:2 }}>base técnica</div>
             </div>
           </div>
@@ -1553,8 +1558,13 @@ function ScreenTurma({ nav, params }) {
           {topRows.length>0 && <div style={{ marginTop:12 }}>
             <Mini>Maiores gaps · {topSource}</Mini>
             <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginTop:8 }}>
-              {topRows.map(([f,v])=><Badge key={f} tone={Number(v)<=3?'warn':'neutral'}>{f} · {Number(v).toFixed(1)}</Badge>)}
+              {topRows.map(([f,v])=><Badge key={f} tone={f==='Decisão'?'info':Number(v)<=3?'warn':'neutral'}>
+                {f} · {Number(v).toFixed(1)}{f==='Decisão'?' · leitura':''}
+              </Badge>)}
             </div>
+            {topRows.some(([f])=>f==='Decisão') && <div style={{ fontSize:11.5, color:C.inkDim, marginTop:7, lineHeight:1.35 }}>
+              Decisão é leitura de jogo. O treino transforma esse gap em situações práticas, não em um golpe isolado.
+            </div>}
           </div>}
 
           {scout ? <div style={{ marginTop:12, paddingTop:11, borderTop:`1px solid ${C.line}` }}>
@@ -1567,11 +1577,28 @@ function ScreenTurma({ nav, params }) {
               {scout.zonaCritica?.zona && <Badge tone="info">zona: {scout.zonaCritica.zona}</Badge>}
               {scout.cartaoFocoScout?.foco && <Badge tone="turq">{scout.cartaoFocoScout.foco}</Badge>}
             </div>
+            {scoutOverridesAuto && <div style={{ marginTop:9, padding:'8px 10px', borderRadius:10,
+              background:'rgba(76,155,255,.10)', border:'1px solid rgba(76,155,255,.25)',
+              fontSize:11.5, color:C.inkDim, lineHeight:1.35 }}>
+              Autoavaliação aponta {autoWorst[0]} ({Number(autoWorst[1]).toFixed(1)}), mas o scout mostrou {scoutFund} no jogo. Você pode gerar pelo scout ou pelo gap da autoavaliação.
+            </div>}
+            {scout.cartaoFocoScout?.regra && <div style={{ marginTop:9, fontSize:11.5, color:C.inkDim, lineHeight:1.35 }}>
+              Próximo scout: validar se a turma cumpre a regra “{scout.cartaoFocoScout.regra}”
+            </div>}
           </div> : <div style={{ marginTop:12, paddingTop:11, borderTop:`1px solid ${C.line}` }}>
             <Mini color={C.n500}>Scout da turma</Mini>
             <div style={{ fontSize:12.5, color:C.inkDim, marginTop:6, lineHeight:1.4 }}>
               Sem scout vinculado ainda. O treino será gerado principalmente por autoavaliação/avaliação técnica.
             </div>
+          </div>}
+
+          {profCount===0 && totalDiag>0 && <div style={{ marginTop:12, padding:'10px 11px', borderRadius:12,
+            border:'1px solid rgba(246,180,60,.28)', background:'rgba(246,180,60,.10)' }}>
+            <div style={{ fontSize:12.5, color:C.ink, fontWeight:700 }}>Avaliação técnica ainda zerada</div>
+            <div style={{ fontSize:11.5, color:C.inkDim, marginTop:4, lineHeight:1.35 }}>
+              O treino funciona com scout e autoavaliação, mas a avaliação do professor aumenta a precisão.
+            </div>
+            <Btn kind="ghost" style={{ width:'100%', marginTop:9 }} onClick={()=>nav.go('alunos')}>Avaliar alunos</Btn>
           </div>}
         </>}
 
@@ -1580,8 +1607,12 @@ function ScreenTurma({ nav, params }) {
 
       <div style={{ display:'flex', gap:10, marginTop:12 }}>
         <Btn kind="secondary" style={{ flex:1 }} icon="check" onClick={preparar}>{st.loading?'Preparando…':'Enviar WhatsApp'}</Btn>
-        <Btn kind="primary" style={{ flex:1 }} icon="clip" onClick={()=>nav.go('plano',{ turma:turma.nome, nivel:turma.nivel, turmaObj:turma })}>Gerar plano</Btn>
+        <Btn kind="primary" style={{ flex:1 }} icon="clip" onClick={()=>nav.go('plano',planParams('scout'))}>Gerar plano</Btn>
       </div>
+      {!diag.loading && !diag.error && (topAuto.length>0 || topProf.length>0) && <div style={{ display:'flex', gap:8, marginTop:8 }}>
+        {topAuto.length>0 && <Btn kind="ghost" style={{ flex:1 }} onClick={()=>nav.go('plano',planParams('auto'))}>Pelo gap auto</Btn>}
+        {topProf.length>0 && <Btn kind="ghost" style={{ flex:1 }} onClick={()=>nav.go('plano',planParams('prof'))}>Pela avaliação</Btn>}
+      </div>}
       <Mini style={{ marginTop:10 }}>Confirmação é para liberar vaga de reposição. Scout continua sendo periódico.</Mini>
 
       {st.error && <Card style={{ marginTop:12, borderColor:'rgba(242,84,91,.35)' }}>
@@ -1648,10 +1679,50 @@ function cleanBlockTitle(name){
   return String(name || '').replace(/^Bloco\s*\d+\s*[—-]\s*/i, '').trim() || 'Bloco';
 }
 function compactBlockCommand(b){
+  if(/fechamento/i.test(b.nome || '') && b.pergunta_final) return b.pergunta_final;
   return b.comando || b.regra || b.organizacao || b.bola_inicial || b.alvo_setor || '';
 }
 function compactBlockRule(b){
   return b.criterio_qualidade || b.pontuacao_especial || b.correcao_principal || b.observar || b.erro_a_observar || '';
+}
+function sortedPlanScores(obj = {}) {
+  return Object.entries(obj || {})
+    .map(([f,v])=>[f, Number(v)])
+    .filter(([,v])=>Number.isFinite(v))
+    .sort((a,b)=>a[1]-b[1]);
+}
+function technicalGapRows(obj = {}) {
+  return sortedPlanScores(obj).filter(([f])=>f !== 'Decisão');
+}
+function planPriorityText(ctx = {}, p = {}) {
+  if(p?.diagnostico?.prioridadeDados) return p.diagnostico.prioridadeDados;
+  const auto = technicalGapRows(ctx.autoavaliacao || {})[0];
+  const prof = technicalGapRows(ctx.avaliacaoProfessor || {})[0];
+  const scoutFund = ctx.scout?.erroPrincipal?.fundamento;
+  const scoutTotal = ctx.scout?.erroPrincipal?.total;
+  const foco = p?.decisaoPedagogica?.focoTecnico || '';
+  if(scoutFund && auto?.[0] && scoutFund !== auto[0] && foco === scoutFund) {
+    return `Autoavaliação indica ${auto[0]} (${Number(auto[1]).toFixed(1)}), mas o scout apontou ${scoutTotal || ''} ocorrência(s) em ${scoutFund}. O plano priorizou o comportamento observado em jogo.`;
+  }
+  if(prof?.[0] && auto?.[0] && prof[0] !== auto[0] && foco === prof[0]) {
+    return `Autoavaliação indica ${auto[0]} (${Number(auto[1]).toFixed(1)}), mas a avaliação do professor apontou ${prof[0]} (${Number(prof[1]).toFixed(1)}).`;
+  }
+  return '';
+}
+function decisionGapText(ctx = {}, p = {}) {
+  if(p?.diagnostico?.gapLeitura) return p.diagnostico.gapLeitura;
+  const row = sortedPlanScores(ctx.autoavaliacao || {}).find(([f])=>f === 'Decisão');
+  if(!row) return '';
+  return `Decisão (${Number(row[1]).toFixed(1)}) é leitura de jogo. O treino trata isso por situação prática, não como fundamento isolado.`;
+}
+function situationTitleForPlan(p = {}) {
+  const text = `${p?.titulo || ''} ${p?.decisaoPedagogica?.focoTatico || ''} ${p?.decisaoPedagogica?.focoTecnico || ''}`;
+  if(/saque|terceira bola/i.test(text)) return 'Entrar no rali com iniciativa';
+  if(/devolu/i.test(text)) return 'Entrar no ponto sem entregar a terceira bola';
+  if(/finaliza|press|aceler|tapa|smash/i.test(text)) return 'Criar vantagem antes de acelerar';
+  if(/defesa|lob|gancho|recuper/i.test(text)) return 'Recuperar espaço antes de atacar';
+  if(/posicion|cobertura|centro/i.test(text)) return 'Bater e recuperar o espaço';
+  return p.titulo || 'Plano de treino';
 }
 function EditField({ label, value, onChange, area = true }){
   const base = { width:'100%', marginTop:4, background:'rgba(255,255,255,.05)', color:C.ink,
@@ -1679,22 +1750,23 @@ function LoadingSteps(){
 
 function ScreenPlano({ nav, params }) {
   const a = params.aluno || null;
-  const [st,setSt] = React.useState({ loading:true, plano:null, fonte:null, id:null, erro:'' });
+  const [st,setSt] = React.useState({ loading:true, plano:null, fonte:null, id:null, erro:'', ctx:null });
   const [editing,setEditing] = React.useState(false);
   const [draft,setDraft] = React.useState(null);
   const [saved,setSaved] = React.useState(false);
   const [showDetails,setShowDetails] = React.useState(false);
   React.useEffect(()=>{
     let alive=true;
-    if(params.plano){ setSt({ loading:false, plano:params.plano, fonte:params.fonte||'ia', id:params.id||null, erro:params.erro||'' }); return; }
-    setSt({ loading:true, plano:null, fonte:null, id:null, erro:'' });
+    if(params.plano){ setSt({ loading:false, plano:params.plano, fonte:params.fonte||'ia', id:params.id||null, erro:params.erro||'', ctx:params.contexto||null }); return; }
+    setSt({ loading:true, plano:null, fonte:null, id:null, erro:'', ctx:null });
     (async ()=>{
-      const ctx = params.contexto || (params.turmaObj?.id ? await contextoTurmaParaIA(params.turmaObj) : contextFromParams(params));
+      const baseCtx = params.contexto || (params.turmaObj?.id ? await contextoTurmaParaIA(params.turmaObj) : contextFromParams(params));
+      const ctx = params.preferredFocusSource ? { ...baseCtx, preferredFocusSource: params.preferredFocusSource } : baseCtx;
       const r = await gerarPlano(ctx);
-      if(alive) setSt({ loading:false, plano:r.plano, fonte:r.fonte, id:r.id, erro:r.erro||'' });
-    })().catch(e=>{ if(alive) setSt({ loading:false, plano:{ titulo:'Erro ao gerar plano', diagnostico:{ gapPrincipal:e.message, confianca:'muito baixa' }, blocos:[] }, fonte:'erro', id:null, erro:e.message||'' }); });
+      if(alive) setSt({ loading:false, plano:r.plano, fonte:r.fonte, id:r.id, erro:r.erro||'', ctx });
+    })().catch(e=>{ if(alive) setSt({ loading:false, plano:{ titulo:'Erro ao gerar plano', diagnostico:{ gapPrincipal:e.message, confianca:'muito baixa' }, blocos:[] }, fonte:'erro', id:null, erro:e.message||'', ctx:null }); });
     return ()=>{ alive=false; };
-  }, [a && a.id, params.contexto, params.turmaObj?.id]);
+  }, [a && a.id, params.contexto, params.turmaObj?.id, params.preferredFocusSource]);
 
   const titulo = a ? a.nome.split(' ')[0] : (params.titulo || 'Turma B');
   const radarData = a && a.radar ? a.radar : [0.55,0.8,0.7,0.45,0.6,0.4];
@@ -1711,6 +1783,10 @@ function ScreenPlano({ nav, params }) {
   const dec = p.decisaoPedagogica || {};
   const ciclo = p.cicloPedagogico || {};
   const blocos = p.blocos || [];
+  const planoCtx = st.ctx || {};
+  const displayTitle = situationTitleForPlan(p);
+  const priorityText = planPriorityText(planoCtx, p);
+  const leituraText = decisionGapText(planoCtx, p);
   const kicker = [dec.estado, dec.metodo].filter(Boolean).join(' · ') || 'Plano gerado por IA';
 
   // ---- edição do plano ----
@@ -1761,7 +1837,7 @@ function ScreenPlano({ nav, params }) {
 
   return (
     <Screen>
-      <Header onBack={nav.back} kicker={kicker} title={p.titulo || titulo}
+      <Header onBack={nav.back} kicker={kicker} title={displayTitle || titulo}
         right={<div className="bf-tap" onClick={startEdit} style={{ width:34,height:34,borderRadius:11, border:`1px solid ${C.line2}`,
           display:'flex',alignItems:'center',justifyContent:'center' }}><Icon name="edit" size={18} color={C.turq}/></div>}/>
       <Body top={16} bottom={96}>
@@ -1795,6 +1871,21 @@ function ScreenPlano({ nav, params }) {
               {dg.justificativaConfianca && <div style={{ fontSize:11, color:C.n500, marginTop:6, lineHeight:1.35 }}>{dg.justificativaConfianca}</div>}
             </div>}
         </Card>
+
+        {(priorityText || leituraText || p.scoutValidacao) && <Card style={{ marginTop:10, borderColor:'rgba(76,155,255,.28)' }}>
+          {priorityText && <>
+            <Mini color={C.info}>Por que esse treino?</Mini>
+            <div style={{ fontSize:12.5, color:C.inkDim, marginTop:6, lineHeight:1.4 }}>{priorityText}</div>
+          </>}
+          {leituraText && <div style={{ fontSize:12, color:C.inkDim, marginTop:priorityText?9:0, lineHeight:1.35 }}>
+            {leituraText}
+          </div>}
+          {p.scoutValidacao && <div style={{ marginTop:10, padding:'8px 10px', borderRadius:10,
+            border:`1px solid ${C.line}`, background:'rgba(255,255,255,.04)' }}>
+            <Mini color={C.turq}>Validar no próximo scout</Mini>
+            <div style={{ fontSize:12, color:C.ink, marginTop:5, lineHeight:1.35 }}>{shortText(p.scoutValidacao, 150)}</div>
+          </div>}
+        </Card>}
 
         {/* objetivo + focos */}
         <Card style={{ marginTop:10 }}>
@@ -1841,24 +1932,6 @@ function ScreenPlano({ nav, params }) {
         </Btn>
 
         {showDetails && <>
-          {/* progressão / regressão */}
-          <div style={{ display:'flex', gap:10, marginTop:12 }}>
-            <Card style={{ flex:1, padding:13 }}>
-              <Mini color={C.ok}>↑ Progressão</Mini>
-              <div style={{ fontSize:11.5, color:C.inkDim, marginTop:6, lineHeight:1.35 }}>{p.progressao}</div>
-            </Card>
-            <Card style={{ flex:1, padding:13 }}>
-              <Mini color={C.warn}>↓ Regressão</Mini>
-              <div style={{ fontSize:11.5, color:C.inkDim, marginTop:6, lineHeight:1.35 }}>{p.regressao}</div>
-            </Card>
-          </div>
-
-          {/* scout de validação */}
-          {p.scoutValidacao && <Card style={{ marginTop:10 }}>
-            <Mini color={C.turq}>◎ Validar no próximo scout</Mini>
-            <div style={{ fontSize:12.5, color:C.inkDim, marginTop:6, lineHeight:1.4 }}>{p.scoutValidacao}</div>
-          </Card>}
-
           {/* ciclo pedagógico */}
           {ciclo.necessario && <Card style={{ marginTop:10, borderColor:'rgba(30,114,224,.3)' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
