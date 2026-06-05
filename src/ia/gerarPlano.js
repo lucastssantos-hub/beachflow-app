@@ -193,17 +193,44 @@ function gameSituationTitle(planoPedagogico = {}, cfg = {}, focus = {}) {
   return cfg.titulo || 'Treino contextual de jogo';
 }
 
+function contextForPreferredSource(ctx = {}) {
+  if (ctx.preferredFocusSource === 'auto') {
+    return {
+      ...ctx,
+      avaliacaoProfessor: {},
+      avaliacaoScout: {},
+      scout: null,
+      scoutEventosRecentes: [],
+      evidenciasScout: [],
+      alunos: (ctx.alunos || []).map((a) => ({ ...a, avaliacaoProfessor: {}, scout: null })),
+    };
+  }
+  if (ctx.preferredFocusSource === 'prof') {
+    return {
+      ...ctx,
+      autoavaliacao: {},
+      avaliacaoScout: {},
+      scout: null,
+      scoutEventosRecentes: [],
+      evidenciasScout: [],
+      alunos: (ctx.alunos || []).map((a) => ({ ...a, autoavaliacao: {}, scout: null })),
+    };
+  }
+  return ctx;
+}
+
 function localPlanFromContext(ctx = {}, erro = '') {
-  const planoPedagogico = ctx.planoPedagogico || pedagogicalPlanForContext(ctx);
-  const focus = chooseFocus(ctx);
+  const sourceCtx = contextForPreferredSource(ctx);
+  const planoPedagogico = sourceCtx.planoPedagogico || pedagogicalPlanForContext(sourceCtx);
+  const focus = chooseFocus(sourceCtx);
   const cfg = FUND_CONFIG[focus.fund] || FUND_CONFIG.Consistência;
-  const scout = ctx.scout;
+  const scout = sourceCtx.scout;
   const confidence = scout?.totalEventos >= 12 ? 'alta' : scout?.totalEventos >= 5 ? 'moderada' : 'baixa';
-  const scoutContext = scout?.leitura || ctx.evidenciasScout?.join(' · ') || '';
+  const scoutContext = scout?.leitura || sourceCtx.evidenciasScout?.join(' · ') || '';
   const scoreText = focus.score != null ? ` (${focus.score}/5)` : '';
   const source = focus.source || 'dados locais';
   const metodo = confidence === 'alta' ? 'aberto' : 'semiaberto';
-  const drillCtx = { ...ctx, foco: focus.fund, fundamento: focus.fund, metodo };
+  const drillCtx = { ...sourceCtx, foco: focus.fund, fundamento: focus.fund, metodo };
   const drills = drillsFromPedagogicalPlan(planoPedagogico);
   const fallbackDrills = recomendarSequenciaDrillsCbt(drillCtx);
   const drillBlocks = drills.map((drill, i) => drillParaBloco(drill, [
@@ -255,11 +282,11 @@ function localPlanFromContext(ctx = {}, erro = '') {
       prioridadeDados: focus.source === 'scout' && focus.autoWorst?.[0] && focus.scoutFund && focus.scoutFund !== focus.autoWorst[0]
         ? `Autoavaliação indica ${focus.autoWorst[0]} (${focus.autoWorst[1]}/5), mas o scout apontou ${focus.scoutFund} como comportamento mais evidente em jogo.`
         : '',
-      gapLeitura: sortedScores(ctx.autoavaliacao || {}).find(([f]) => LEITURA_GAPS.has(canonicalFund(f)))
+      gapLeitura: sortedScores(sourceCtx.autoavaliacao || {}).find(([f]) => LEITURA_GAPS.has(canonicalFund(f)))
         ? 'Decisão aparece como leitura de jogo; o treino trata isso por contexto, não como golpe isolado.'
         : '',
     },
-    nivel: ctx.nivel || 'Intermediário',
+    nivel: sourceCtx.nivel || 'Intermediário',
     decisaoPedagogica: {
       estado: planoPedagogico.diagnostico?.estadoComprometido || 'Estabilizar',
       metodo,
@@ -289,17 +316,18 @@ function localPlanFromContext(ctx = {}, erro = '') {
 }
 
 function enrichContextWithDrills(ctx = {}) {
-  const planoPedagogico = pedagogicalPlanForContext(ctx);
-  const focus = chooseFocus(ctx);
+  const sourceCtx = contextForPreferredSource(ctx);
+  const planoPedagogico = pedagogicalPlanForContext(sourceCtx);
+  const focus = chooseFocus(sourceCtx);
   const metodo = ctx.metodo || ctx.tipo_treino || ctx.decisaoPedagogica?.metodo || '';
-  const drillCtx = { ...ctx, foco: focus.fund, fundamento: focus.fund, metodo };
+  const drillCtx = { ...sourceCtx, foco: focus.fund, fundamento: focus.fund, metodo };
   const sequencia = drillsFromPedagogicalPlan(planoPedagogico);
   const fallbackSequencia = recomendarSequenciaDrillsCbt(drillCtx);
   const baseSequencia = sequencia.length ? sequencia : fallbackSequencia;
   const extras = recomendarDrillsCbt(drillCtx, 5).filter(d => !baseSequencia.some(s => s.id === d.id));
   const drills = [...baseSequencia, ...extras].slice(0, 6).map(drillResumoParaIA);
   return {
-    ...ctx,
+    ...sourceCtx,
     planoPedagogico,
     motorPedagogico: {
       diagnostico: planoPedagogico.diagnostico,

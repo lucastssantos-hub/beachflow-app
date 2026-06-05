@@ -1,7 +1,7 @@
 import React from 'react';
 import { gerarPlano, contextFromParams, salvarEdicao, salvarAvaliacao, listarPlanos } from './ia/gerarPlano.js';
 import { supabase, authEnabled } from './supabaseClient.js';
-import { listAlunos, listTurmas, getResumo, salvarAlunoCadastro, salvarTurmaCadastro, contextoTurmaParaIA } from './data/alunos.js';
+import { listAlunos, listTurmas, listAlunosDaTurma, getResumo, salvarAlunoCadastro, salvarTurmaCadastro, contextoTurmaParaIA } from './data/alunos.js';
 import { listPartidas, getPartida, criarPartida, salvarPonto, encerrarPartida, scoutContext } from './data/scout.js';
 import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutDeciding, tennis, modeLabel, nextScoutServe } from './data/scoutScore.js';
 import { DEMO_ALUNOS as ALUNOS, DEMO_TURMAS, DEMO_RADAR_LABELS as RLAB } from './data/demo.js';
@@ -1468,14 +1468,18 @@ function ScreenTurma({ nav, params }) {
   const turma = params.turma || DEMO_TURMAS[0];
   const [st,setSt] = React.useState({ loading:false, sessionId:null, alunos:null, error:'' });
   const [diag,setDiag] = React.useState({ loading:true, ctx:null, error:'' });
-  React.useEffect(()=>{
+  const [evalModal,setEvalModal] = React.useState({ open:false, loading:false, alunos:[], alunoId:'', vals:null, nota:'', saving:false, error:'' });
+  const carregarDiag = React.useCallback(()=>{
     let alive = true;
     setDiag({ loading:true, ctx:null, error:'' });
     contextoTurmaParaIA(turma)
       .then((ctx)=>{ if(alive) setDiag({ loading:false, ctx, error:'' }); })
       .catch((e)=>{ if(alive) setDiag({ loading:false, ctx:null, error:e.message || 'Não foi possível carregar o diagnóstico da turma.' }); });
     return ()=>{ alive=false; };
-  }, [turma?.id]);
+  }, [turma]);
+  React.useEffect(()=>{
+    return carregarDiag();
+  }, [carregarDiag]);
   React.useEffect(()=>{
     if(!st.sessionId || !st.alunos?.length) return undefined;
     let alive = true;
@@ -1517,6 +1521,33 @@ function ScreenTurma({ nav, params }) {
   const scoutFund = scout?.erroPrincipal?.fundamento;
   const scoutOverridesAuto = scoutFund && autoWorst?.[0] && scoutFund !== autoWorst[0];
   const planParams = (preferredFocusSource)=>({ turma:turma.nome, nivel:turma.nivel, turmaObj:turma, preferredFocusSource });
+  const openEvalModal = async ()=>{
+    setEvalModal({ open:true, loading:true, alunos:[], alunoId:'', vals:null, nota:'', saving:false, error:'' });
+    try {
+      const alunos = await listAlunosDaTurma(turma.id);
+      const first = alunos[0] || null;
+      const vals = FUND_AVALIACAO.map((f)=>Number(first?.notasProf?.[f] || 3));
+      setEvalModal({ open:true, loading:false, alunos, alunoId:first?.id || '', vals, nota:'', saving:false, error:'' });
+    } catch(e) {
+      setEvalModal({ open:true, loading:false, alunos:[], alunoId:'', vals:null, nota:'', saving:false, error:e.message || 'Não foi possível carregar alunos da turma.' });
+    }
+  };
+  const setEvalAluno = (id)=>{
+    setEvalModal(m=>{
+      const aluno = m.alunos.find(a=>a.id===id);
+      return { ...m, alunoId:id, vals:FUND_AVALIACAO.map((f)=>Number(aluno?.notasProf?.[f] || 3)), nota:'' };
+    });
+  };
+  const setEvalVal = (i,n)=>setEvalModal(m=>({ ...m, vals:(m.vals || FUND_AVALIACAO.map(()=>3)).map((v,j)=>j===i?n:v) }));
+  const salvarEvalModal = async ()=>{
+    const aluno = evalModal.alunos.find(a=>a.id===evalModal.alunoId);
+    if(!aluno) return;
+    setEvalModal(m=>({ ...m, saving:true, error:'' }));
+    const notas = {}; FUND_AVALIACAO.forEach((f,i)=>{ notas[f] = evalModal.vals?.[i] || 3; });
+    await salvarAvaliacao(aluno.id, notas, evalModal.nota?.trim() || null);
+    setEvalModal(m=>({ ...m, saving:false, error:'' }));
+    carregarDiag();
+  };
   return <Screen>
     <Header onBack={nav.back} kicker="Turma" title={turma.nome}/>
     <Body top={16} bottom={96}>
@@ -1598,7 +1629,7 @@ function ScreenTurma({ nav, params }) {
             <div style={{ fontSize:11.5, color:C.inkDim, marginTop:4, lineHeight:1.35 }}>
               O treino funciona com scout e autoavaliação, mas a avaliação do professor aumenta a precisão.
             </div>
-            <Btn kind="ghost" style={{ width:'100%', marginTop:9 }} onClick={()=>nav.go('alunos')}>Avaliar alunos</Btn>
+            <Btn kind="ghost" style={{ width:'100%', marginTop:9 }} onClick={openEvalModal}>Avaliar alunos</Btn>
           </div>}
         </>}
 
@@ -1648,6 +1679,50 @@ function ScreenTurma({ nav, params }) {
         </div>
       </Card>}
     </Body>
+    {evalModal.open && <div style={{ position:'absolute', inset:0, zIndex:50, background:'rgba(3,8,16,.72)', backdropFilter:'blur(8px)', display:'flex', alignItems:'flex-end' }}>
+      <div style={{ width:'100%', maxHeight:'86%', overflow:'auto', background:C.navy850, borderTop:`1px solid ${C.line2}`, borderRadius:'22px 22px 0 0', padding:'18px 20px 28px' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
+          <div>
+            <Mini color={C.turq}>Avaliação da turma</Mini>
+            <div style={{ fontSize:20, color:'#fff', fontWeight:800, marginTop:4 }}>Alunos da {turma.nome}</div>
+          </div>
+          <button className="bf-tap" onClick={()=>setEvalModal(m=>({ ...m, open:false }))} style={{ width:38,height:38,borderRadius:12,border:`1px solid ${C.line2}`,background:'transparent',color:C.ink,fontSize:20 }}>×</button>
+        </div>
+        {evalModal.loading && <div style={{ color:C.inkDim, fontSize:13, marginTop:18 }}>Carregando alunos…</div>}
+        {evalModal.error && <div style={{ color:C.err, fontSize:12.5, marginTop:12 }}>{evalModal.error}</div>}
+        {!evalModal.loading && !evalModal.error && evalModal.alunos.length===0 && <Card style={{ marginTop:14, textAlign:'center' }}>
+          <div style={{ color:C.ink, fontSize:13 }}>Nenhum aluno matriculado nesta turma.</div>
+        </Card>}
+        {!evalModal.loading && evalModal.alunos.length>0 && <>
+          <CadastroField label="Aluno">
+            <select value={evalModal.alunoId} onChange={e=>setEvalAluno(e.target.value)} style={cadastroInputStyle}>
+              {evalModal.alunos.map(a=><option key={a.id} value={a.id}>{a.nome}</option>)}
+            </select>
+          </CadastroField>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:10 }}>
+            {FUND_AVALIACAO.map((f,i)=><Card key={f} style={{ padding:'10px 11px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:12.5, color:C.ink }}>{f}</span>
+                <span style={{ fontFamily:'var(--ff-m)', fontSize:10.5, color:C.turq }}>{evalModal.vals?.[i] || 3}/5</span>
+              </div>
+              <div style={{ display:'flex', gap:5, marginTop:8 }}>
+                {[1,2,3,4,5].map(n=><div key={n} className="bf-tap" onClick={()=>setEvalVal(i,n)}
+                  style={{ flex:1, height:22, borderRadius:6, background:n <= (evalModal.vals?.[i] || 3) ? C.turq : 'rgba(255,255,255,.06)', border:`1px solid ${n <= (evalModal.vals?.[i] || 3) ? 'transparent' : C.line}` }}/>)}
+              </div>
+            </Card>)}
+          </div>
+          <CadastroField label="Nota livre">
+            <textarea value={evalModal.nota} onChange={e=>setEvalModal(m=>({ ...m, nota:e.target.value }))} rows={2}
+              placeholder="Ex.: saque entra, mas terceira bola fica desorganizada…"
+              style={{ ...cadastroInputStyle, resize:'vertical', lineHeight:1.35 }}/>
+          </CadastroField>
+          <div style={{ display:'flex', gap:10, marginTop:14 }}>
+            <Btn kind="ghost" style={{ flex:1 }} onClick={()=>setEvalModal(m=>({ ...m, open:false }))}>Fechar</Btn>
+            <Btn kind="primary" style={{ flex:2 }} icon="check" onClick={salvarEvalModal}>{evalModal.saving?'Salvando…':'Salvar avaliação'}</Btn>
+          </div>
+        </>}
+      </div>
+    </div>}
   </Screen>;
 }
 
@@ -1661,6 +1736,7 @@ const BLOCO_FIELDS = [
   ['observar','Observar'], ['pergunta_final','Pergunta final'],
   ['registro_professor','Registro do professor'], ['proximo_passo','Próximo passo'],
 ];
+const FUND_AVALIACAO = ['Saque','Devolução','Forehand','Backhand','Lob','Smash','Bandeja','Gancho','Tapa','Curta','Posicionamento','Consistência'];
 function confTone(s){ const v=(s||'').toLowerCase();
   if(v.includes('alta')) return 'ok'; if(v.includes('moderada')) return 'warn'; return 'err'; }
 function PlanoField({ label, value }){
@@ -2070,6 +2146,7 @@ function ScoutBtn({ label, big, c, onClick, n }) {
 // ---------- SCOUT: NOVA PARTIDA (setup) ----------
 function ScreenScoutNovo({ nav }) {
   const [alunos,setAlunos] = React.useState(null);
+  const [classAlunos,setClassAlunos] = React.useState(null);
   const [turmas,setTurmas] = React.useState(null);
   const [titulo,setTitulo] = React.useState('Partida ao vivo');
   const [singles,setSingles] = React.useState(false);
@@ -2086,14 +2163,28 @@ function ScreenScoutNovo({ nav }) {
     });
     return ()=>{alive=false;};
   },[]);
-  const byId = (id)=> (alunos||[]).find(a=>a.id===id);
+  React.useEffect(()=>{
+    let alive = true;
+    if(!classId){ setClassAlunos(null); return undefined; }
+    setClassAlunos(null);
+    const load = authEnabled ? listAlunosDaTurma(classId) : Promise.resolve(alunos || []);
+    load.then((r)=>{
+      if(!alive) return;
+      setClassAlunos(r);
+      if(r.length>=2) setSel({ a1:r[0].id, a2:(r[1]||r[0]).id, b1:(r[2]||r[1]||r[0]).id, b2:(r[3]||r[2]||r[1]||r[0]).id });
+    }).catch(()=>{ if(alive) setClassAlunos([]); });
+    return ()=>{ alive=false; };
+  },[classId, alunos?.length]);
+  const playerOptions = classId ? (classAlunos || []) : (alunos || []);
+  const byId = (id)=> (playerOptions||[]).find(a=>a.id===id) || (alunos||[]).find(a=>a.id===id);
   const turmaById = (id)=> (turmas||[]).find(t=>t.id===id);
   const selStyle = { width:'100%', marginTop:4, background:'rgba(255,255,255,.05)', color:C.ink,
     border:`1px solid ${C.line2}`, borderRadius:10, padding:'9px 11px', fontFamily:'var(--ff-u)', fontSize:13.5, outline:'none' };
   const Sel = ({ k, label }) => <div style={{ flex:1 }}>
     <span style={{ fontFamily:'var(--ff-m)', fontSize:9, letterSpacing:'.08em', textTransform:'uppercase', color:C.n500 }}>{label}</span>
-    <select value={sel[k]} onChange={e=>setSel(s=>({...s,[k]:e.target.value}))} style={selStyle}>
-      {(alunos||[]).map(a=><option key={a.id} value={a.id}>{a.nome}</option>)}
+    <select value={playerOptions.some(a=>a.id===sel[k]) ? sel[k] : ''} onChange={e=>setSel(s=>({...s,[k]:e.target.value}))} style={selStyle}>
+      {!playerOptions.length && <option value="">Sem aluno nesta turma</option>}
+      {(playerOptions||[]).map(a=><option key={a.id} value={a.id}>{a.nome}</option>)}
     </select></div>;
   const iniciar = async ()=>{
     const a1=byId(sel.a1), b1=byId(sel.b1);
@@ -2137,6 +2228,8 @@ function ScreenScoutNovo({ nav }) {
             </select>
           </div>
           <Card style={{ marginTop:14 }}>
+            {classId && classAlunos===null && <div style={{ color:C.inkDim, fontSize:12, marginBottom:10 }}>Carregando alunos da turma…</div>}
+            {classId && classAlunos && classAlunos.length<2 && <div style={{ color:C.warn, fontSize:12, marginBottom:10 }}>Esta turma precisa ter pelo menos 2 alunos matriculados para scout.</div>}
             <Mini color={C.turq}>Dupla A</Mini>
             <div style={{ display:'flex', gap:10, marginTop:6 }}>
               <Sel k="a1" label="Jogador A1"/>{!singles && <Sel k="a2" label="Jogador A2"/>}</div>

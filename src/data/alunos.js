@@ -314,6 +314,17 @@ export async function listTurmas() {
   })).sort((a, b) => b.alunos - a.alunos); // mais cheias primeiro
 }
 
+export async function listAlunosDaTurma(turmaId) {
+  if (!supabase || !turmaId) return [];
+  const [alunos, enr] = await Promise.all([
+    listAlunos(true),
+    supabase.from('class_enrollments').select('student_id').eq('class_id', turmaId),
+  ]);
+  if (enr.error) { console.warn('[listAlunosDaTurma]', enr.error.message); return []; }
+  const ids = new Set((enr.data || []).map((x) => x.student_id).filter(Boolean));
+  return alunos.filter((a) => ids.has(a.id));
+}
+
 export async function salvarTurmaCadastro({ id, nome, nivel, hora, capacidade, foco }) {
   if (!supabase) return { ok: false, error: 'Supabase não configurado' };
   const teacher_id = await uid();
@@ -401,6 +412,7 @@ export async function contextoTurmaParaIA(turma) {
     const scout = buildScoutResumo(scoutRows.filter((e) => e.student_id === s.id));
     const foco = focoFromNotas(Object.keys(prof).length ? prof : auto);
     return {
+      id: s.id,
       nome: s.name,
       nivel: NIVEL[s.level] || s.level || turma.nivel || 'Intermediário',
       foco,
