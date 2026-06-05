@@ -1467,6 +1467,15 @@ function ScreenTurmaForm({ nav, params }) {
 function ScreenTurma({ nav, params }) {
   const turma = params.turma || DEMO_TURMAS[0];
   const [st,setSt] = React.useState({ loading:false, sessionId:null, alunos:null, error:'' });
+  const [diag,setDiag] = React.useState({ loading:true, ctx:null, error:'' });
+  React.useEffect(()=>{
+    let alive = true;
+    setDiag({ loading:true, ctx:null, error:'' });
+    contextoTurmaParaIA(turma)
+      .then((ctx)=>{ if(alive) setDiag({ loading:false, ctx, error:'' }); })
+      .catch((e)=>{ if(alive) setDiag({ loading:false, ctx:null, error:e.message || 'Não foi possível carregar o diagnóstico da turma.' }); });
+    return ()=>{ alive=false; };
+  }, [turma?.id]);
   React.useEffect(()=>{
     if(!st.sessionId || !st.alunos?.length) return undefined;
     let alive = true;
@@ -1494,6 +1503,15 @@ function ScreenTurma({ nav, params }) {
     const link = confirmationUrl(item.token);
     return `Oi, ${item.aluno.name}! Confirma sua presença na aula ${turma.nome}${turma.hora?` (${turma.hora})`:''}? ${link}`;
   };
+  const ctx = diag.ctx || {};
+  const alunosCtx = ctx.alunos || [];
+  const autoCount = alunosCtx.filter(a=>a.autoavaliacao && Object.keys(a.autoavaliacao).length).length;
+  const profCount = alunosCtx.filter(a=>a.avaliacaoProfessor && Object.keys(a.avaliacaoProfessor).length).length;
+  const topAuto = Object.entries(ctx.autoavaliacao || {}).sort((a,b)=>Number(a[1])-Number(b[1])).slice(0,3);
+  const topProf = Object.entries(ctx.avaliacaoProfessor || {}).sort((a,b)=>Number(a[1])-Number(b[1])).slice(0,3);
+  const scout = ctx.scout || null;
+  const topSource = topProf.length ? 'professor' : topAuto.length ? 'autoavaliação' : '';
+  const topRows = topProf.length ? topProf : topAuto;
   return <Screen>
     <Header onBack={nav.back} kicker="Turma" title={turma.nome}/>
     <Body top={16} bottom={96}>
@@ -1505,6 +1523,59 @@ function ScreenTurma({ nav, params }) {
           </div>
           {turma.foco && <Badge tone="turq">{turma.foco}</Badge>}
         </div>
+      </Card>
+
+      <Card style={{ marginTop:12 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', gap:10, alignItems:'flex-start' }}>
+          <div>
+            <Mini>Diagnóstico antes do treino</Mini>
+            <div style={{ fontSize:13.5, color:C.ink, marginTop:6, lineHeight:1.35 }}>
+              {diag.loading ? 'Carregando dados da turma…' : diag.error ? 'Não consegui carregar todos os dados.' : `${ctx.alunosMatriculados || turma.alunos || 0} aluno(s) considerados.`}
+            </div>
+          </div>
+          {scout?.totalEventos ? <Badge tone={scout.totalEventos>=12?'ok':'warn'}>{scout.totalEventos} scout</Badge> : <Badge tone="neutral">sem scout</Badge>}
+        </div>
+
+        {!diag.loading && !diag.error && <>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:12 }}>
+            <div style={{ padding:10, borderRadius:12, background:'rgba(255,255,255,.04)', border:`1px solid ${C.line}` }}>
+              <Mini>Autoavaliações</Mini>
+              <div style={{ fontSize:16, color:C.ink, fontWeight:800, marginTop:4 }}>{autoCount}/{ctx.alunosMatriculados || alunosCtx.length || turma.alunos || 0}</div>
+              <div style={{ fontSize:11.5, color:C.inkDim, marginTop:2 }}>base de percepção</div>
+            </div>
+            <div style={{ padding:10, borderRadius:12, background:'rgba(255,255,255,.04)', border:`1px solid ${C.line}` }}>
+              <Mini>Avaliação prof.</Mini>
+              <div style={{ fontSize:16, color:C.ink, fontWeight:800, marginTop:4 }}>{profCount}/{ctx.alunosMatriculados || alunosCtx.length || turma.alunos || 0}</div>
+              <div style={{ fontSize:11.5, color:C.inkDim, marginTop:2 }}>base técnica</div>
+            </div>
+          </div>
+
+          {topRows.length>0 && <div style={{ marginTop:12 }}>
+            <Mini>Maiores gaps · {topSource}</Mini>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginTop:8 }}>
+              {topRows.map(([f,v])=><Badge key={f} tone={Number(v)<=3?'warn':'neutral'}>{f} · {Number(v).toFixed(1)}</Badge>)}
+            </div>
+          </div>}
+
+          {scout ? <div style={{ marginTop:12, paddingTop:11, borderTop:`1px solid ${C.line}` }}>
+            <Mini color={C.info}>Scout da turma</Mini>
+            <div style={{ fontSize:12.5, color:C.ink, marginTop:6, lineHeight:1.4 }}>
+              {scout.leituraPratica || scout.leitura || 'Há scout vinculado, mas sem padrão prático forte ainda.'}
+            </div>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginTop:8 }}>
+              {scout.erroPrincipal?.fundamento && <Badge tone="warn">ajuste: {scout.erroPrincipal.fundamento}</Badge>}
+              {scout.zonaCritica?.zona && <Badge tone="info">zona: {scout.zonaCritica.zona}</Badge>}
+              {scout.cartaoFocoScout?.foco && <Badge tone="turq">{scout.cartaoFocoScout.foco}</Badge>}
+            </div>
+          </div> : <div style={{ marginTop:12, paddingTop:11, borderTop:`1px solid ${C.line}` }}>
+            <Mini color={C.n500}>Scout da turma</Mini>
+            <div style={{ fontSize:12.5, color:C.inkDim, marginTop:6, lineHeight:1.4 }}>
+              Sem scout vinculado ainda. O treino será gerado principalmente por autoavaliação/avaliação técnica.
+            </div>
+          </div>}
+        </>}
+
+        {diag.error && <div style={{ fontSize:12, color:C.warn, marginTop:8, lineHeight:1.35 }}>{diag.error}</div>}
       </Card>
 
       <div style={{ display:'flex', gap:10, marginTop:12 }}>
@@ -1546,10 +1617,6 @@ function ScreenTurma({ nav, params }) {
         </div>
       </Card>}
     </Body>
-    <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'12px 20px 30px',
-      background:'linear-gradient(transparent,'+C.navy900+' 30%)' }}>
-      <Btn kind="primary" style={{ width:'100%' }} icon="clip" onClick={()=>nav.go('plano',{ turma:turma.nome, nivel:turma.nivel, turmaObj:turma })}>Gerar plano da turma</Btn>
-    </div>
   </Screen>;
 }
 
