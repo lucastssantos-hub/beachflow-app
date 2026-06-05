@@ -1,7 +1,7 @@
 import React from 'react';
-import { gerarPlano, contextFromParams, salvarEdicao, salvarAvaliacao, listarPlanos } from './ia/gerarPlano.js';
+import { gerarPlano, contextFromParams, salvarEdicao, listarPlanos } from './ia/gerarPlano.js';
 import { supabase, authEnabled } from './supabaseClient.js';
-import { listAlunos, listTurmas, listAlunosDaTurma, getResumo, salvarAlunoCadastro, salvarTurmaCadastro, contextoTurmaParaIA } from './data/alunos.js';
+import { listAlunos, listTurmas, listAlunosDaTurma, getResumo, salvarAlunoCadastro, salvarAvaliacaoProfessor, trocarAlunoTurma, inativarAluno, reativarAluno, salvarTurmaCadastro, contextoTurmaParaIA } from './data/alunos.js';
 import { listPartidas, getPartida, criarPartida, salvarPonto, encerrarPartida, scoutContext } from './data/scout.js';
 import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutDeciding, tennis, modeLabel, nextScoutServe } from './data/scoutScore.js';
 import { DEMO_ALUNOS as ALUNOS, DEMO_TURMAS, DEMO_RADAR_LABELS as RLAB } from './data/demo.js';
@@ -954,19 +954,23 @@ function ScreenAlunoForm({ nav, params }) {
 function ScreenAlunos({ nav }) {
   const [q,setQ] = React.useState('');
   const [filtro,setFiltro] = React.useState('Todos');
+  const [statusTab,setStatusTab] = React.useState('ativos');
   const [showMissingAuto,setShowMissingAuto] = React.useState(false);
   const [showFeedbackReady,setShowFeedbackReady] = React.useState(false);
   const [autoMsg,setAutoMsg] = React.useState('');
   const [alunos,setAlunos] = React.useState(null);
   React.useEffect(()=>{
     let alive=true;
-    if(authEnabled){ listAlunos().then(r=>{ if(alive) setAlunos(r); }); }
+    if(authEnabled){ listAlunos(false, true).then(r=>{ if(alive) setAlunos(r); }); }
     else { setAlunos(ALUNOS); } // modo demo (sem login)
     return ()=>{ alive=false; };
   },[]);
 
   const FILTROS = ['Todos','Iniciante','Intermediário','Avançado'];
-  const base = alunos||[];
+  const all = alunos||[];
+  const ativos = all.filter(a=>a.active !== false);
+  const inativos = all.filter(a=>a.active === false);
+  const base = statusTab==='inativos' ? inativos : ativos;
   const semAuto = base.filter(a=>!a.notasAuto || !Object.keys(a.notasAuto).length);
   const comFeedback = base.filter(a=>a.scoutResumo && a.notasAuto && Object.keys(a.notasAuto).length);
   const list = base.filter(a=>{
@@ -986,6 +990,12 @@ function ScreenAlunos({ nav }) {
     } catch(e) {
       setAutoMsg(e.message || 'Não foi possível preparar o link.');
     }
+  };
+  const mensagemReativacao = (a)=>`Oi, ${firstName(a.nome)}! Tudo bem? Estou reorganizando as turmas do BeachFlow. Quando quiser voltar a treinar, me chama por aqui que vejo um horário bom para você.`;
+  const enviarReativacao = async (a)=>{
+    const msg = mensagemReativacao(a);
+    if(a.phone) window.open(whatsappUrl(a.phone, msg), '_blank', 'noopener,noreferrer');
+    else { await navigator.clipboard?.writeText(msg); setAutoMsg(`Mensagem de ${a.nome} copiada. Sem WhatsApp no cadastro.`); }
   };
   // mensagem de feedback COM o link da tela do aluno (radar + leitura visual)
   const mensagemFeedbackComLink = async (a)=>{
@@ -1016,7 +1026,7 @@ function ScreenAlunos({ nav }) {
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <div style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:26, letterSpacing:'-.02em', color:'#fff' }}>Alunos</div>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            {alunos && <span style={{ fontFamily:'var(--ff-m)', fontSize:11, color:C.inkDim }}>{base.length} no total</span>}
+            {alunos && <span style={{ fontFamily:'var(--ff-m)', fontSize:11, color:C.inkDim }}>{ativos.length} ativos · {inativos.length} inativos</span>}
             <div className="bf-tap" onClick={()=>nav.go('alunoForm')} style={{ width:34,height:34,borderRadius:11, border:`1px solid ${C.line2}`,
               display:'flex',alignItems:'center',justifyContent:'center' }}><Icon name="plus" size={18} color={C.turq}/></div>
           </div>
@@ -1034,6 +1044,17 @@ function ScreenAlunos({ nav }) {
               style={{ fontFamily:'var(--ff-m)', fontSize:11, padding:'6px 12px', borderRadius:8,
               whiteSpace:'nowrap', border:`1px solid ${on?C.turq:C.line2}`, color:on?C.turq:C.inkDim,
               background:on?'rgba(22,194,163,.1)':'transparent' }}>{f}</span>; })}
+        </div>
+        <div style={{ display:'flex', gap:8, marginTop:10 }}>
+          {[['ativos','Ativos',ativos.length],['inativos','Inativos',inativos.length]].map(([k,l,n])=>{
+            const on=statusTab===k;
+            return <button key={k} className="bf-tap" onClick={()=>setStatusTab(k)}
+              style={{ flex:1, border:`1px solid ${on?C.turq:C.line2}`, borderRadius:10, padding:'10px 8px',
+                background:on?'rgba(22,194,163,.12)':'transparent', color:on?C.turq:C.inkDim,
+                fontSize:12.5, fontWeight:800 }}>
+              {l} · {n}
+            </button>;
+          })}
         </div>
         {alunos && <Card style={{ marginTop:10, padding:'12px 13px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
@@ -1111,15 +1132,20 @@ function ScreenAlunos({ nav }) {
             <div style={{ textAlign:'center', color:C.inkDim, fontSize:13, marginTop:30 }}>Carregando alunos…</div>}
           {alunos && list.length===0 &&
             <div style={{ textAlign:'center', color:C.inkDim, fontSize:13, marginTop:30 }}>
-              {base.length===0 ? 'Nenhum aluno nesta conta.' : 'Nenhum aluno encontrado.'}</div>}
+              {base.length===0 ? (statusTab==='inativos'?'Nenhum aluno inativo.':'Nenhum aluno ativo nesta conta.') : 'Nenhum aluno encontrado.'}</div>}
           {list.map(a=>
             <div key={a.id} className="bf-tap" onClick={()=>nav.go('aluno',{aluno:a})}
               style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 2px', borderBottom:`1px solid ${C.line}` }}>
               <Avatar initials={a.ini} color={a.cor}/>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontSize:14, color:C.ink, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.nome}</div>
-                <div style={{ fontSize:11.5, color:C.inkDim }}>{(a.turma||'').split(' · ')[0]} · {a.foco}</div></div>
-              <Badge tone={a.tone}>{a.delta}</Badge>
+                <div style={{ fontSize:11.5, color:C.inkDim }}>{a.active===false?'Inativo · ex-aluno':`${(a.turma||'').split(' · ')[0]} · ${a.foco}`}</div></div>
+              {a.active===false
+                ? <button className="bf-tap" onClick={(e)=>{ e.stopPropagation(); enviarReativacao(a); }}
+                  style={{ border:0, borderRadius:9, padding:'8px 10px', background:'rgba(22,194,163,.12)', color:C.turq, fontSize:12, fontWeight:800 }}>
+                  Chamar
+                </button>
+                : <Badge tone={a.tone}>{a.delta}</Badge>}
               <Icon name="chevR" size={16} color={C.n500}/>
             </div>)}
         </div>
@@ -1206,7 +1232,16 @@ function ScreenAluno({ nav, params }) {
   const a = params.aluno || ALUNOS[0];
   const [tab,setTab] = React.useState('tecnico');
   const [feedbackMsg,setFeedbackMsg] = React.useState('');
+  const [turmas,setTurmas] = React.useState([]);
+  const [turmaDestino,setTurmaDestino] = React.useState('');
+  const [gestaoMsg,setGestaoMsg] = React.useState('');
+  const [gestaoBusy,setGestaoBusy] = React.useState(false);
   const canFeedback = !!(a.scoutResumo && a.notasAuto && Object.keys(a.notasAuto).length);
+  React.useEffect(()=>{
+    let alive = true;
+    if(authEnabled) listTurmas().then((rows)=>{ if(alive){ setTurmas(rows); setTurmaDestino(rows[0]?.id || ''); } });
+    return ()=>{ alive=false; };
+  },[]);
   const feedbackComLink = async ()=>{
     const { link } = await prepararFeedbackAluno(a);
     return `${feedbackAlunoTexto(a)}\n\n📊 Veja seu radar e os detalhes aqui:\n${link}`;
@@ -1232,6 +1267,29 @@ function ScreenAluno({ nav, params }) {
     } catch(e) {
       setFeedbackMsg(e.message || 'Não foi possível copiar o feedback.');
     }
+  };
+  const trocarTurma = async ()=>{
+    if(!turmaDestino) { setGestaoMsg('Escolha uma turma de destino.'); return; }
+    setGestaoBusy(true); setGestaoMsg('');
+    const r = await trocarAlunoTurma(a.id, turmaDestino);
+    setGestaoBusy(false);
+    if(!r.ok) { setGestaoMsg(r.error || 'Não foi possível trocar a turma.'); return; }
+    setGestaoMsg('Turma atualizada. Volte para a lista para ver o aluno na nova turma.');
+  };
+  const inativar = async ()=>{
+    if(!confirm(`Inativar ${a.nome}? Ele sai das turmas, mas o histórico fica salvo.`)) return;
+    setGestaoBusy(true); setGestaoMsg('');
+    const r = await inativarAluno(a.id);
+    setGestaoBusy(false);
+    if(!r.ok) { setGestaoMsg(r.error || 'Não foi possível inativar o aluno.'); return; }
+    setGestaoMsg('Aluno inativado. Ele aparecerá na aba Inativos.');
+  };
+  const reativar = async ()=>{
+    setGestaoBusy(true); setGestaoMsg('');
+    const r = await reativarAluno(a.id, turmaDestino || null);
+    setGestaoBusy(false);
+    if(!r.ok) { setGestaoMsg(r.error || 'Não foi possível reativar o aluno.'); return; }
+    setGestaoMsg('Aluno reativado. Ele voltou para a lista de ativos.');
   };
   return (
     <Screen>
@@ -1345,6 +1403,37 @@ function ScreenAluno({ nav, params }) {
           <div style={{ fontSize:13, color:C.ink }}>Sem histórico de evolução ainda</div>
           <div style={{ fontSize:11.5, color:C.inkDim, marginTop:5 }}>A curva aparece conforme novas avaliações forem registradas.</div>
         </Card>)}
+
+        {authEnabled && <Card style={{ marginTop:12 }}>
+          <Mini>Gestão do aluno</Mini>
+          <div style={{ fontSize:12.5, color:C.inkDim, lineHeight:1.4, marginTop:6 }}>
+            {a.active===false
+              ? 'Ex-aluno preservado no histórico. Reative quando ele voltar a treinar.'
+              : 'Troque a turma ou inative sem perder avaliações, scouts e autoavaliações.'}
+          </div>
+          <select value={turmaDestino} onChange={e=>setTurmaDestino(e.target.value)}
+            style={{ width:'100%', marginTop:10, background:'rgba(255,255,255,.05)', color:C.ink,
+              border:`1px solid ${C.line2}`, borderRadius:10, padding:'10px 11px',
+              fontFamily:'var(--ff-u)', fontSize:13, outline:'none' }}>
+            <option value="">Sem turma</option>
+            {turmas.map(t=><option key={t.id} value={t.id}>{t.nome} · {t.hora || '--:--'}</option>)}
+          </select>
+          {a.active===false
+            ? <Btn kind="secondary" style={{ width:'100%', marginTop:10 }} icon="check" onClick={reativar}>{gestaoBusy?'Atualizando…':'Reativar aluno'}</Btn>
+            : <div style={{ display:'flex', gap:8, marginTop:10 }}>
+                <button className="bf-tap" onClick={trocarTurma}
+                  style={{ flex:1, border:`1px solid ${C.line2}`, borderRadius:10, padding:'10px 8px',
+                    background:'transparent', color:C.turq, fontSize:12.5, fontWeight:800 }}>
+                  {gestaoBusy?'Salvando…':'Trocar turma'}
+                </button>
+                <button className="bf-tap" onClick={inativar}
+                  style={{ flex:1, border:`1px solid rgba(255,106,69,.35)`, borderRadius:10, padding:'10px 8px',
+                    background:'rgba(255,106,69,.08)', color:C.coral, fontSize:12.5, fontWeight:800 }}>
+                  Inativar
+                </button>
+              </div>}
+          {gestaoMsg && <div style={{ fontSize:11.5, color:/não|erro|Escolha/i.test(gestaoMsg)?C.warn:C.turq, lineHeight:1.35, marginTop:8 }}>{gestaoMsg}</div>}
+        </Card>}
 
         <Btn kind="secondary" style={{ width:'100%', marginTop:14 }} icon="clip" onClick={()=>nav.go('plano',{aluno:a})}>Gerar plano para {a.nome.split(' ')[0]}</Btn>
         <Btn kind="ghost" style={{ width:'100%', marginTop:10 }} icon="edit" onClick={()=>nav.go('alunoForm',{aluno:a})}>Editar cadastro</Btn>
@@ -1544,7 +1633,11 @@ function ScreenTurma({ nav, params }) {
     if(!aluno) return;
     setEvalModal(m=>({ ...m, saving:true, error:'' }));
     const notas = {}; FUND_AVALIACAO.forEach((f,i)=>{ notas[f] = evalModal.vals?.[i] || 3; });
-    await salvarAvaliacao(aluno.id, notas, evalModal.nota?.trim() || null);
+    const r = await salvarAvaliacaoProfessor(aluno.id, notas, evalModal.nota?.trim() || null);
+    if(!r.ok) {
+      setEvalModal(m=>({ ...m, saving:false, error:r.error || 'Não foi possível salvar a avaliação.' }));
+      return;
+    }
     setEvalModal(m=>({ ...m, saving:false, error:'' }));
     carregarDiag();
   };
@@ -2442,16 +2535,18 @@ Object.assign(window, { ScreenAulas, ScreenPlano, ScreenScout, ScreenDiagnostico
 // ---------- AVALIAÇÃO TÉCNICA (professor) ----------
 function ScreenAvaliacao({ nav, params }) {
   const a = (params && params.aluno) || ALUNOS[0];
-  const FUND = ['Saque','Devolução','Ataque','Defesa','Posicionamento','Constância'];
-  const [vals,setVals] = React.useState(a.radar.map(v=>Math.round(v*5)));
+  const FUND = FUND_AVALIACAO;
+  const [vals,setVals] = React.useState(FUND.map((f)=>Number(a.notasProf?.[f] || 3)));
   const [nota,setNota] = React.useState('');
   const [salvando,setSalvando] = React.useState(false);
+  const [erro,setErro] = React.useState('');
   const set = (i,n)=>setVals(s=>s.map((v,j)=>j===i?n:v));
   const salvar = async ()=>{
-    setSalvando(true);
+    setSalvando(true); setErro('');
     const notas = {}; FUND.forEach((f,i)=>{ notas[f]=vals[i]; });
-    await salvarAvaliacao(a.id, notas, nota.trim()||null);
+    const r = await salvarAvaliacaoProfessor(a.id, notas, nota.trim()||null);
     setSalvando(false);
+    if(!r.ok) { setErro(r.error || 'Não foi possível salvar a avaliação.'); return; }
     // leva ao diagnóstico já usando a avaliação real recém-salva
     nav.go('diagnostico',{ aluno:a });
   };
@@ -2485,6 +2580,7 @@ function ScreenAvaliacao({ nav, params }) {
               border:`1px solid ${C.line2}`, borderRadius:10, padding:'9px 11px', fontFamily:'var(--ff-u)',
               fontSize:13, lineHeight:1.4, outline:'none', resize:'vertical' }}/>
         </Card>
+        {erro && <div style={{ marginTop:10, color:C.err, fontSize:12 }}>{erro}</div>}
       </Body>
       <div style={{ position:'absolute', left:0, right:0, bottom:0, padding:'12px 20px 30px',
         background:'linear-gradient(transparent,'+C.navy900+' 30%)' }}>

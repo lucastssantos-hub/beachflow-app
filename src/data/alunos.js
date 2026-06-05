@@ -156,6 +156,7 @@ function buildScoutResumo(events = []) {
 }
 
 let _cacheAlunos = null;
+let _cacheAlunosAll = null;
 async function uid() { const { data } = await supabase.auth.getUser(); return data?.user?.id || null; }
 function dbLevel(n = '') {
   const v = String(n).toLowerCase();
@@ -170,12 +171,29 @@ function dbTime(hora = '') {
   return `${h.padStart(2, '0')}:${m.padStart(2, '0')}:00`;
 }
 
+async function selectStudents() {
+  const full = await supabase
+    .from('students')
+    .select('id,name,level,phone,active,inactive_at,inactive_reason')
+    .order('name');
+  if (!full.error) return full;
+  if (/active|inactive/i.test(full.error.message || '')) {
+    const fallback = await supabase.from('students').select('id,name,level,phone').order('name');
+    if (!fallback.error && Array.isArray(fallback.data)) {
+      fallback.data = fallback.data.map((s) => ({ ...s, active: true, inactive_at: null, inactive_reason: null }));
+    }
+    return fallback;
+  }
+  return full;
+}
+
 // Lista os alunos do professor logado, já com radar real e notas para a IA.
-export async function listAlunos(force) {
+export async function listAlunos(force, includeInactive = false) {
   if (!supabase) return [];
-  if (_cacheAlunos && !force) return _cacheAlunos;
+  const cache = includeInactive ? _cacheAlunosAll : _cacheAlunos;
+  if (cache && !force) return cache;
   const [stu, enr, cls, ev, scoutEvents] = await Promise.all([
-    supabase.from('students').select('id,name,level,phone').order('name'),
+    selectStudents(),
     supabase.from('class_enrollments').select('student_id,class_id'),
     supabase.from('classes').select('id,name,level'),
     supabase.from('evaluations').select('student_id,fundamental,score,evaluator'),
@@ -207,7 +225,8 @@ export async function listAlunos(force) {
     scoutByStudent.get(e.student_id).push(e);
   }
 
-  const out = (stu.data || []).map((s, i) => {
+  const students = (stu.data || []).filter((s) => includeInactive || s.active !== false);
+  const out = students.map((s, i) => {
     const a = agg.get(s.id) || { teacher: {}, blind: {} };
     const cls = classByStudent.get(s.id);
     const scoutRows = scoutByStudent.get(s.id) || [];
@@ -240,6 +259,7 @@ export async function listAlunos(force) {
     const scoutResumo = buildScoutResumo(scoutRows);
     return {
       id: s.id, nome: s.name, phone: s.phone || '', ini: initials(s.name), cor: PALETTE[i % PALETTE.length],
+      active: s.active !== false, inactiveAt: s.inactive_at || null, inactiveReason: s.inactive_reason || '',
       nivel: NIVEL[s.level] || s.level || '—',
       turma: cls ? `${cls.name} · ${NIVEL[cls.level] || cls.level}` : (NIVEL[s.level] || s.level || 'Sem turma'),
       foco, radarFonte,
@@ -249,7 +269,8 @@ export async function listAlunos(force) {
       notasProf, notasAuto, notasScout, hasProf: nProf > 0, hasScout: nScout > 0, scoutResumo,
     };
   });
-  _cacheAlunos = out;
+  if (includeInactive) _cacheAlunosAll = out;
+  else _cacheAlunos = out;
   return out;
 }
 
@@ -263,8 +284,91 @@ export async function salvarAlunoCadastro({ id, nome, nivel, phone }) {
     : supabase.from('students').insert(row).select('id').single();
   const { data, error } = await q;
   if (error) return { ok: false, error: error.message };
-  _cacheAlunos = null;
+  _cacheAlunos = null; _cacheAlunosAll = null;
   return { ok: true, id: data?.id || id };
+}
+
+export async function salvarAvaliacaoProfessor(alunoId, notas = {}, notaLivre = null) {
+  if (!supabase) return { ok: false, error: 'Supabase não configurado' };
+  if (!alunoId) return { ok: false, error: 'Aluno inválido' };
+  const teacher_id = await uid();
+  if (!teacher_id) return { ok: false, error: 'Professor não autenticado' };
+  const rows = Object.entries(notas)
+    .filter(([, v]) => Number.isFinite(Number(v)))
+    .map(([fundamental, score]) => ({
+      teacher_id,
+      student_id: alunoId,
+      evaluator: 'teacher',
+      fundamental: canonicalFund(fundamental),
+      score: clamp(Number(score) * 2),
+    }));
+  if (!rows.length) return { ok: false, error: 'Nenhuma nota válida para salvar' };
+  const { error } = await supabase.from('evaluations').insert(rows);
+  if (error) return { ok: false, error: error.message };
+  // O campo livre ainda não tem coluna no schema atual; preservamos a avaliação objetiva.
+  void notaLivre;
+  _cacheAlunos = null; _cacheAlunosAll = null;
+  return { ok: true, total: rows.length };
+}
+
+export async function trocarAlunoTurma(studentId, classId) {
+  if (!supabase) return { ok: false, error: 'Supabase não configurado' };
+  const teacher_id = await uid();
+  if (!teacher_id) return { ok: false, error: 'Professor não autenticado' };
+  if (!studentId) return { ok: false, error: 'Aluno inválido' };
+  const del = await supabase
+    .from('class_enrollments')
+    .delete()
+    .eq('teacher_id', teacher_id)
+    .eq('student_id', studentId);
+  if (del.error) return { ok: false, error: del.error.message };
+  if (classId) {
+    const ins = await supabase
+      .from('class_enrollments')
+      .insert({ teacher_id, student_id: studentId, class_id: classId });
+    if (ins.error) return { ok: false, error: ins.error.message };
+  }
+  _cacheAlunos = null; _cacheAlunosAll = null;
+  return { ok: true };
+}
+
+export async function inativarAluno(studentId, reason = '') {
+  if (!supabase) return { ok: false, error: 'Supabase não configurado' };
+  const teacher_id = await uid();
+  if (!teacher_id) return { ok: false, error: 'Professor não autenticado' };
+  const up = await supabase
+    .from('students')
+    .update({ active: false, inactive_at: new Date().toISOString(), inactive_reason: reason || null })
+    .eq('teacher_id', teacher_id)
+    .eq('id', studentId);
+  if (up.error) return { ok: false, error: up.error.message };
+  const del = await supabase
+    .from('class_enrollments')
+    .delete()
+    .eq('teacher_id', teacher_id)
+    .eq('student_id', studentId);
+  if (del.error) return { ok: false, error: del.error.message };
+  _cacheAlunos = null; _cacheAlunosAll = null;
+  return { ok: true };
+}
+
+export async function reativarAluno(studentId, classId = null) {
+  if (!supabase) return { ok: false, error: 'Supabase não configurado' };
+  const teacher_id = await uid();
+  if (!teacher_id) return { ok: false, error: 'Professor não autenticado' };
+  const up = await supabase
+    .from('students')
+    .update({ active: true, inactive_at: null, inactive_reason: null })
+    .eq('teacher_id', teacher_id)
+    .eq('id', studentId);
+  if (up.error) return { ok: false, error: up.error.message };
+  if (classId) {
+    const moved = await trocarAlunoTurma(studentId, classId);
+    if (!moved.ok) return moved;
+  } else {
+    _cacheAlunos = null; _cacheAlunosAll = null;
+  }
+  return { ok: true };
 }
 
 // Resumo para o dashboard (Hoje): contagens reais + aluno com maior gap.
@@ -299,13 +403,17 @@ export async function getResumo() {
 // O nome da turma já traz dia+hora (o campo weekday no banco não é confiável).
 export async function listTurmas() {
   if (!supabase) return [];
-  const [cls, enr] = await Promise.all([
+  const [cls, enr, stu] = await Promise.all([
     supabase.from('classes').select('id,name,level,start_time,capacity,focus_fundamental'),
-    supabase.from('class_enrollments').select('class_id'),
+    supabase.from('class_enrollments').select('class_id,student_id'),
+    selectStudents(),
   ]);
   if (cls.error) { console.warn('[listTurmas]', cls.error.message); return []; }
+  const activeIds = new Set((stu.data || []).filter((s) => s.active !== false).map((s) => s.id));
   const counts = {};
-  for (const e of (enr.data || [])) counts[e.class_id] = (counts[e.class_id] || 0) + 1;
+  for (const e of (enr.data || [])) {
+    if (!e.student_id || activeIds.has(e.student_id)) counts[e.class_id] = (counts[e.class_id] || 0) + 1;
+  }
   return (cls.data || []).map((c) => ({
     id: c.id, nome: c.name, nivel: NIVEL[c.level] || c.level || '—',
     hora: (c.start_time || '').slice(0, 5),
