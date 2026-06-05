@@ -287,8 +287,21 @@ async function callGemini(userContent: string, model?: string): Promise<{ text: 
 }
 
 async function callAi(userContent: string, model?: string): Promise<{ text: string; usage: unknown; provider: string; model: string }> {
-  if (AI_PROVIDER === "gemini") return await callGemini(userContent, model);
-  return await callAnthropic(userContent, model);
+  const order = AI_PROVIDER === "gemini"
+    ? ["gemini", "anthropic"]
+    : ["anthropic", "gemini"];
+  let lastError: unknown = null;
+  for (const provider of order) {
+    try {
+      if (provider === "gemini" && GEMINI_KEY) return await callGemini(userContent, model);
+      if (provider === "anthropic" && ANTHROPIC_KEY) return await callAnthropic(userContent, model);
+    } catch (err) {
+      lastError = err;
+      console.warn(`[callAi] ${provider} falhou:`, err instanceof Error ? err.message : String(err));
+    }
+  }
+  if (lastError instanceof Error) throw lastError;
+  throw new Error("Nenhum provedor de IA configurado no Supabase. Configure GEMINI_API_KEY ou ANTHROPIC_API_KEY.");
 }
 
 // Deriva o id do professor do JWT (o gateway do Supabase já valida o token).
