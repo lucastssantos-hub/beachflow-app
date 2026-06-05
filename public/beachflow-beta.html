@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BeachFlow Beta — Garanta seu acesso antecipado</title>
+<meta name="description" content="Cadastre-se para a beta do BeachFlow. 60 dias grátis, acesso de fundador e desconto permanente.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #080e1a;
+    --bg2:      #0d1525;
+    --bg3:      #111e30;
+    --green:    #39ff7e;
+    --cyan:     #3ef0e0;
+    --orange:   #ff6a2b;
+    --text:     #eef2ff;
+    --text2:    #8a96b0;
+    --text3:    #4a5468;
+    --border:   rgba(255,255,255,0.07);
+    --r:        14px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.35;
+  }
+
+  /* ── LAYOUT ── */
+  .page {
+    display: grid;
+    grid-template-columns: 1fr 480px;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  @media (max-width: 900px) {
+    .page { grid-template-columns: 1fr; }
+    .panel-left { min-height: 50vh; }
+  }
+
+  /* ── LEFT PANEL ── */
+  .panel-left {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 48px 56px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel-left::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    right: -100px;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(57,255,126,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .panel-left::after {
+    content: '';
+    position: absolute;
+    bottom: -50px;
+    left: -50px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(62,240,224,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .left-top { position: relative; z-index: 1; }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.03em;
+    text-decoration: none;
+    color: var(--text);
+    display: inline-block;
+    margin-bottom: 64px;
+  }
+  .logo span { color: var(--orange); }
+
+  .left-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(57,255,126,0.08);
+    border: 1px solid rgba(57,255,126,0.2);
+    border-radius: 100px;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--green);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .left-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.7); }
+  }
+
+  .left-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(32px, 3.5vw, 50px);
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    margin-bottom: 20px;
+  }
+
+  .left-title .ghost {
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(255,255,255,0.2);
+  }
+
+  .left-desc {
+    font-size: 16px;
+    color: var(--text2);
+    font-weight: 300;
+    line-height: 1.65;
+    max-width: 440px;
+    margin-bottom: 40px;
+  }
+
+  /* Benefits list */
+  .benefits {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 48px;
+  }
+
+  .benefit {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .benefit-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+  }
+
+  .benefit-text { flex: 1; }
+  .benefit-text strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .benefit-text span {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+
+  /* Count */
+  .left-count {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: rgba(57,255,126,0.04);
+    border: 1px solid rgba(57,255,126,0.1);
+    border-radius: 12px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .count-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--green);
+    letter-spacing: -0.05em;
+    line-height: 1;
+  }
+
+  .count-label {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.4;
+  }
+  .count-label strong { color: var(--text); display: block; }
+
+  .count-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .count-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    width: 67%;
+    transition: width 1s ease;
+  }
+
+  /* Quotes */
+  .left-quote {
+    position: relative;
+    z-index: 1;
+    padding: 24px 0 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .quote-text {
+    font-size: 14px;
+    color: var(--text2);
+    font-style: italic;
+    line-height: 1.65;
+    margin-bottom: 16px;
+  }
+  .quote-text strong { color: var(--text); font-style: normal; }
+
+  .quote-author {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .q-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--cyan), var(--green));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: #050e0a;
+  }
+
+  .q-name { font-weight: 600; font-size: 13px; }
+  .q-role { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+
+  /* ── RIGHT PANEL (FORM) ── */
+  .panel-right {
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 48px 48px;
+    position: relative;
+  }
+
+  @media (max-width: 900px) {
+    .panel-left { padding: 36px 28px; }
+    .panel-right { padding: 40px 28px; }
+  }
+
+  .form-header {
+    margin-bottom: 36px;
+  }
+
+  .form-step-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 10px;
+  }
+
+  .form-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+  }
+
+  .form-subtitle {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.55;
+  }
+
+  /* Steps indicator */
+  .steps-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 36px;
+  }
+
+  .si-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+  }
+  .si-step.active { color: var(--green); }
+  .si-step.done { color: var(--text2); }
+
+  .si-num {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+  }
+  .si-step.active .si-num {
+    background: var(--green);
+    border-color: var(--green);
+    color: #050e0a;
+    font-weight: 700;
+    box-shadow: 0 0 12px rgba(57,255,126,0.4);
+  }
+  .si-step.done .si-num {
+    background: rgba(57,255,126,0.15);
+    border-color: rgba(57,255,126,0.3);
+    color: var(--green);
+  }
+  .si-step.done .si-num::after { content: '✓'; }
+
+  .si-line {
+    width: 28px;
+    height: 1px;
+    background: var(--border);
+    margin: 0 6px;
+  }
+
+  /* FORM */
+  .bf-form { display: flex; flex-direction: column; gap: 18px; }
+
+  .field-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  @media (max-width: 500px) {
+    .field-group { grid-template-columns: 1fr; }
+  }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+
+  .field label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .field label .req { color: var(--green); }
+
+  .field input,
+  .field select,
+  .field textarea {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-size: 15px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+    -webkit-appearance: none;
+  }
+  .field input::placeholder,
+  .field textarea::placeholder { color: var(--text3); font-size: 14px; }
+  .field select { cursor: pointer; }
+  .field select option { background: var(--bg2); }
+
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus {
+    border-color: rgba(57,255,126,0.4);
+    box-shadow: 0 0 0 3px rgba(57,255,126,0.08);
+  }
+
+  .field input.error { border-color: rgba(255,80,80,0.5); }
+
+  .field-hint {
+    font-size: 11.5px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Range slider */
+  .range-wrap { display: flex; align-items: center; gap: 14px; }
+
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: var(--bg3);
+    border-radius: 2px;
+    border: none;
+    padding: 0;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--green);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(57,255,126,0.5);
+    transition: transform 0.15s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+
+  .range-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    color: var(--green);
+    min-width: 36px;
+    text-align: right;
+  }
+
+  /* Checkbox group */
+  .checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  @media (max-width: 400px) { .checkbox-grid { grid-template-columns: 1fr; } }
+
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text2);
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .check-item:hover { border-color: rgba(57,255,126,0.2); color: var(--text); }
+  .check-item.selected {
+    border-color: rgba(57,255,126,0.4);
+    background: rgba(57,255,126,0.06);
+    color: var(--text);
+  }
+
+  .check-box {
+    width: 16px; height: 16px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .check-item.selected .check-box {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .check-item.selected .check-box::after {
+    content: '✓';
+    font-size: 10px;
+    color: #050e0a;
+    font-weight: 700;
+  }
+
+  /* Divider */
+  .form-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+
+  /* Submit */
+  .submit-area { display: flex; flex-direction: column; gap: 12px; }
+
+  .btn-submit {
+    width: 100%;
+    background: var(--green);
+    color: #050e0a;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: box-shadow 0.2s, transform 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: -0.01em;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-submit::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    transition: left 0.4s;
+  }
+
+  .btn-submit:hover {
+    box-shadow: 0 0 40px rgba(57,255,126,0.35);
+    transform: translateY(-1px);
+  }
+
+  .btn-submit:hover::before { left: 100%; }
+
+  .btn-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .submit-note {
+    font-size: 11.5px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    text-align: center;
+  }
+
+  .security-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ── SUCCESS STATE ── */
+  .success-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 48px 24px;
+    gap: 24px;
+  }
+
+  .success-icon {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: rgba(57,255,126,0.1);
+    border: 1px solid rgba(57,255,126,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    box-shadow: 0 0 40px rgba(57,255,126,0.2);
+    animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .success-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+
+  .success-desc {
+    font-size: 15px;
+    color: var(--text2);
+    line-height: 1.65;
+    max-width: 340px;
+  }
+
+  .success-info {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 28px;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .success-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .success-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .success-row .key { color: var(--text3); font-family: 'DM Mono', monospace; }
+  .success-row .val { font-weight: 500; }
+  .success-row .val.green { color: var(--green); }
+
+  .success-share {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .share-label {
+    font-size: 12px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .share-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    color: var(--text2);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  .share-btn:hover {
+    border-color: rgba(255,255,255,0.2);
+    color: var(--text);
+  }
+  .share-btn.green {
+    background: rgba(57,255,126,0.08);
+    border-color: rgba(57,255,126,0.2);
+    color: var(--green);
+  }
+  .share-btn.green:hover {
+    background: rgba(57,255,126,0.15);
+  }
+
+  /* ── LOADING SPINNER ── */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(5,14,10,0.3);
+    border-top-color: #050e0a;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── BACK LINK ── */
+  .back-link {
+    position: fixed;
+    top: 20px;
+    left: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text3);
+    text-decoration: none;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.06em;
+    transition: color 0.2s;
+    z-index: 10;
+  }
+  .back-link:hover { color: var(--text2); }
+</style>
+</head>
+<body>
+
+<a href="beachflow-landing.html" class="back-link">← voltar</a>
+
+<div class="page">
+
+  <!-- LEFT PANEL -->
+  <div class="panel-left">
+    <div class="left-top">
+      <a href="beachflow-landing.html" class="logo">Beach<span>Flow</span></a>
+
+      <div class="left-badge">Beta fundadores · Acesso antecipado</div>
+
+      <h1 class="left-title">
+        Molde o produto.<br>
+        <span class="ghost">Ganhe para sempre</span><br>
+        o desconto.
+      </h1>
+
+      <p class="left-desc">Os primeiros professores que entram na beta definem o roadmap, têm acesso prioritário e garantem preço de fundador permanente quando o produto for pago.</p>
+
+      <div class="benefits">
+        <div class="benefit">
+          <div class="benefit-icon">⚡</div>
+          <div class="benefit-text">
+            <strong>60 dias completamente grátis</strong>
+            <span>Sem cartão de crédito. Sem compromisso. Cancela quando quiser.</span>
+          </div>
+        </div>
+        <div class="benefit">
+          <div class="benefit-icon">🎯</div>
+          <div class="benefit-text">
+            <strong>Acesso a todos os recursos</strong>
+            <span>Scout, diagnóstico IA, prescrição, radar e gestão financeira desbloqueados.</span>
+          </div>
+        </div>
+        <div class="benefit">
+          <div class="benefit-icon">🏷️</div>
+          <div class="benefit-text">
+            <strong>Desconto de fundador permanente</strong>
+            <span>50% off para sempre quando o produto virar pago. Garantido por contrato.</span>
+          </div>
+        </div>
+        <div class="benefit">
+          <div class="benefit-icon">🗣️</div>
+          <div class="benefit-text">
+            <strong>Você define o roadmap</strong>
+            <span>Canal direto com os fundadores. Sua demanda entra no sprint seguinte.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="left-count">
+        <div>
+          <div class="count-num" id="counter">67</div>
+        </div>
+        <div>
+          <div class="count-label">
+            <strong>vagas preenchidas</strong>
+            de 100 disponíveis na beta
+          </div>
+          <div class="count-bar" style="margin-top:8px;">
+            <div class="count-fill" id="count-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="left-quote" style="margin-top:24px;">
+        <p class="quote-text">"Finalmente um sistema que pensa como eu penso na quadra. <strong>Registro o que acontece, e o app me diz por quê está acontecendo.</strong>"</p>
+        <div class="quote-author">
+          <div class="q-avatar">RL</div>
+          <div>
+            <div class="q-name">Ricardo Lima</div>
+            <div class="q-role">Professor de Beach Tennis · SP</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel-right">
+
+    <!-- FORM VIEW -->
+    <div id="form-view">
+
+      <div class="form-header">
+        <div class="form-step-label">// Cadastro beta · acesso antecipado</div>
+        <h2 class="form-title">Garanta sua vaga.</h2>
+        <p class="form-subtitle">Preencha os dados abaixo. Demora menos de 2 minutos.</p>
+      </div>
+
+      <div class="steps-indicator">
+        <div class="si-step active" id="si-1">
+          <div class="si-num">1</div>
+          <span>Você</span>
+        </div>
+        <div class="si-line"></div>
+        <div class="si-step" id="si-2">
+          <div class="si-num">2</div>
+          <span>Contexto</span>
+        </div>
+        <div class="si-line"></div>
+        <div class="si-step" id="si-3">
+          <div class="si-num">3</div>
+          <span>Confirmação</span>
+        </div>
+      </div>
+
+      <!-- STEP 1 -->
+      <div id="step1">
+        <div class="bf-form">
+          <div class="field-group">
+            <div class="field">
+              <label>Nome <span class="req">*</span></label>
+              <input type="text" id="nome" placeholder="Seu nome" autocomplete="given-name">
+            </div>
+            <div class="field">
+              <label>Sobrenome</label>
+              <input type="text" id="sobrenome" placeholder="Sobrenome" autocomplete="family-name">
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Email <span class="req">*</span></label>
+            <input type="email" id="email" placeholder="professor@email.com" autocomplete="email">
+          </div>
+
+          <div class="field">
+            <label>WhatsApp <span class="req">*</span></label>
+            <input type="tel" id="whatsapp" placeholder="(11) 99999-0000" autocomplete="tel">
+            <span class="field-hint">// para enviar seu link de acesso</span>
+          </div>
+
+          <div class="field">
+            <label>Cidade / Estado <span class="req">*</span></label>
+            <input type="text" id="cidade" placeholder="São Paulo, SP">
+          </div>
+
+          <div class="form-divider"></div>
+
+          <div class="submit-area">
+            <button class="btn-submit" onclick="goStep2()">
+              <span id="btn1-text">Continuar →</span>
+              <div class="spinner" id="spin1"></div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div id="step2" style="display:none;">
+        <div class="bf-form">
+
+          <div class="field">
+            <label>Quantos alunos você tem atualmente? <span class="req">*</span></label>
+            <div class="range-wrap">
+              <input type="range" id="num-alunos" min="1" max="100" value="15" oninput="document.getElementById('alunos-val').textContent=this.value+' alunos'">
+              <span class="range-val" id="alunos-val">15 alunos</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Nível de ensino principal <span class="req">*</span></label>
+            <select id="nivel">
+              <option value="">Selecione...</option>
+              <option value="iniciante">Iniciante (amarelo)</option>
+              <option value="intermediario">Intermediário (verde)</option>
+              <option value="avancado">Avançado (azul / amarelo CBT)</option>
+              <option value="todos">Todos os níveis</option>
+              <option value="competicao">Competição / alto rendimento</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Como você organiza seus alunos hoje?</label>
+            <div class="checkbox-grid" id="organize-grid">
+              <div class="check-item" onclick="toggleCheck(this)">
+                <div class="check-box"></div>
+                📱 WhatsApp
+              </div>
+              <div class="check-item" onclick="toggleCheck(this)">
+                <div class="check-box"></div>
+                📊 Planilha
+              </div>
+              <div class="check-item" onclick="toggleCheck(this)">
+                <div class="check-box"></div>
+                📓 Caderno/anotação
+              </div>
+              <div class="check-item" onclick="toggleCheck(this)">
+                <div class="check-box"></div>
+                🧠 Na memória
+              </div>
+              <div class="check-item" onclick="toggleCheck(this)">
+                <div class="check-box"></div>
+                💻 Outro app
+              </div>
+              <div class="check-item" onclick="toggleCheck(this)">
+                <div class="check-box"></div>
+                ❌ Não organizo
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Qual é seu maior desafio hoje?</label>
+            <select id="desafio">
+              <option value="">Selecione...</option>
+              <option value="personalizar_treino">Personalizar treino por aluno</option>
+              <option value="historico">Manter histórico de evolução</option>
+              <option value="comunicar_progresso">Comunicar progresso ao aluno</option>
+              <option value="escalar">Escalar sem perder qualidade</option>
+              <option value="financeiro">Gestão financeira e cobranças</option>
+              <option value="diagnostico">Diagnosticar o real problema do aluno</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Como você ficou sabendo do BeachFlow?</label>
+            <select id="origem">
+              <option value="">Selecione...</option>
+              <option value="instagram">Instagram</option>
+              <option value="indicacao">Indicação de colega</option>
+              <option value="grupo_wpp">Grupo de WhatsApp</option>
+              <option value="youtube">YouTube</option>
+              <option value="google">Google / busca</option>
+              <option value="evento">Evento / torneio</option>
+              <option value="outro">Outro</option>
+            </select>
+          </div>
+
+          <div class="form-divider"></div>
+
+          <div style="display:flex;gap:12px;">
+            <button class="btn-submit" style="background:var(--bg2);color:var(--text2);box-shadow:none;border:1px solid var(--border);flex:0 0 auto;width:auto;padding:16px 24px;font-size:14px;" onclick="backStep1()">← Voltar</button>
+            <button class="btn-submit" style="flex:1;" onclick="submitForm()">
+              <span id="btn2-text">Garantir minha vaga 🚀</span>
+              <div class="spinner" id="spin2"></div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SUCCESS VIEW -->
+    <div class="success-screen" id="success-view">
+      <div class="success-icon">🎉</div>
+      <h2 class="success-title">Vaga garantida!</h2>
+      <p class="success-desc">Você está na lista de fundadores do BeachFlow. Em breve você receberá o link de acesso no seu WhatsApp.</p>
+
+      <div class="success-info">
+        <div class="success-row">
+          <span class="key">status</span>
+          <span class="val green">✓ Confirmado</span>
+        </div>
+        <div class="success-row">
+          <span class="key">plano</span>
+          <span class="val">Beta Fundadores</span>
+        </div>
+        <div class="success-row">
+          <span class="key">acesso</span>
+          <span class="val green">60 dias grátis</span>
+        </div>
+        <div class="success-row">
+          <span class="key">desconto</span>
+          <span class="val green">50% off permanente</span>
+        </div>
+        <div class="success-row">
+          <span class="key">posição</span>
+          <span class="val" id="success-pos">#68 na lista</span>
+        </div>
+      </div>
+
+      <div class="success-share">
+        <div class="share-label">// indique um colega professor</div>
+        <a href="#" class="share-btn green" onclick="shareWhatsApp()">
+          📲 Indicar pelo WhatsApp
+        </a>
+        <a href="#" class="share-btn" onclick="copyLink()">
+          🔗 Copiar link de indicação
+        </a>
+      </div>
+
+      <div style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;text-align:center;">
+        // qualquer dúvida, fale com a gente pelo WhatsApp
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://btjsweysefmbceqqlyxx.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ0anN3ZXlzZWZtYmNlcXFseXh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNzk2ODQsImV4cCI6MjA5NDg1NTY4NH0.9_JLTjzMWj5apV75H_Y-qtEE24pBrz7bdONP8EHvNdQ';
+  const BETA_URL = window.location.href.split('#')[0];
+
+  // Pre-fill email from landing page
+  window.addEventListener('DOMContentLoaded', () => {
+    const email = localStorage.getItem('bf_email');
+    if (email) {
+      document.getElementById('email').value = email;
+      localStorage.removeItem('bf_email');
+    }
+    // Animate counter
+    animateCounter();
+  });
+
+  function animateCounter() {
+    const el = document.getElementById('counter');
+    let current = 0;
+    const target = 67;
+    const step = target / 40;
+    const timer = setInterval(() => {
+      current = Math.min(current + step, target);
+      el.textContent = Math.floor(current);
+      if (current >= target) clearInterval(timer);
+    }, 30);
+
+    // Animate bar
+    setTimeout(() => {
+      document.getElementById('count-fill').style.width = '67%';
+    }, 100);
+  }
+
+  function toggleCheck(el) {
+    el.classList.toggle('selected');
+  }
+
+  function goStep2() {
+    const nome = document.getElementById('nome').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const whatsapp = document.getElementById('whatsapp').value.trim();
+    const cidade = document.getElementById('cidade').value.trim();
+
+    // Validate
+    let valid = true;
+    if (!nome) { document.getElementById('nome').classList.add('error'); valid = false; }
+    if (!email || !email.includes('@')) { document.getElementById('email').classList.add('error'); valid = false; }
+    if (!whatsapp) { document.getElementById('whatsapp').classList.add('error'); valid = false; }
+    if (!cidade) { document.getElementById('cidade').classList.add('error'); valid = false; }
+
+    if (!valid) return;
+
+    // Clear errors
+    ['nome','email','whatsapp','cidade'].forEach(id => {
+      document.getElementById(id).classList.remove('error');
+    });
+
+    // Animate transition
+    const btn = document.getElementById('btn1-text');
+    const spin = document.getElementById('spin1');
+    btn.style.display = 'none';
+    spin.style.display = 'block';
+
+    setTimeout(() => {
+      document.getElementById('step1').style.display = 'none';
+      document.getElementById('step2').style.display = 'block';
+
+      // Update steps indicator
+      document.getElementById('si-1').classList.remove('active');
+      document.getElementById('si-1').classList.add('done');
+      const s1 = document.getElementById('si-1').querySelector('.si-num');
+      s1.textContent = '';
+      document.getElementById('si-2').classList.add('active');
+
+      btn.style.display = 'block';
+      spin.style.display = 'none';
+    }, 500);
+  }
+
+  function backStep1() {
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('step1').style.display = 'block';
+
+    document.getElementById('si-1').classList.add('active');
+    document.getElementById('si-1').classList.remove('done');
+    document.getElementById('si-1').querySelector('.si-num').textContent = '1';
+    document.getElementById('si-2').classList.remove('active');
+  }
+
+  function selectedOrganizacao() {
+    return Array.from(document.querySelectorAll('#organize-grid .check-item.selected'))
+      .map(item => item.textContent.trim().replace(/\s+/g, ' '));
+  }
+
+  function setSubmitError(message) {
+    let error = document.getElementById('submit-error');
+    if (!error) {
+      error = document.createElement('div');
+      error.id = 'submit-error';
+      error.style.cssText = "margin-top:14px;color:#ff8a8a;font-size:12px;font-family:'DM Mono',monospace;text-align:center;";
+      document.querySelector('#step2 .submit-area').appendChild(error);
+    }
+    error.textContent = message;
+  }
+
+  async function saveSignup(data) {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/beta_signups`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal'
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(body || 'Supabase request failed');
+    }
+  }
+
+  async function submitForm() {
+    const nivel = document.getElementById('nivel').value;
+    if (!nivel) {
+      document.getElementById('nivel').style.borderColor = 'rgba(255,80,80,0.5)';
+      return;
+    }
+
+    const btn = document.getElementById('btn2-text');
+    const spin = document.getElementById('spin2');
+    btn.style.display = 'none';
+    spin.style.display = 'block';
+    setSubmitError('');
+
+    const data = {
+      nome: document.getElementById('nome').value.trim(),
+      sobrenome: document.getElementById('sobrenome').value.trim(),
+      email: document.getElementById('email').value.trim().toLowerCase(),
+      whatsapp: document.getElementById('whatsapp').value.trim(),
+      cidade: document.getElementById('cidade').value.trim(),
+      num_alunos: Number(document.getElementById('num-alunos').value),
+      nivel: document.getElementById('nivel').value,
+      desafio: document.getElementById('desafio').value,
+      origem: document.getElementById('origem').value,
+      organizacao: selectedOrganizacao(),
+      referrer: document.referrer || null,
+      page_url: BETA_URL,
+      user_agent: navigator.userAgent
+    };
+
+    try {
+      await saveSignup(data);
+
+      // Update steps indicator
+      document.getElementById('si-2').classList.remove('active');
+      document.getElementById('si-2').classList.add('done');
+      document.getElementById('si-2').querySelector('.si-num').textContent = '';
+      document.getElementById('si-3').classList.add('active');
+      document.getElementById('si-3').classList.remove('active');
+      document.getElementById('si-3').classList.add('done');
+      document.getElementById('si-3').querySelector('.si-num').textContent = '';
+
+      console.log('BeachFlow Beta Registration:', data);
+
+      // Show success
+      document.getElementById('form-view').style.display = 'none';
+      const successView = document.getElementById('success-view');
+      successView.style.display = 'flex';
+
+      // Update position
+      const position = Math.floor(Math.random() * 5) + 65;
+      document.getElementById('success-pos').textContent = `#${position} na lista`;
+      document.getElementById('counter').textContent = position;
+      document.getElementById('count-fill').style.width = (position) + '%';
+    } catch (err) {
+      console.error('BeachFlow Beta Registration failed:', err);
+      setSubmitError('Não conseguimos salvar agora. Tente novamente em alguns segundos.');
+      btn.style.display = 'block';
+      spin.style.display = 'none';
+    }
+  }
+
+  // Phone mask
+  document.getElementById('whatsapp').addEventListener('input', function(e) {
+    let v = e.target.value.replace(/\D/g, '');
+    if (v.length >= 11) {
+      v = v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    } else if (v.length >= 6) {
+      v = v.replace(/(\d{2})(\d{4,5})/, '($1) $2');
+    } else if (v.length >= 2) {
+      v = v.replace(/(\d{2})/, '($1) ');
+    }
+    e.target.value = v;
+  });
+
+  // Remove error on input
+  document.querySelectorAll('input').forEach(input => {
+    input.addEventListener('input', function() {
+      this.classList.remove('error');
+      this.style.borderColor = '';
+    });
+  });
+
+  // Share functions
+  function shareWhatsApp() {
+    const msg = encodeURIComponent(`Oi! Me cadastrei no BeachFlow, um app de inteligência pedagógica para professores de beach tennis. Diagnóstico de alunos e prescrição de treino com IA. Acesso beta gratuito: ${BETA_URL}`);
+    window.open(`https://wa.me/?text=${msg}`, '_blank');
+  }
+
+  function copyLink() {
+    navigator.clipboard.writeText(BETA_URL);
+    const btn = event.target.closest('.share-btn');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ Link copiado!';
+    btn.style.color = 'var(--green)';
+    setTimeout(() => {
+      btn.innerHTML = orig;
+      btn.style.color = '';
+    }, 2000);
+  }
+</script>
+</body>
+</html>
