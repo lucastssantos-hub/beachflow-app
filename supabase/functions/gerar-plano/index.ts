@@ -90,8 +90,15 @@ CICLO PEDAGÓGICO: sugira só quando o problema claramente exige mais de uma aul
 
 ESTILO: modo quadra. O professor precisa bater o olho e entender em segundos.
 - Cada campo deve ter 1 frase curta.
+- Gere um "cartaoAula" com FOCO, REGRA e VALIDAR. É isso que o professor verá primeiro.
+- "cartaoAula.foco" deve ter até 70 caracteres.
+- "cartaoAula.regra" deve ter até 55 caracteres.
+- "cartaoAula.validar" deve ter até 75 caracteres.
 - Não transforme o plano em relatório, apostila ou explicação longa.
 - A tela principal do app mostrará apenas comando + regra de cada bloco; portanto esses campos precisam ser muito claros.
+- "comando" e "regra" de cada bloco devem ter até 90 caracteres.
+- "criterio_qualidade", "pontuacao_especial", "observar" e "pergunta_final" devem ter até 90 caracteres.
+- Organização, bola inicial, alvo e rotação podem explicar a execução, mas sem justificativa pedagógica.
 - Detalhes como organização, rotação e alvo devem ser objetivos, sem justificativa pedagógica extensa.
 - Progressão, regressão, scoutValidacao e cicloPedagogico devem ter no máximo 1 frase curta cada.
 
@@ -106,6 +113,11 @@ SAÍDA: responda SOMENTE com JSON válido (sem markdown, sem texto fora do JSON)
     "justificativaConfianca": "1 frase ligada à amostra do scout / convergência das fontes"
   },
   "nivel": "Iniciante | Intermediário | Avançado",
+  "cartaoAula": {
+    "foco": "frase de ação para o professor",
+    "regra": "regra curta do jogo/exercício",
+    "validar": "o que observar no próximo scout"
+  },
   "decisaoPedagogica": {
     "estado": "intenção pedagógica",
     "metodo": "fechado | semiaberto | aberto",

@@ -1844,6 +1844,13 @@ function shortText(value, max = 150){
   if(text.length <= max) return text;
   return text.slice(0, max - 1).trimEnd() + '…';
 }
+function courtText(value, max = 96){
+  return shortText(String(value || '')
+    .replace(/\b(Objetivo|Como fazer|Organização|Regra|Comando|Critério de qualidade)\s*:\s*/gi, '')
+    .replace(/\s*\((?:ex|exemplo)\.?:?[^)]*\)/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim(), max);
+}
 function cleanBlockTitle(name){
   return String(name || '').replace(/^Bloco\s*\d+\s*[—-]\s*/i, '').trim() || 'Bloco';
 }
@@ -1892,6 +1899,27 @@ function situationTitleForPlan(p = {}) {
   if(/defesa|lob|gancho|recuper/i.test(text)) return 'Recuperar espaço antes de atacar';
   if(/posicion|cobertura|centro/i.test(text)) return 'Bater e recuperar o espaço';
   return p.titulo || 'Plano de treino';
+}
+function planCourtCard(p = {}) {
+  const dg = p.diagnostico || {};
+  const dec = p.decisaoPedagogica || {};
+  const card = p.cartaoAula || p.cartaoDaAula || {};
+  const baseFoco = card.foco || p.objetivo || dec.focoTatico || dg.gapPrincipal || 'Ajustar o principal padrão do jogo.';
+  let baseRegra = card.regra || dec.regraOperacional || '';
+  if(!baseRegra) {
+    const text = `${p.titulo || ''} ${dec.focoTatico || ''} ${dec.focoTecnico || ''}`;
+    if(/devolu/i.test(text)) baseRegra = 'Devolução curta entrega ponto.';
+    else if(/saque/i.test(text)) baseRegra = 'Saque só conta com base pronta para a próxima bola.';
+    else if(/tapa|smash|finaliza|aceler/i.test(text)) baseRegra = 'Winner cedo não vira padrão.';
+    else if(/lob|gancho|defesa|recuper/i.test(text)) baseRegra = 'Primeiro compra tempo, depois joga.';
+    else baseRegra = 'Só aumenta risco depois de criar vantagem.';
+  }
+  const validar = card.validar || p.scoutValidacao || 'Ver se o padrão melhora quando volta para o jogo.';
+  return {
+    foco: courtText(baseFoco, 86),
+    regra: courtText(baseRegra, 76),
+    validar: courtText(validar, 92),
+  };
 }
 function EditField({ label, value, onChange, area = true }){
   const base = { width:'100%', marginTop:4, background:'rgba(255,255,255,.05)', color:C.ink,
@@ -1957,6 +1985,7 @@ function ScreenPlano({ nav, params }) {
   const priorityText = planPriorityText(planoCtx, p);
   const leituraText = decisionGapText(planoCtx, p);
   const kicker = [dec.estado, dec.metodo].filter(Boolean).join(' · ') || 'Plano gerado por IA';
+  const cartao = planCourtCard(p);
 
   // ---- edição do plano ----
   const startEdit = ()=>{ setDraft(JSON.parse(JSON.stringify(p))); setEditing(true); };
@@ -2021,43 +2050,44 @@ function ScreenPlano({ nav, params }) {
             background:'rgba(39,192,138,.12)', border:'1px solid rgba(39,192,138,.3)', color:C.ok }}>
             ✓ Ajuste salvo — a IA pode aprender com ele</div>}
 
-        {/* diagnóstico */}
+        {/* cartão operacional: leitura rápida em quadra */}
         <Card glow>
-          <div style={{ display:'flex', gap:13, alignItems:'flex-start' }}>
-            <Radar data={radarData} size={92}/>
+          <Mini color={C.turq}>Foco da aula</Mini>
+          <div style={{ fontSize:19, color:'#fff', fontWeight:800, marginTop:7, lineHeight:1.16 }}>{cartao.foco}</div>
+          <div style={{ marginTop:12, padding:'10px 11px', borderRadius:12, background:'rgba(255,106,69,.12)', border:'1px solid rgba(255,106,69,.25)' }}>
+            <Mini color={C.coral}>Regra do dia</Mini>
+            <div style={{ fontSize:14, color:C.ink, fontWeight:700, marginTop:4, lineHeight:1.25 }}>{cartao.regra}</div>
+          </div>
+          <div style={{ marginTop:10, fontSize:12, color:C.inkDim, lineHeight:1.35 }}>
+            <span style={{ color:C.turq, fontWeight:800 }}>Validar: </span>{cartao.validar}
+          </div>
+        </Card>
+
+        {/* objetivo + focos */}
+        {showDetails && <Card style={{ marginTop:10 }}>
+          <Mini>Diagnóstico</Mini>
+          <div style={{ display:'flex', gap:13, alignItems:'flex-start', marginTop:8 }}>
+            <Radar data={radarData} size={82}/>
             <div style={{ flex:1 }}>
-              <Mini>Diagnóstico</Mini>
-              <div style={{ fontSize:13.5, color:'#fff', fontWeight:600, marginTop:5, lineHeight:1.25 }}>{dg.gapPrincipal}</div>
+              <div style={{ fontSize:13.5, color:'#fff', fontWeight:600, lineHeight:1.25 }}>{dg.gapPrincipal}</div>
               {dg.contexto && <div style={{ fontSize:12, color:C.inkDim, marginTop:4, lineHeight:1.35 }}>{dg.contexto}</div>}
             </div>
           </div>
-          {(dg.confianca || dg.fonte) &&
-            <div style={{ marginTop:11, paddingTop:11, borderTop:`1px solid ${C.line}` }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ fontSize:11, color:C.inkDim }}>Confiança {dg.fonte?`· fonte: ${dg.fonte}`:''}</span>
-                {dg.confianca && <Badge tone={confTone(dg.confianca)}>{dg.confianca}</Badge>}
-              </div>
-              {dg.justificativaConfianca && <div style={{ fontSize:11, color:C.n500, marginTop:6, lineHeight:1.35 }}>{dg.justificativaConfianca}</div>}
-            </div>}
-        </Card>
-
-        {(priorityText || leituraText || p.scoutValidacao) && <Card style={{ marginTop:10, borderColor:'rgba(76,155,255,.28)' }}>
+          {(dg.confianca || dg.fonte) && <div style={{ marginTop:11, paddingTop:11, borderTop:`1px solid ${C.line}` }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontSize:11, color:C.inkDim }}>Confiança {dg.fonte?`· fonte: ${dg.fonte}`:''}</span>
+              {dg.confianca && <Badge tone={confTone(dg.confianca)}>{dg.confianca}</Badge>}
+            </div>
+            {dg.justificativaConfianca && <div style={{ fontSize:11, color:C.n500, marginTop:6, lineHeight:1.35 }}>{dg.justificativaConfianca}</div>}
+          </div>}
           {priorityText && <>
-            <Mini color={C.info}>Por que esse treino?</Mini>
+            <Mini color={C.info} style={{ marginTop:12 }}>Por que esse treino?</Mini>
             <div style={{ fontSize:12.5, color:C.inkDim, marginTop:6, lineHeight:1.4 }}>{priorityText}</div>
           </>}
-          {leituraText && <div style={{ fontSize:12, color:C.inkDim, marginTop:priorityText?9:0, lineHeight:1.35 }}>
-            {leituraText}
-          </div>}
-          {p.scoutValidacao && <div style={{ marginTop:10, padding:'8px 10px', borderRadius:10,
-            border:`1px solid ${C.line}`, background:'rgba(255,255,255,.04)' }}>
-            <Mini color={C.turq}>Validar no próximo scout</Mini>
-            <div style={{ fontSize:12, color:C.ink, marginTop:5, lineHeight:1.35 }}>{shortText(p.scoutValidacao, 150)}</div>
-          </div>}
+          {leituraText && <div style={{ fontSize:12, color:C.inkDim, marginTop:9, lineHeight:1.35 }}>{leituraText}</div>}
         </Card>}
 
-        {/* objetivo + focos */}
-        <Card style={{ marginTop:10 }}>
+        {showDetails && <Card style={{ marginTop:10 }}>
           <Mini>Objetivo</Mini>
           <div style={{ fontSize:13.5, color:C.ink, marginTop:5, lineHeight:1.35 }}>{p.objetivo}</div>
           {dec.focoTatico && <PlanoField label="Foco tático" value={dec.focoTatico}/>}
@@ -2066,7 +2096,7 @@ function ScreenPlano({ nav, params }) {
             {p.nivel && <Badge tone="info">{p.nivel}</Badge>}
             {dec.metodo && <Badge tone="coral">método: {dec.metodo}</Badge>}
           </div>
-        </Card>
+        </Card>}
 
         {/* blocos */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:16 }}>
@@ -2082,13 +2112,13 @@ function ScreenPlano({ nav, params }) {
               <span style={{ fontSize:13.5, color:C.ink, fontWeight:600 }}>{cleanBlockTitle(b.nome)}</span>
               {b.drill_id && <span style={{ fontFamily:'var(--ff-m)', fontSize:9, color:C.info, marginLeft:'auto' }}>{b.drill_id}</span>}
             </div>
-            {command && <div style={{ marginTop:8, fontSize:12.5, color:C.inkDim, lineHeight:1.35 }}>
-              {shortText(command, 155)}
+            {command && <div style={{ marginTop:8, fontSize:13, color:C.ink, lineHeight:1.32, fontWeight:650 }}>
+              {courtText(command, 102)}
             </div>}
             {rule && <div style={{ marginTop:9, padding:'8px 10px', borderRadius:10,
               background:'rgba(255,255,255,.045)', border:`1px solid ${C.line}`,
               fontSize:11.5, color:C.ink, lineHeight:1.3 }}>
-              <span style={{ color:coral?C.coral:C.turq, fontWeight:800 }}>Regra: </span>{shortText(rule, 125)}
+              <span style={{ color:coral?C.coral:C.turq, fontWeight:800 }}>Regra: </span>{courtText(rule, 82)}
             </div>}
             {showDetails && <div style={{ marginTop:10, paddingTop:8, borderTop:`1px solid ${C.line}` }}>
               {BLOCO_FIELDS.map(([k,l])=> <PlanoField key={k} label={l} value={b[k]}/>)}

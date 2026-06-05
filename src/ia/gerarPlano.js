@@ -287,6 +287,11 @@ function localPlanFromContext(ctx = {}, erro = '') {
         : '',
     },
     nivel: sourceCtx.nivel || 'Intermediário',
+    cartaoAula: {
+      foco: cfg.objetivo,
+      regra: cfg.regra,
+      validar: 'Ver se o padrão melhora quando volta para o jogo.',
+    },
     decisaoPedagogica: {
       estado: planoPedagogico.diagnostico?.estadoComprometido || 'Estabilizar',
       metodo,
