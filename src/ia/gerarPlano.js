@@ -3,7 +3,7 @@
 // Se o endpoint não estiver configurado/acessível, gera um plano local com os
 // dados disponíveis para a interface continuar funcionando em quadra.
 
-import { DRILLS_CBT, recomendarDrillsCbt, recomendarSequenciaDrillsCbt, drillResumoParaIA, drillParaBloco } from '../data/drillsCbt.js';
+import { DRILLS_CBT, recomendarSequenciaDrillsCbt, drillResumoParaIA, drillParaBloco } from '../data/drillsCbt.js';
 import { pedagogicalPlanForContext } from './pedagogicalEngine.js';
 
 const ENV = import.meta.env || {};
@@ -110,6 +110,17 @@ const FUND_CONFIG = {
 function drillsFromPedagogicalPlan(planoPedagogico = {}) {
   const byId = new Map(DRILLS_CBT.map((d) => [d.id, d]));
   return (planoPedagogico.drillsSelecionados || []).map((id) => byId.get(id)).filter(Boolean);
+}
+
+function nomeBlocoDrill(drill = {}, index = 0) {
+  const formato = String(drill.formato || '').toLowerCase();
+  const tipo = formato.includes('aberto') && !formato.includes('semi')
+    ? 'Jogo aberto'
+    : formato.includes('semi')
+      ? 'Semiaberto'
+      : 'Fechado';
+  const papel = index === 0 ? 'do foco' : index === 1 ? 'da transição' : index === 2 ? 'aplicado' : 'condicionado';
+  return `Bloco ${index + 1} — ${tipo} ${papel}`;
 }
 
 function num(v) {
@@ -233,12 +244,7 @@ function localPlanFromContext(ctx = {}, erro = '') {
   const drillCtx = { ...sourceCtx, foco: focus.fund, fundamento: focus.fund, metodo };
   const drills = drillsFromPedagogicalPlan(planoPedagogico);
   const fallbackDrills = recomendarSequenciaDrillsCbt(drillCtx);
-  const drillBlocks = drills.map((drill, i) => drillParaBloco(drill, [
-    'Bloco 1 — Fechado do golpe',
-    'Bloco 2 — Fechado da transição',
-    'Bloco 3 — Semiaberto da transição',
-    'Bloco 4 — Jogo condicionado',
-  ][i] || `Bloco ${i + 1}`));
+  const drillBlocks = drills.map((drill, i) => drillParaBloco(drill, nomeBlocoDrill(drill, i)));
   const fallbackBlocks = [
     {
       nome: 'Bloco 1 — Aquecimento específico',
@@ -263,12 +269,7 @@ function localPlanFromContext(ctx = {}, erro = '') {
       observar: 'A ação resolve o problema de jogo ou vira tentativa apressada?',
     },
   ];
-  const exerciseBlocks = drillBlocks.length ? drillBlocks : (fallbackDrills.length ? fallbackDrills.map((drill, i) => drillParaBloco(drill, [
-    'Bloco 1 — Fechado do golpe',
-    'Bloco 2 — Fechado da transição',
-    'Bloco 3 — Semiaberto da transição',
-    'Bloco 4 — Jogo condicionado',
-  ][i] || `Bloco ${i + 1}`)) : fallbackBlocks);
+  const exerciseBlocks = drillBlocks.length ? drillBlocks : (fallbackDrills.length ? fallbackDrills.map((drill, i) => drillParaBloco(drill, nomeBlocoDrill(drill, i))) : fallbackBlocks);
   return {
     titulo: gameSituationTitle(planoPedagogico, cfg, focus),
     diagnostico: {
@@ -329,8 +330,8 @@ function enrichContextWithDrills(ctx = {}) {
   const sequencia = drillsFromPedagogicalPlan(planoPedagogico);
   const fallbackSequencia = recomendarSequenciaDrillsCbt(drillCtx);
   const baseSequencia = sequencia.length ? sequencia : fallbackSequencia;
-  const extras = recomendarDrillsCbt(drillCtx, 5).filter(d => !baseSequencia.some(s => s.id === d.id));
-  const drills = [...baseSequencia, ...extras].slice(0, 6).map(drillResumoParaIA);
+  const drillsPermitidos = baseSequencia.slice(0, 4);
+  const drills = drillsPermitidos.map(drillResumoParaIA);
   return {
     ...sourceCtx,
     planoPedagogico,
@@ -343,6 +344,14 @@ function enrichContextWithDrills(ctx = {}) {
       restricoes: planoPedagogico.restricoesAplicadas,
       objetivo_da_aula: planoPedagogico.treino?.observacoesProfessor?.[0] || planoPedagogico.diagnostico?.justificativa,
     },
+    regrasGeracaoTreino: [
+      'Use apenas os drills em bibliotecaDrillsCbt.',
+      'Não invente exercício fora da biblioteca CBT.',
+      'Organize em sequência curta: fechado do golpe, fechado da transição, semiaberto e aberto.',
+      'Se o scout separar saque, devolução e rally, não misture os contextos.',
+      'Decisão é leitura de jogo; nunca use Decisão como fundamento-alvo.',
+    ],
+    drillsPermitidosIds: drillsPermitidos.map((d) => d.id),
     ...(drills.length ? { bibliotecaDrillsCbt: drills } : {}),
   };
 }

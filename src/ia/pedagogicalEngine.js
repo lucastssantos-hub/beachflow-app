@@ -50,6 +50,15 @@ const STATE_LABELS = {
 };
 const READING_GAPS = new Set(['DECISAO', 'LEITURA_DE_JOGO']);
 
+const CANONICAL_PROBLEMS = [
+  { id: 'saque_terceira_bola', keywords: ['terceira bola', '3a bola', '3ª bola', 'apos saque', 'após saque', 'entrada no rali', 'entrada no rally'], shot: 'SAQUE', state: 'SAQUE', transitionId: 'CORE_T01', objective: 'Saque com direção e entrada organizada na próxima bola.' },
+  { id: 'saque_direto', keywords: ['erro de saque', 'erros de saque', 'saque: ', 'saque sem alvo', 'toss', 'dupla falta'], shot: 'SAQUE', state: 'SAQUE', transitionId: 'CORE_T01', objective: 'Estabilizar saque antes da terceira bola.' },
+  { id: 'devolucao_direta', keywords: ['erro de devolucao', 'erro de devolução', 'devolucao: ', 'devolução: ', 'devolucao sem continuidade', 'devolução sem continuidade'], shot: 'DEVOLUCAO', state: 'SAQUE', transitionId: 'CORE_T01', objective: 'Devolver com profundidade para entrar no rali.' },
+  { id: 'rally_neutro', keywords: ['rally', 'rali', 'bola neutra', 'neutro sem progressao', 'neutro sem progressão', 'forehand e backhand', 'forehand/backhand'], shot: 'FOREHAND_BACKHAND_DINAMICO', state: 'NEUTRO', transitionId: 'CORE_T04', objective: 'Organizar bola neutra para construir o ponto.' },
+  { id: 'finalizacao_precoce', keywords: ['finalizacao fora', 'finalização fora', 'zona verde', 'winner cedo', 'acelerar cedo', 'smash zona', 'tapa aparece antes'], shot: 'TAPA_ACELERADA_ESPETADA', state: 'CONSTRUCAO', transitionId: 'CORE_T05', objective: 'Criar vantagem antes de acelerar ou finalizar.' },
+  { id: 'defesa_sem_saida', keywords: ['defesa sem saida', 'defesa sem saída', 'lob curto', 'nao compra tempo', 'não compra tempo', 'reorganizar'], shot: 'LOB', state: 'DEFESA', transitionId: 'CORE_T02', objective: 'Ganhar tempo e reconstruir antes de atacar.' },
+];
+
 function norm(value = '') {
   return String(value || '')
     .normalize('NFD')
@@ -101,6 +110,27 @@ function isReadingGap(value = '') {
   return READING_GAPS.has(norm(value));
 }
 
+function diagnosticText(input = {}) {
+  return [
+    input.tema,
+    input.objetivo,
+    input.observedGap,
+    ...(input.gaps || []),
+    input.scout?.prioritizedDiagnosis,
+    input.scout?.serveContext,
+    input.scout?.returnContext,
+    input.scout?.rallyContext,
+    input.scout?.semanticDiagnosis,
+    input.scout?.brokenTransition,
+    input.scout?.trainingDirection,
+  ].filter(Boolean).join(' ');
+}
+
+function detectCanonicalProblem(input = {}) {
+  const text = norm(diagnosticText(input));
+  return CANONICAL_PROBLEMS.find((problem) => problem.keywords.some((kw) => text.includes(norm(kw)))) || null;
+}
+
 function dependencyToShot(dep = '') {
   const d = norm(dep);
   if (d.includes('LOB')) return 'LOB';
@@ -112,26 +142,41 @@ function dependencyToShot(dep = '') {
 }
 
 function diagnoseGap(input = {}, data = ontology) {
+  const canonical = detectCanonicalProblem(input);
   const observedGap = input.gaps?.[0] || input.tema || input.objetivo || input.observedGap || '';
-  const targetShot = shotKeyFromText(observedGap, data);
-  const stateFromText = stateKeyFromText(observedGap, data);
+  const targetShot = canonical?.shot || shotKeyFromText(observedGap, data);
+  const stateFromText = canonical?.state || stateKeyFromText(observedGap, data);
   const shot = targetShot ? data.shots[targetShot] : null;
   const fromStates = arr(shot?.from_state);
   const toStates = arr(shot?.to_state);
   const brokenState = stateFromText || fromStates[0] || 'NEUTRO';
   const possibleRootCauses = shot?.dependencies || data.states?.[brokenState]?.desired_exits || [];
-  return { observedGap, targetShot, brokenState, toStates, possibleRootCauses, confidence: targetShot ? 'moderada' : 'baixa' };
+  return { observedGap, targetShot, brokenState, toStates, possibleRootCauses, canonical, confidence: targetShot ? 'moderada' : 'baixa' };
 }
 
 function findRootCause(diagnosis, scores = {}) {
   const targetShot = diagnosis.targetShot;
   const targetScore = scoreFor(scores, targetShot);
-  let best = { key: targetShot || diagnosis.brokenState, dependency: '', score: targetScore || 99, reason: 'Gap observado como ponto de partida.' };
+  let best = {
+    key: targetShot || diagnosis.brokenState,
+    dependency: '',
+    score: targetScore || 99,
+    reason: diagnosis.canonical?.objective || 'Gap observado como ponto de partida.',
+    transitionId: diagnosis.canonical?.transitionId || '',
+    canonicalProblem: diagnosis.canonical?.id || '',
+  };
   for (const dep of diagnosis.possibleRootCauses || []) {
     const depShot = dependencyToShot(dep);
     const depScore = scoreFor(scores, depShot, dep);
     if (depScore > 0 && (!targetScore || depScore < targetScore || depScore < best.score)) {
-      best = { key: depShot || targetShot || diagnosis.brokenState, dependency: dep, score: depScore, reason: `${label(dep)} aparece como pré-requisito mais fraco que o golpe observado.` };
+      best = {
+        key: depShot || targetShot || diagnosis.brokenState,
+        dependency: dep,
+        score: depScore,
+        reason: `${label(dep)} aparece como pré-requisito mais fraco que o golpe observado.`,
+        transitionId: diagnosis.canonical?.transitionId || '',
+        canonicalProblem: diagnosis.canonical?.id || '',
+      };
     }
   }
   if (targetShot === 'SMASH' && scoreFor(scores, 'LOB') && scoreFor(scores, 'LOB') <= targetScore) {
@@ -149,6 +194,7 @@ function transitionMatchesShot(transition, shotKey) {
 
 function selectCorrectiveTransition(rootCause, data = ontology) {
   const transitions = data.core_transitions || [];
+  if (rootCause.transitionId) return transitions.find((t) => t.id === rootCause.transitionId) || transitions[0];
   const shotKey = rootCause.key;
   if (shotKey === 'LOB') return transitions.find((t) => t.id === 'CORE_T02') || transitions.find((t) => t.id === 'CORE_T03') || transitions[0];
   if (shotKey === 'GANCHO') return transitions.find((t) => t.id === 'CORE_T03') || transitions[0];
@@ -190,32 +236,40 @@ function orderDrillsForLesson(drills = []) {
     if (found) used.add(found.id);
     return found;
   };
-  const first = drills[0];
-  if (first) used.add(first.id);
+  const closedShot = take((d) => fmt(d) === 'FECHADO' && (d.relevance || d.nomeComecaNoFoco || d.nomeDoFoco));
   return [
-    first,
-    take((d) => fmt(d) === 'FECHADO'),
-    take((d) => fmt(d) === 'SEMI_ABERTO' || fmt(d) === 'SEMIABERTO'),
-    take((d) => fmt(d) === 'ABERTO'),
+    closedShot || take((d) => fmt(d) === 'FECHADO'),
+    take((d) => fmt(d) === 'FECHADO' && d.transicao),
+    take((d) => (fmt(d) === 'SEMI_ABERTO' || fmt(d) === 'SEMIABERTO') && (d.transicao || d.relevance)),
+    take((d) => fmt(d) === 'ABERTO' && (d.transicao || d.relevance)),
     ...drills.filter((d) => !used.has(d.id)),
   ].filter(Boolean).slice(0, 4);
 }
 
 function selectDrills(route, data = ontology) {
+  const byId = new Map(DRILLS_CBT.map((d) => [d.id, d]));
+  if (route.canonicalProblem === 'saque_terceira_bola') {
+    return ['D003', 'D035', 'D019', 'D023'].map((id) => byId.get(id)).filter(Boolean);
+  }
+  if (route.canonicalProblem === 'devolucao_direta') {
+    return ['D016', 'D006', 'D023', 'D003'].map((id) => byId.get(id)).filter(Boolean);
+  }
   const currentCbt = recomendarSequenciaDrillsCbt({
     nivel: route.level,
     foco: route.focusLabel || label(route.allowedShots?.[0] || route.targetShot || ''),
     fundamento: route.focusLabel || label(route.allowedShots?.[0] || route.targetShot || ''),
     metodo: route.metodo || 'semiaberto',
+    objetivo: route.canonicalObjective || route.transition?.objective || '',
+    problema: route.canonicalProblem || '',
     scout: {
-      leitura: route.transition?.objective || '',
+      leitura: [route.canonicalObjective, route.transition?.objective, route.diagnosticText].filter(Boolean).join(' · '),
       erroPrincipal: { fundamento: route.focusLabel || label(route.targetShot || route.allowedShots?.[0] || '') },
     },
   });
   if (currentCbt.length) {
-    const byId = new Map(DRILLS_CBT.map((d) => [d.id, d]));
     const fallbackIds = FALLBACK_DRILL_IDS[route.targetShot] || FALLBACK_DRILL_IDS[route.allowedShots?.[0]] || [];
-    const filled = [...currentCbt];
+    const priority = fallbackIds.map((id) => byId.get(id)).filter(Boolean).map((drill) => ({ ...drill, relevance: drill.relevance ?? 1, transicao: drill.transicao ?? 1 }));
+    const filled = [...priority, ...currentCbt];
     for (const id of fallbackIds) {
       if (filled.length >= 4) break;
       const drill = byId.get(id);
@@ -297,6 +351,9 @@ export function generatePedagogicalPlan(input = {}) {
     targetShot: diagnosis.targetShot,
     focusLabel: label(diagnosis.targetShot || rootCause.key || constraints.allowedShots[0]),
     metodo: level === 'iniciante' ? 'fechado' : 'semiaberto',
+    canonicalProblem: rootCause.canonicalProblem || diagnosis.canonical?.id || '',
+    canonicalObjective: diagnosis.canonical?.objective || rootCause.reason || '',
+    diagnosticText: diagnosticText(normalized),
   };
   const drills = selectDrills(route);
   const transitionText = transition ? `${STATE_LABELS[transition.from] || transition.from} → ${STATE_LABELS[transition.to] || transition.to}` : 'Neutro → Construção';
@@ -329,6 +386,8 @@ export function generatePedagogicalPlan(input = {}) {
       transitionId: transition?.id || '',
       transitionObjective: transition?.objective || '',
       targetShot: diagnosis.targetShot,
+      canonicalProblem: route.canonicalProblem,
+      canonicalObjective: route.canonicalObjective,
       rootCause,
       drills: drills.map((d) => ({
         id: d.id,
