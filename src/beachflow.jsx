@@ -1610,6 +1610,9 @@ function ScreenTurma({ nav, params }) {
   const scoutFund = scout?.erroPrincipal?.fundamento;
   const scoutOverridesAuto = scoutFund && autoWorst?.[0] && scoutFund !== autoWorst[0];
   const planParams = (preferredFocusSource)=>({ turma:turma.nome, nivel:turma.nivel, turmaObj:turma, preferredFocusSource });
+  const focoAtual = scout?.cartaoFocoScout?.foco || scout?.leituraPratica || turma.foco || (autoWorst ? autoWorst[0] : 'Diagnóstico da turma');
+  const regraAtual = scout?.cartaoFocoScout?.regra || (scoutFund ? `Validar ${scoutFund} no jogo.` : autoWorst ? `Observar ${autoWorst[0]} na aula.` : 'Coletar mais dados em quadra.');
+  const validacaoAtual = scout?.cartaoFocoScout?.validar || scout?.cartaoFocoScout?.regra || 'Ver se o foco aparece melhor no próximo scout.';
   const openEvalModal = async ()=>{
     setEvalModal({ open:true, loading:true, alunos:[], alunoId:'', vals:null, nota:'', saving:false, error:'' });
     try {
@@ -1648,9 +1651,24 @@ function ScreenTurma({ nav, params }) {
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:10 }}>
           <div>
             <Mini>{turma.hora || '--:--'} · {turma.nivel}</Mini>
-            <div style={{ fontSize:13.5, color:C.ink, marginTop:6 }}>{turma.alunos || 0}{turma.capacidade?`/${turma.capacidade}`:''} alunos</div>
+            <div style={{ fontSize:18, color:'#fff', fontWeight:800, marginTop:5 }}>{turma.alunos || 0}{turma.capacidade?`/${turma.capacidade}`:''} alunos</div>
           </div>
           {turma.foco && <Badge tone="turq">{turma.foco}</Badge>}
+        </div>
+      </Card>
+
+      <Card style={{ marginTop:10, borderColor:'rgba(22,194,163,.24)' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:10 }}>
+          <Mini color={C.turq}>Foco atual da turma</Mini>
+          {scout?.totalEventos ? <Badge tone="ok">{scout.totalEventos} scout</Badge> : <Badge tone="neutral">sem scout</Badge>}
+        </div>
+        <div style={{ fontSize:17, color:'#fff', fontWeight:800, marginTop:7, lineHeight:1.18 }}>{courtText(focoAtual, 76)}</div>
+        <div style={{ marginTop:10, padding:'9px 10px', borderRadius:11, background:'rgba(255,255,255,.045)', border:`1px solid ${C.line}` }}>
+          <Mini color={C.coral}>Regra rápida</Mini>
+          <div style={{ fontSize:13, color:C.ink, fontWeight:700, marginTop:4, lineHeight:1.25 }}>{courtText(regraAtual, 72)}</div>
+        </div>
+        <div style={{ fontSize:11.5, color:C.inkDim, lineHeight:1.35, marginTop:9 }}>
+          <span style={{ color:C.turq, fontWeight:800 }}>Validar: </span>{courtText(validacaoAtual, 88)}
         </div>
       </Card>
 
@@ -2678,22 +2696,52 @@ function ScreenAutoaval({ nav, params }) {
 }
 
 // ---------- EVOLUÇÃO PERCEBIDA ----------
-function ScreenEvolucao({ nav }) {
+function ScreenEvolucao({ nav, params }) {
+  const a = params?.aluno || ALUNOS[0];
+  const serie = a.evo || [40,42,48,46,55,60,64];
+  const deltaText = a.delta || `${Math.round((serie[serie.length - 1] || 0) - (serie[0] || 0)) > 0 ? '+' : ''}${Math.round((serie[serie.length - 1] || 0) - (serie[0] || 0))}%`;
+  const fundamentos = [
+    ['Recepção',64,'+22%',C.turq],
+    ['Saque',58,'+9%',C.turq],
+    ['Devolução',38,'-4%',C.warn],
+    ['Defesa',71,'+15%',C.turq],
+  ];
+  const melhor = fundamentos.filter(([, ,d])=>String(d).startsWith('+')).sort((a,b)=>parseFloat(String(b[2]))-parseFloat(String(a[2])))[0] || fundamentos[0];
+  const atencao = fundamentos.filter(([, ,d])=>String(d).startsWith('-')).sort((a,b)=>parseFloat(String(a[2]))-parseFloat(String(b[2])))[0] || fundamentos.sort((a,b)=>a[1]-b[1])[0];
   return (
     <Screen>
-      <Header onBack={nav.back} kicker="Turma B · 7 semanas" title="Evolução"/>
+      <Header onBack={nav.back} kicker={`${a.turma || 'Aluno'} · 7 semanas`} title="Evolução"/>
       <Body top={16} bottom={26}>
         <Card>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline' }}>
             <Mini>Índice de evolução percebida</Mini>
-            <span style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:22, color:C.turq, letterSpacing:'-.02em' }}>+18%</span></div>
-          <div style={{ marginTop:14 }}><Line values={[40,42,48,46,55,60,64]} height={100}/></div>
+            <span style={{ fontFamily:'var(--ff-d)', fontWeight:800, fontSize:22, color:String(deltaText).startsWith('-')?C.warn:C.turq, letterSpacing:'-.02em' }}>{deltaText}</span></div>
+          <div style={{ marginTop:14 }}><Line values={serie} height={100}/></div>
           <div style={{ display:'flex', justifyContent:'space-between', fontFamily:'var(--ff-m)', fontSize:9.5, color:C.n500, marginTop:6 }}>
             {['S1','S2','S3','S4','S5','S6','S7'].map(s=><span key={s}>{s}</span>)}</div>
         </Card>
 
+        <Card style={{ marginTop:10, borderColor:'rgba(22,194,163,.24)' }}>
+          <Mini color={C.turq}>Leitura rápida</Mini>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:10 }}>
+            <div style={{ padding:10, borderRadius:12, background:'rgba(255,255,255,.04)', border:`1px solid ${C.line}` }}>
+              <Mini>Mais evoluiu</Mini>
+              <div style={{ fontSize:14, color:C.ink, fontWeight:800, marginTop:4 }}>{melhor[0]}</div>
+              <div style={{ fontFamily:'var(--ff-m)', fontSize:11, color:melhor[3], marginTop:2 }}>{melhor[2]}</div>
+            </div>
+            <div style={{ padding:10, borderRadius:12, background:'rgba(255,255,255,.04)', border:`1px solid ${C.line}` }}>
+              <Mini>Pede atenção</Mini>
+              <div style={{ fontSize:14, color:C.ink, fontWeight:800, marginTop:4 }}>{atencao[0]}</div>
+              <div style={{ fontFamily:'var(--ff-m)', fontSize:11, color:atencao[3], marginTop:2 }}>{atencao[2]}</div>
+            </div>
+          </div>
+          <div style={{ marginTop:10, fontSize:12.5, color:C.inkDim, lineHeight:1.4 }}>
+            Próximo foco: manter o que evoluiu em <b style={{color:C.ink}}>{melhor[0]}</b> e confirmar no scout se <b style={{color:C.ink}}>{atencao[0]}</b> transfere melhor para o jogo.
+          </div>
+        </Card>
+
         <Mini style={{ marginTop:18 }}>Por fundamento</Mini>
-        {[['Recepção',64,'+22%',C.turq],['Saque',58,'+9%',C.turq],['Devolução',38,'-4%',C.warn],['Defesa',71,'+15%',C.turq]].map(([l,v,d,t])=>
+        {fundamentos.map(([l,v,d,t])=>
           <Card key={l} style={{ marginTop:8, padding:'13px 14px' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:9 }}>
               <span style={{ fontSize:13.5, color:C.ink }}>{l}</span>
