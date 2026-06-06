@@ -2,6 +2,7 @@
 // Tabelas: students, classes, class_enrollments, evaluations. RLS por teacher_id = auth.uid().
 import { supabase } from '../supabaseClient.js';
 import { inferTacticalIssue, practicalIssueText, focusCardFromIssue, ONTOLOGY_PROMPT_BLOCK } from './ontology.js';
+import { aggregateScout } from './scoutAggregationV2.js';
 
 const PALETTE = ['#16C2A3', '#FF6A45', '#1E72E0'];
 const NIVEL = { iniciante: 'Iniciante', intermediario: 'Intermediário', avancado: 'Avançado' };
@@ -75,6 +76,7 @@ function buildScoutNotas(events = []) {
 export function buildScoutResumo(events = []) {
   const rows = [...events].sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
   if (!rows.length) return null;
+  const scoutV2 = aggregateScout(rows);
 
   const byFund = {};
   const errorsByFund = {};
@@ -139,6 +141,17 @@ export function buildScoutResumo(events = []) {
     problemasTaticos: topEntries(issues, 4).map(([texto, total]) => ({ texto, total, pratica: practicalIssueText(texto), cartao: focusCardFromIssue(texto) })),
     leituraPratica: practicalIssue || '',
     cartaoFocoScout: focusCard,
+    prioritizedDiagnosis: scoutV2.prioritizedDiagnosis,
+    brokenTransition: scoutV2.brokenTransition,
+    semanticRadar: scoutV2.semanticRadar,
+    scoutValidated: scoutV2.scoutValidated,
+    behaviorProfile: scoutV2.behaviorProfile,
+    confidence: scoutV2.confidence,
+    serveContext: scoutV2.serveContext,
+    returnContext: scoutV2.returnContext,
+    rallyContext: scoutV2.rallyContext,
+    semanticDiagnosis: scoutV2.semanticDiagnosis,
+    trainingDirection: scoutV2.trainingDirection,
     eventosRecentes: rows.slice(0, 12).map((e) => ({
       data: e.created_at,
       fundamento: canonicalFund(e.fundamental || e.technique || 'Consistência'),
@@ -535,6 +548,15 @@ export async function contextoTurmaParaIA(turma) {
       leitura: scout.leitura,
       leituraPratica: scout.leituraPratica,
       cartaoFocoScout: scout.cartaoFocoScout,
+      prioritizedDiagnosis: scout.prioritizedDiagnosis,
+      brokenTransition: scout.brokenTransition,
+      semanticRadar: scout.semanticRadar,
+      scoutValidated: scout.scoutValidated,
+      behaviorProfile: scout.behaviorProfile,
+      confidence: scout.confidence,
+      serveContext: scout.serveContext,
+      returnContext: scout.returnContext,
+      rallyContext: scout.rallyContext,
       } : null,
     };
   });

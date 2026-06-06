@@ -343,7 +343,14 @@ export function generatePedagogicalPlan(input = {}) {
 }
 
 export function buildPedagogicalInputFromContext(ctx = {}) {
-  const scoutGap = ctx.scout?.erroPrincipal?.fundamento || ctx.scout?.leitura || '';
+  const scoutDiagnosis = [
+    ctx.scout?.prioritizedDiagnosis,
+    ctx.scout?.serveContext,
+    ctx.scout?.returnContext,
+    ctx.scout?.rallyContext,
+    ctx.scout?.brokenTransition,
+  ].filter(Boolean).join('\n');
+  const scoutGap = ctx.scout?.erroPrincipal?.fundamento || ctx.scout?.leitura || ctx.scout?.semanticDiagnosis || '';
   const scoreSources = [ctx.avaliacaoProfessor, ctx.avaliacaoScout, ctx.autoavaliacao].filter(Boolean);
   const scoreEntries = scoreSources.flatMap((source) => Object.entries(source || {}).map(([k, v]) => [k, Number(v)]));
   const weakest = scoreEntries
@@ -352,7 +359,7 @@ export function buildPedagogicalInputFromContext(ctx = {}) {
   return {
     turmaId: ctx.turma?.id,
     nivel: normalizeLevel(ctx.nivel),
-    objetivo: ctx.objetivo || ctx.observacoes || '',
+    objetivo: [ctx.objetivo || ctx.observacoes || '', scoutDiagnosis].filter(Boolean).join('\n'),
     tema: ctx.foco && !isReadingGap(ctx.foco) ? ctx.foco : (scoutGap || weakest),
     gaps: [scoutGap, weakest, ctx.foco].filter((x) => x && !isReadingGap(x)),
     duracaoMinutos: ctx.duracaoMin || 60,

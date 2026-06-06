@@ -3,6 +3,7 @@
 import { supabase } from '../supabaseClient.js';
 import { initialScoutScore, applyScoutWinner, scoutScoreText, scoutDeciding, inferIntention } from './scoutScore.js';
 import { buildScoutResumo } from './alunos.js';
+import { applyScoutConsistencyRules, validatePointConsistency, buildScoutEvent, teamOfPlayer } from './scoutConsistency.js';
 
 async function uid() { const { data } = await supabase.auth.getUser(); return data?.user?.id || null; }
 
@@ -28,20 +29,24 @@ export async function criarPartida({ titulo, mode, singles, a1, a2, b1, b2, clas
 // Salva um ponto: aplica a pontuação, grava o ponto e atualiza a partida. Retorna o novo placar.
 export async function salvarPonto(match, draft, scoreState, pointNumber) {
   const tid = await uid();
+  const check = validatePointConsistency(draft, match);
+  if (!check.valid) throw new Error(check.error || 'Ponto inconsistente.');
+  const applied = applyScoutConsistencyRules(draft, match).draft;
   const before = scoreState;
-  const after = applyScoutWinner(before, draft.winner);
-  const serveEvent = draft.outcome === 'Ace' || draft.outcome === 'Erro de saque';
-  const technique = serveEvent ? 'Saque' : draft.technique;
-  const intention = inferIntention(technique, draft.outcome, draft.zone);
+  const after = applyScoutWinner(before, applied.winner);
+  const serveEvent = applied.outcome === 'Ace' || applied.outcome === 'Erro de saque';
+  const returnEvent = applied.outcome === 'Erro de devolução';
+  const technique = serveEvent ? 'Saque' : (returnEvent ? 'Devolução' : applied.technique);
+  const intention = inferIntention(technique, applied.outcome, applied.zone);
   const all = [...match.players.a, ...match.players.b];
-  const teamOf = (pid) => (match.players.a.some((p) => p.id === pid) ? 'a' : (match.players.b.some((p) => p.id === pid) ? 'b' : null));
-  const serverName = all.find((p) => p.id === draft.server)?.name || '';
+  const serverName = all.find((p) => p.id === applied.server)?.name || '';
+  const finalPlayerName = all.find((p) => p.id === applied.final_player)?.name || '';
   const point = {
     teacher_id: tid, match_id: match.id, point_number: pointNumber,
-    set_number: before.set_number, server_id: draft.server, server_name: serverName,
-    server_team: teamOf(draft.server), serve_side: draft.serve_side,
-    outcome: draft.outcome, shot: technique, technique, inferred_intention: intention,
-    zone: draft.zone || '', winner_team: draft.winner,
+    set_number: before.set_number, server_id: applied.server, server_name: serverName,
+    server_team: teamOfPlayer(applied.server, match), serve_side: applied.serve_side,
+    outcome: applied.outcome, shot: technique, technique, inferred_intention: intention,
+    zone: applied.zone || '', winner_team: applied.winner,
     score_before: scoutScoreText(before), score_after: scoutScoreText(after),
     games_before: `${before.games.a}x${before.games.b}`, games_after: `${after.games.a}x${after.games.b}`,
     sets_before: `${before.sets.a}x${before.sets.b}`, sets_after: `${after.sets.a}x${after.sets.b}`,
@@ -49,12 +54,51 @@ export async function salvarPonto(match, draft, scoreState, pointNumber) {
   };
   const { error } = await supabase.from('scout_points').insert(point);
   if (error) console.warn('[salvarPonto]', error.message);
+  let scoutEvent = null;
+  const builtEvent = buildScoutEvent(applied, match, point);
+  if (builtEvent) {
+    const {
+      is_deciding_point,
+      is_tiebreak,
+      is_super_tiebreak,
+      ...eventForDb
+    } = builtEvent;
+    scoutEvent = {
+      teacher_id: tid,
+      match_id: match.id,
+      ...(match.classId ? { class_id: match.classId } : {}),
+      ...eventForDb,
+      note: [
+        builtEvent.note,
+        finalPlayerName ? `final_player=${finalPlayerName}` : '',
+        applied.ace_dir ? `ace_dir=${applied.ace_dir}` : '',
+        applied.return_side ? `return_side=${applied.return_side}` : '',
+      ].filter(Boolean).join(' · '),
+    };
+    const { error: evError } = await supabase.from('scout_events').insert(scoutEvent);
+    if (evError) {
+      console.warn('[salvarPonto scout_event]', evError.message);
+      const minimalEvent = {
+        teacher_id: tid,
+        match_id: match.id,
+        ...(match.classId ? { class_id: match.classId } : {}),
+        student_id: scoutEvent.student_id,
+        fundamental: scoutEvent.fundamental,
+        kind: scoutEvent.kind,
+        score: scoutEvent.score,
+        note: scoutEvent.note,
+      };
+      const { error: minError } = await supabase.from('scout_events').insert(minimalEvent);
+      if (minError) console.warn('[salvarPonto scout_event:minimal]', minError.message);
+      else scoutEvent = minimalEvent;
+    }
+  }
   await supabase.from('scout_matches').update({
     games_a: after.games.a, games_b: after.games.b, points_a: after.points.a, points_b: after.points.b,
     score_state: after, ended: after.finished,
     ...(after.finished ? { ended_at: new Date().toISOString(), active: false } : {}),
   }).eq('id', match.id);
-  return after;
+  return { score: after, point, event: scoutEvent };
 }
 
 export async function encerrarPartida(id) {
@@ -104,8 +148,14 @@ const rawLegacyId = (id = '') => String(id).replace(/^legacy:/, '');
 function normalizeLegacyPoint(x, i = 0) {
   return {
     outcome: x.outcome || '',
-    shot: x.technique || '',
-    technique: x.technique || '',
+    shot: x.technique || x.fundamental || '',
+    technique: x.technique || x.fundamental || '',
+    fundamental: x.fundamental || x.technique || '',
+    kind: x.kind || '',
+    student_id: x.student_id || '',
+    inferred_intention: x.inferred_intention || '',
+    tactical_issue: x.tactical_issue || '',
+    note: x.note || '',
     winner_team: '',
     score_after: typeof x.score === 'string' ? x.score : '',
     point_number: i + 1,
@@ -186,7 +236,7 @@ export async function getPartida(id) {
   if (isLegacyId(id)) {
     const matchId = rawLegacyId(id);
     const { data, error } = await supabase.from('scout_events')
-      .select('match_id,class_id,student_id,outcome,technique,zone,score,created_at')
+      .select('match_id,class_id,student_id,fundamental,kind,outcome,technique,inferred_intention,tactical_issue,zone,score,note,created_at')
       .eq('match_id', matchId)
       .order('created_at', { ascending: true });
     if (error) { console.warn('[getPartida scout_events]', error.message); return null; }
@@ -215,7 +265,7 @@ export async function getPartida(id) {
       .select('outcome,shot,technique,winner_team,server_name,final_player_name,score_after,point_number,set_number,created_at')
       .eq('match_id', id).order('point_number', { ascending: true }),
     supabase.from('scout_events')
-      .select('outcome,technique,zone,score,created_at')
+      .select('student_id,fundamental,kind,outcome,technique,inferred_intention,tactical_issue,zone,score,note,created_at')
       .eq('match_id', id).order('created_at', { ascending: true }),
   ]);
   if (m.error) { console.warn('[getPartida]', m.error.message); return null; }

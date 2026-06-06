@@ -4,6 +4,7 @@ import { supabase, authEnabled } from './supabaseClient.js';
 import { listAlunos, listTurmas, listAlunosDaTurma, getResumo, salvarAlunoCadastro, salvarAvaliacaoProfessor, trocarAlunoTurma, inativarAluno, reativarAluno, salvarTurmaCadastro, contextoTurmaParaIA } from './data/alunos.js';
 import { listPartidas, getPartida, criarPartida, salvarPonto, encerrarPartida, scoutContext } from './data/scout.js';
 import { MODES, OUTCOMES, TECHNIQUES, ZONES, SERVE_SIDES, scoutScoreText, scoutDeciding, tennis, modeLabel, nextScoutServe } from './data/scoutScore.js';
+import { ACE_DIRECTIONS, RETURN_SIDE_OPTIONS, applyScoutConsistencyRules, validatePointConsistency } from './data/scoutConsistency.js';
 import { DEMO_ALUNOS as ALUNOS, DEMO_TURMAS, DEMO_RADAR_LABELS as RLAB } from './data/demo.js';
 import { prepararConfirmacoesTurma, atualizarStatusConfirmacoes, getConfirmacao, responderConfirmacao, confirmationUrl, whatsappUrl, statusLabel, statusTone } from './data/confirmacoes.js';
 import { AUTO_FUNDAMENTOS, prepararAutoavaliacaoAluno, prepararFeedbackAluno, salvarAutoavaliacaoToken } from './data/autoavaliacao.js';
@@ -2402,30 +2403,47 @@ function ScreenScoutAoVivo({ nav, params }) {
   const players = [...m.players.a, ...m.players.b];
   const fn = (nm='')=> nm.split(' ')[0];
   const teamName = (t)=> (t==='a'?m.players.a:m.players.b).map(p=>fn(p.name)).join(' & ');
-  const serveEvent = draft && (draft.outcome==='Ace' || draft.outcome==='Erro de saque');
   const nextServeDraft = ()=>{
     const next = nextScoutServe(score);
     const team = m.players[next.team] || [];
     const server = team.length ? team[next.playerIndex % team.length].id : players[0]?.id || '';
-    return { server, serve_side:next.serve_side, winner:'a', outcome:'Winner', technique:'', zone:'' };
+    return { server, serve_side:next.serve_side, winner:next.team, outcome:'Winner', technique:'', zone:'', final_player:'', ace_dir:'', return_side:'' };
   };
-  const upd = (k,v)=> setDraft(d=>({...d,[k]:v}));
+  const consistency = draft ? applyScoutConsistencyRules(draft, m) : null;
+  const dft = consistency?.draft || draft || {};
+  const upd = (k,v)=> setDraft(d=>{
+    const reset = k==='outcome'
+      ? { technique:'', zone:'', final_player:'', ace_dir:'', return_side:'' }
+      : (k==='server' ? { final_player:'', ace_dir:'', return_side:'' } : {});
+    return {...d, ...reset, [k]:v};
+  });
   const Choice = ({ k, v, label }) => <div className="bf-tap" onClick={()=>upd(k,v)}
     style={{ padding:'9px 4px', borderRadius:9, textAlign:'center', fontSize:11.5, lineHeight:1.15,
-      border:`1px solid ${draft[k]===v?C.turq:C.line2}`, background:draft[k]===v?'rgba(22,194,163,.14)':'transparent',
-      color:draft[k]===v?C.turq:C.inkDim }}>{label}</div>;
+      border:`1px solid ${dft[k]===v?C.turq:C.line2}`, background:dft[k]===v?'rgba(22,194,163,.14)':'transparent',
+      color:dft[k]===v?C.turq:C.inkDim }}>{label}</div>;
+  const LockBadge = ({ children }) => <div style={{ padding:'10px 12px', borderRadius:10, border:`1px solid ${C.turq}`,
+    background:'rgba(22,194,163,.12)', color:C.turq, fontSize:12, fontWeight:800, textAlign:'center' }}>{children}</div>;
   const grid = (cols)=>({ display:'grid', gridTemplateColumns:`repeat(${cols},1fr)`, gap:7, marginTop:7 });
   const lbl = { fontFamily:'var(--ff-m)', fontSize:9.5, letterSpacing:'.06em', textTransform:'uppercase', color:C.n500, marginTop:13, display:'block' };
 
   const salvar = async ()=>{
-    if(!draft.server||!draft.winner||!draft.outcome) return;
-    if(!serveEvent && !draft.technique) return;
+    const check = validatePointConsistency(draft, m);
+    if(!check.valid) { alert(check.error); return; }
     setBusy(true);
-    const after = await salvarPonto(m, draft, score, pts.length+1);
-    setBusy(false);
+    let saved;
+    try {
+      saved = await salvarPonto(m, draft, score, pts.length+1);
+    } catch (err) {
+      setBusy(false);
+      alert(err?.message || 'Não foi possível salvar o ponto.');
+      return;
+    }
+    const after = saved?.score || saved;
+    const event = saved?.event || null;
     setScore(after);
-    setPts(p=>[...p,{ outcome:draft.outcome, shot: serveEvent?'Saque':draft.technique, winner:draft.winner, score_after: scoutScoreText(after) }]);
+    setPts(p=>[...p,{ outcome:dft.outcome, shot:event?.fundamental || dft.technique || (dft.outcome==='Ace'||dft.outcome==='Erro de saque'?'Saque':'Devolução'), winner:dft.winner, score_after: scoutScoreText(after) }]);
     setDraft(null);
+    setBusy(false);
   };
   const encerrar = async ()=>{ await encerrarPartida(m.id); nav.go('partida',{ id:m.id }); };
 
@@ -2450,18 +2468,40 @@ function ScreenScoutAoVivo({ nav, params }) {
 
         {/* form de ponto */}
         {draft ? <Card style={{ marginTop:12 }}>
+          {consistency?.autoNote && <div style={{ padding:'10px 12px', borderRadius:12, border:`1px solid ${C.line2}`,
+            background:'rgba(30,114,224,.10)', color:C.inkDim, fontSize:12, lineHeight:1.35, marginBottom:10 }}>
+            {consistency.autoNote}
+          </div>}
           <span style={{ ...lbl, marginTop:0 }}>Sacador</span>
           <div style={grid(2)}>{players.map(p=><Choice key={p.id} k="server" v={p.id} label={fn(p.name)}/>)}</div>
           <span style={lbl}>Posição do saque</span>
           <div style={grid(3)}>{SERVE_SIDES.map(x=><Choice key={x} k="serve_side" v={x} label={x}/>)}</div>
           <span style={lbl}>Quem venceu o ponto?</span>
-          <div style={grid(2)}>
-            <Choice k="winner" v="a" label={teamName('a')}/><Choice k="winner" v="b" label={teamName('b')}/></div>
+          {consistency?.lockedFields?.has('winner')
+            ? <LockBadge>{teamName(dft.winner)}</LockBadge>
+            : <div style={grid(2)}>
+              <Choice k="winner" v="a" label={teamName('a')}/><Choice k="winner" v="b" label={teamName('b')}/></div>}
           <span style={lbl}>Como terminou?</span>
           <div style={grid(2)}>{OUTCOMES.map(x=><Choice key={x} k="outcome" v={x} label={x}/>)}</div>
-          {!serveEvent && <>
+          {consistency?.showAceDir && <>
+            <span style={lbl}>Direção do ace</span>
+            <div style={grid(2)}>{ACE_DIRECTIONS.map(x=><Choice key={x.value} k="ace_dir" v={x.value} label={x.label}/>)}</div>
+          </>}
+          {(consistency?.lockedFields?.has('final_player') || !consistency?.hiddenFields?.has('final_player')) && <>
+            <span style={lbl}>Executor</span>
+            {consistency?.lockedFields?.has('final_player')
+              ? <LockBadge>{players.find(p=>p.id===dft.final_player)?.name || 'Sacador'}</LockBadge>
+              : <div style={grid(2)}>{(consistency?.executorOptions || players).map(p=><Choice key={p.id} k="final_player" v={p.id} label={fn(p.name)}/>)}</div>}
+          </>}
+          {consistency?.showReturnSide && <>
+            <span style={lbl}>Erro de devolução</span>
+            <div style={grid(2)}>{RETURN_SIDE_OPTIONS.map(x=><Choice key={x} k="return_side" v={x} label={x}/>)}</div>
+          </>}
+          {!consistency?.hiddenFields?.has('technique') && <>
             <span style={lbl}>Técnica principal</span>
             <div style={grid(3)}>{TECHNIQUES.map(x=><Choice key={x} k="technique" v={x} label={x}/>)}</div>
+          </>}
+          {!consistency?.hiddenFields?.has('zone') && <>
             <span style={lbl}>Zona <span style={{textTransform:'none',color:C.n500}}>(opcional)</span></span>
             <div style={grid(3)}>{ZONES.map(x=><Choice key={x} k="zone" v={x} label={x}/>)}</div>
           </>}
