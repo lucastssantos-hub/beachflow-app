@@ -48,6 +48,7 @@ const STATE_LABELS = {
   PRESSAO: 'Pressão',
   FINALIZACAO: 'Finalização',
 };
+const READING_GAPS = new Set(['DECISAO', 'LEITURA_DE_JOGO']);
 
 function norm(value = '') {
   return String(value || '')
@@ -94,6 +95,10 @@ function scoreFor(scores = {}, shotKey = '', dependency = '') {
     if (found && Number(scores[found]) > 0) return Number(scores[found]);
   }
   return 0;
+}
+
+function isReadingGap(value = '') {
+  return READING_GAPS.has(norm(value));
 }
 
 function dependencyToShot(dep = '') {
@@ -249,7 +254,10 @@ function selectDrills(route, data = ontology) {
 function scoresFromInput(input = {}) {
   const scores = {};
   for (const source of [input.avaliacaoProfessor, input.autoavaliacao, input.avaliacaoScout]) {
-    for (const [k, v] of Object.entries(source || {})) scores[k] = Number(v);
+    for (const [k, v] of Object.entries(source || {})) {
+      if (isReadingGap(k)) continue;
+      scores[k] = Number(v);
+    }
   }
   return scores;
 }
@@ -338,13 +346,15 @@ export function buildPedagogicalInputFromContext(ctx = {}) {
   const scoutGap = ctx.scout?.erroPrincipal?.fundamento || ctx.scout?.leitura || '';
   const scoreSources = [ctx.avaliacaoProfessor, ctx.avaliacaoScout, ctx.autoavaliacao].filter(Boolean);
   const scoreEntries = scoreSources.flatMap((source) => Object.entries(source || {}).map(([k, v]) => [k, Number(v)]));
-  const weakest = scoreEntries.filter(([, v]) => Number.isFinite(v)).sort((a, b) => a[1] - b[1])[0]?.[0] || '';
+  const weakest = scoreEntries
+    .filter(([k, v]) => !isReadingGap(k) && Number.isFinite(v))
+    .sort((a, b) => a[1] - b[1])[0]?.[0] || '';
   return {
     turmaId: ctx.turma?.id,
     nivel: normalizeLevel(ctx.nivel),
     objetivo: ctx.objetivo || ctx.observacoes || '',
-    tema: ctx.foco || scoutGap || weakest,
-    gaps: [scoutGap, weakest, ctx.foco].filter(Boolean),
+    tema: ctx.foco && !isReadingGap(ctx.foco) ? ctx.foco : (scoutGap || weakest),
+    gaps: [scoutGap, weakest, ctx.foco].filter((x) => x && !isReadingGap(x)),
     duracaoMinutos: ctx.duracaoMin || 60,
     numeroAlunos: ctx.alunosMatriculados || ctx.alunos?.length || 0,
     avaliacaoProfessor: ctx.avaliacaoProfessor || {},

@@ -72,7 +72,7 @@ function buildScoutNotas(events = []) {
   return out;
 }
 
-function buildScoutResumo(events = []) {
+export function buildScoutResumo(events = []) {
   const rows = [...events].sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
   if (!rows.length) return null;
 

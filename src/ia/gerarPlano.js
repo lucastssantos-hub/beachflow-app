@@ -382,6 +382,69 @@ function friendlyAiError(message = '') {
   return text || 'IA indisponível. Plano local gerado com os dados disponíveis.';
 }
 
+function shortText(text = '', max = 96) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  return clean.length > max ? `${clean.slice(0, max - 1).trim()}…` : clean;
+}
+
+function normalizePlanShape(plano = {}, ctx = {}) {
+  if (!plano || typeof plano !== 'object') return plano;
+  if (typeof plano.diagnostico === 'string') {
+    plano.diagnostico = {
+      gapPrincipal: plano.diagnostico,
+      contexto: plano.contexto || '',
+      fonte: plano.fonte || 'IA',
+      confianca: plano.confianca || 'moderada',
+      justificativaConfianca: plano.confianca_dados || '',
+    };
+  }
+  plano.decisaoPedagogica = plano.decisaoPedagogica || {};
+  if (plano.foco_tecnico && !plano.decisaoPedagogica.focoTecnico) plano.decisaoPedagogica.focoTecnico = plano.foco_tecnico;
+  if (plano.foco_tatico && !plano.decisaoPedagogica.focoTatico) plano.decisaoPedagogica.focoTatico = plano.foco_tatico;
+  if (plano.tipo_treino && !plano.decisaoPedagogica.metodo) plano.decisaoPedagogica.metodo = plano.tipo_treino;
+  if (plano.intencao_pedagogica && !plano.decisaoPedagogica.estado) plano.decisaoPedagogica.estado = plano.intencao_pedagogica;
+
+  const focus = chooseFocus(ctx);
+  if (LEITURA_GAPS.has(canonicalFund(plano.decisaoPedagogica.focoTecnico))) {
+    plano.decisaoPedagogica.focoTecnico = focus.fund;
+    plano.diagnostico = plano.diagnostico || {};
+    plano.diagnostico.gapLeitura = 'Decisão é leitura de jogo; o treino trata isso por situação prática, não como golpe isolado.';
+  }
+
+  plano.cartaoAula = plano.cartaoAula || {};
+  if (!plano.cartaoAula.foco) plano.cartaoAula.foco = plano.objetivo || plano.decisaoPedagogica.focoTatico || plano.diagnostico?.gapPrincipal || 'Ajustar o principal padrão do jogo.';
+  if (!plano.cartaoAula.regra) {
+    const text = `${plano.titulo || ''} ${plano.decisaoPedagogica.focoTecnico || ''} ${plano.decisaoPedagogica.focoTatico || ''}`;
+    if (/devolu/i.test(text)) plano.cartaoAula.regra = 'Profundidade antes de agressividade.';
+    else if (/saque/i.test(text)) plano.cartaoAula.regra = 'Saque só conta com terceira bola organizada.';
+    else if (/tapa|smash|finaliza|aceler/i.test(text)) plano.cartaoAula.regra = 'Winner cedo não vira padrão.';
+    else if (/lob|gancho|defesa|recuper/i.test(text)) plano.cartaoAula.regra = 'Primeiro compra tempo, depois joga.';
+    else plano.cartaoAula.regra = 'Decisão antes da execução.';
+  }
+  if (!plano.cartaoAula.validar) plano.cartaoAula.validar = plano.scoutValidacao || 'Ver se o padrão melhora no jogo.';
+  plano.cartaoAula.foco = shortText(plano.cartaoAula.foco, 70);
+  plano.cartaoAula.regra = shortText(plano.cartaoAula.regra, 56);
+  plano.cartaoAula.validar = shortText(plano.cartaoAula.validar, 76);
+
+  plano.blocos = (plano.blocos || []).slice(0, 5).map((raw = {}, i) => {
+    const b = raw || {};
+    return {
+      ...b,
+      nome: b.nome || `Bloco ${i + 1}`,
+      comando: shortText(b.comando, 96),
+      regra: shortText(b.regra, 96),
+      criterio_qualidade: shortText(b.criterio_qualidade, 96),
+      pontuacao_especial: shortText(b.pontuacao_especial, 96),
+      observar: shortText(b.observar, 96),
+      pergunta_final: shortText(b.pergunta_final, 96),
+    };
+  });
+  plano.progressao = shortText(plano.progressao || plano.criterio_progressao || '', 120);
+  plano.regressao = shortText(plano.regressao || plano.criterio_regressao || '', 120);
+  plano.scoutValidacao = shortText(plano.scoutValidacao || plano.scout_final || '', 120);
+  return plano;
+}
+
 // Plano de exemplo no contrato JSON aninhado (espelha a Edge Function).
 export const SAMPLE_PLAN = {
   titulo: 'Devolução cruzada estável',
@@ -527,9 +590,9 @@ const _cache = new Map();
 // Gera o plano. Retorna { plano, id, fonte: 'ia' | 'exemplo' | 'cache', erro? }.
 export async function gerarPlano(ctx) {
   try {
-    if (FORCE_DEMO) return { plano: SAMPLE_PLAN, id: null, fonte: 'demo' };
+    if (FORCE_DEMO) return { plano: normalizePlanShape(SAMPLE_PLAN, ctx || {}), id: null, fonte: 'demo' };
     const enrichedCtx = enrichContextWithDrills(ctx || {});
-    if (!ENDPOINT) return { plano: localPlanFromContext(enrichedCtx, 'Endpoint de IA não configurado'), id: null, fonte: 'local' };
+    if (!ENDPOINT) return { plano: normalizePlanShape(localPlanFromContext(enrichedCtx, 'Endpoint de IA não configurado'), enrichedCtx), id: null, fonte: 'local' };
     const key = JSON.stringify(enrichedCtx);
     if (_cache.has(key)) return { ..._cache.get(key), fonte: 'cache' };
     const res = await fetch(ENDPOINT, {
@@ -542,15 +605,15 @@ export async function gerarPlano(ctx) {
     if (data.error) throw new Error(data.error);
     const plano = data.plano || data;
     if (isExamplePlan(plano)) {
-      return { plano: localPlanFromContext(ctx, 'A IA retornou um plano de exemplo'), id: null, fonte: 'local' };
+      return { plano: normalizePlanShape(localPlanFromContext(ctx, 'A IA retornou um plano de exemplo'), ctx), id: null, fonte: 'local' };
     }
-    const out = { plano, id: data.id || null };
+    const out = { plano: normalizePlanShape(plano, enrichedCtx), id: data.id || null };
     _cache.set(key, out);
     return { ...out, fonte: 'ia' };
   } catch (e) {
     const friendly = friendlyAiError(e.message);
     console.warn('[gerarPlano] usando plano local:', friendly);
-    return { plano: localPlanFromContext(ctx || {}, friendly), id: null, fonte: 'local', erro: friendly };
+    return { plano: normalizePlanShape(localPlanFromContext(ctx || {}, friendly), ctx || {}), id: null, fonte: 'local', erro: friendly };
   }
 }
 

@@ -2,6 +2,7 @@
 // RLS por teacher_id = auth.uid().
 import { supabase } from '../supabaseClient.js';
 import { initialScoutScore, applyScoutWinner, scoutScoreText, scoutDeciding, inferIntention } from './scoutScore.js';
+import { buildScoutResumo } from './alunos.js';
 
 async function uid() { const { data } = await supabase.auth.getUser(); return data?.user?.id || null; }
 
@@ -63,13 +64,13 @@ export async function encerrarPartida(id) {
 
 // Constrói o contexto da IA a partir de uma partida (getPartida): scout como fonte principal.
 export function scoutContext(d) {
-  const erros = {}, winners = {}, ctx = {};
+  const resumo = buildScoutResumo(d.pts || []);
+  const erros = {}, winners = {};
   for (const p of (d.pts || [])) {
     const f = p.shot || p.technique;
     if (!f) continue;
     if (/erro/i.test(p.outcome || '')) erros[f] = (erros[f] || 0) + 1;
     if (/winner/i.test(p.outcome || '')) winners[f] = (winners[f] || 0) + 1;
-    if (p.zone) (ctx[f] = ctx[f] || []).push(p.zone);
   }
   const padroes = Object.entries(erros).sort((a, b) => b[1] - a[1]).slice(0, 5)
     .map(([fundamento, frequencia]) => ({ tipo: 'erro não forçado', fundamento, frequencia }));
@@ -80,11 +81,16 @@ export function scoutContext(d) {
     ...(d.className ? { turma: d.className } : {}),
     duracaoMin: 60,
     scout: {
+      ...(resumo || {}),
       pontosAnalisados: d.stats ? d.stats.total : (d.pts || []).length,
       placar: `${d.gamesA}x${d.gamesB} games`,
       padroes,
       errosPorGolpe: erros,
       winnersPorGolpe: winners,
+      erroPrincipal: resumo?.erroPrincipal || (padroes[0] ? { fundamento: padroes[0].fundamento, total: padroes[0].frequencia } : null),
+      leitura: resumo?.leitura || padroes.map((p) => `${p.frequencia} erro(s) em ${p.fundamento}`).join(' · '),
+      leituraPratica: resumo?.leituraPratica || '',
+      cartaoFocoScout: resumo?.cartaoFocoScout || null,
     },
   };
 }

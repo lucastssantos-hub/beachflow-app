@@ -217,7 +217,40 @@ function extractJsonObject(s: string): string {
   return cleaned.slice(start);
 }
 
-function normalizePlano(plano: any): any {
+function compactText(value = "", max = 96): string {
+  const clean = String(value || "").replace(/\s+/g, " ").trim();
+  return clean.length > max ? `${clean.slice(0, max - 1).trim()}…` : clean;
+}
+
+function weakestTechnical(ctx: Record<string, any> = {}): string {
+  const rows = [ctx.avaliacaoProfessor, ctx.avaliacaoScout, ctx.autoavaliacao]
+    .filter(Boolean)
+    .flatMap((src: Record<string, unknown>) => Object.entries(src || {}))
+    .filter(([k, v]) => !/^decis/i.test(k) && Number.isFinite(Number(v)))
+    .sort((a, b) => Number(a[1]) - Number(b[1]));
+  return String(rows[0]?.[0] || ctx.scout?.erroPrincipal?.fundamento || "Consistência");
+}
+
+function normalizePlano(plano: any, ctx: Record<string, any> = {}): any {
+  plano = plano && typeof plano === "object" ? plano : {};
+  if (typeof plano.diagnostico === "string") {
+    plano.diagnostico = {
+      gapPrincipal: plano.diagnostico,
+      contexto: "",
+      fonte: "IA",
+      confianca: "moderada",
+      justificativaConfianca: plano.confianca_dados || "",
+    };
+  }
+  plano.decisaoPedagogica = plano.decisaoPedagogica || {};
+  if (plano.foco_tecnico && !plano.decisaoPedagogica.focoTecnico) plano.decisaoPedagogica.focoTecnico = plano.foco_tecnico;
+  if (plano.foco_tatico && !plano.decisaoPedagogica.focoTatico) plano.decisaoPedagogica.focoTatico = plano.foco_tatico;
+  if (plano.tipo_treino && !plano.decisaoPedagogica.metodo) plano.decisaoPedagogica.metodo = plano.tipo_treino;
+  if (/^decis/i.test(String(plano.decisaoPedagogica.focoTecnico || ""))) {
+    plano.decisaoPedagogica.focoTecnico = weakestTechnical(ctx);
+    plano.diagnostico = plano.diagnostico || {};
+    plano.diagnostico.gapLeitura = "Decisão é leitura de jogo; o treino trata isso por situação prática.";
+  }
   const metodo = String(plano?.decisaoPedagogica?.metodo || "").toLowerCase();
   if (metodo) {
     let normalized = plano.decisaoPedagogica.metodo;
@@ -226,12 +259,28 @@ function normalizePlano(plano: any): any {
     else if (metodo.includes("fechado")) normalized = "fechado";
     plano.decisaoPedagogica.metodo = normalized;
   }
-  plano.blocos = (plano.blocos || []).map((b: any) => ({
-    bola_inicial: "Definir claramente como a bola começa neste bloco.",
-    alvo_setor: "Definir setor/alvo antes de iniciar.",
-    rotacao: "Rodar após a sequência para todos passarem pela função principal.",
-    ...b,
-  }));
+  plano.blocos = (plano.blocos || []).map((raw: any) => {
+    const b = raw || {};
+    return {
+      bola_inicial: "Definir claramente como a bola começa neste bloco.",
+      alvo_setor: "Definir setor/alvo antes de iniciar.",
+      rotacao: "Rodar após a sequência para todos passarem pela função principal.",
+      ...b,
+      comando: compactText(b.comando, 96),
+      regra: compactText(b.regra, 96),
+      criterio_qualidade: compactText(b.criterio_qualidade, 96),
+      pontuacao_especial: compactText(b.pontuacao_especial, 96),
+      observar: compactText(b.observar, 96),
+      pergunta_final: compactText(b.pergunta_final, 96),
+    };
+  }).slice(0, 5);
+  plano.cartaoAula = plano.cartaoAula || {};
+  plano.cartaoAula.foco = compactText(plano.cartaoAula.foco || plano.objetivo || plano.decisaoPedagogica.focoTatico || "Ajustar o principal padrão do jogo.", 70);
+  plano.cartaoAula.regra = compactText(plano.cartaoAula.regra || "Decisão antes da execução.", 56);
+  plano.cartaoAula.validar = compactText(plano.cartaoAula.validar || plano.scoutValidacao || "Ver se o padrão melhora no jogo.", 76);
+  plano.progressao = compactText(plano.progressao || plano.criterio_progressao || "", 120);
+  plano.regressao = compactText(plano.regressao || plano.criterio_regressao || "", 120);
+  plano.scoutValidacao = compactText(plano.scoutValidacao || plano.scout_final || "", 120);
   return plano;
 }
 
@@ -449,7 +498,7 @@ Deno.serve(async (req: Request) => {
     let plano: any;
     let parseOk = true;
     try {
-      plano = normalizePlano(JSON.parse(extractJsonObject(ai.text)));
+      plano = normalizePlano(JSON.parse(extractJsonObject(ai.text)), context || {});
     } catch {
       plano = { _raw: ai.text, _parseError: true };
       parseOk = false;
