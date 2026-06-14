@@ -246,14 +246,79 @@ function orderDrillsForLesson(drills = []) {
   ].filter(Boolean).slice(0, 4);
 }
 
+// Curadoria validada por problema canônico — agora os 6 (antes só 2).
+// Listas em progressão fechado → semi-aberto → aberto, alinhadas à transição corretiva.
+const CURATED_BY_PROBLEM = {
+  saque_terceira_bola: ['D003', 'D035', 'D019', 'D023'], // CORE_T01
+  saque_direto:        ['D035', 'D003', 'D006', 'D019'], // CORE_T01 (estabilizar saque)
+  devolucao_direta:    ['D003', 'D006', 'D016', 'D023'], // CORE_T01
+  rally_neutro:        ['D013', 'D017', 'D018', 'D023'], // CORE_T04 (construir bola neutra)
+  finalizacao_precoce: ['D013', 'D018', 'D024', 'D023'], // CORE_T05 (construir/recuperar ANTES de acelerar)
+  defesa_sem_saida:    ['D014', 'D013', 'D022', 'D024'], // CORE_T02 (ganhar tempo e reconstruir)
+};
+
+// "Smash" → SMASH, "Defesa" → FOREHAND_BACKHAND_ESTATICO, etc. (golpes PT → chave de golpe).
+function golpesToShots(golpes = []) {
+  const out = new Set();
+  for (const g of golpes) {
+    const n = norm(g);
+    for (const [key, aliases] of Object.entries(SHOT_ALIASES)) {
+      if (aliases.some((a) => n.includes(a) || a.includes(n))) out.add(key);
+    }
+  }
+  return out;
+}
+
+const FORMAT_RANK = (f) => {
+  const n = norm(f);
+  if (n.startsWith('FECHA')) return 0;
+  if (n.includes('SEMI')) return 1;
+  if (n.startsWith('ABERT')) return 2;
+  return 3;
+};
+
+// Seleção por VÍNCULO com a transição corretiva, sobre a biblioteca real (DRILLS_CBT):
+// um drill treina a transição se cruza os golpes E os estados {from,to} dela.
+// Substitui o casamento por palavra do fundamento, que escolhia drills do MESMO
+// golpe do erro (ex.: mais smash para quem já acelera cedo demais).
+function drillsByTransition(route) {
+  const t = route.transition;
+  if (!t) return [];
+  const shots = new Set(t.shots || []);
+  const states = new Set([t.from, t.to].filter(Boolean).map(norm));
+  const lvl = normalizeLevel(route.level || '');
+  const pool = DRILLS_CBT
+    .filter((d) => {
+      const sh = golpesToShots(d.golpes || []);
+      const es = (d.estados || []).map(norm);
+      return [...sh].some((s) => shots.has(s)) && es.some((s) => states.has(s));
+    })
+    .filter((d) => !d.nivel || normalizeLevel(d.nivel) === lvl || lvl === 'avancado')
+    .sort((a, b) => FORMAT_RANK(a.formato) - FORMAT_RANK(b.formato));
+  const selected = [];
+  for (const rank of [0, 1, 2]) {
+    const found = pool.find((d) => FORMAT_RANK(d.formato) === rank && !selected.includes(d));
+    if (found) selected.push(found);
+  }
+  for (const d of pool) if (selected.length < 4 && !selected.includes(d)) selected.push(d);
+  return selected.slice(0, 4);
+}
+
 function selectDrills(route, data = ontology) {
   const byId = new Map(DRILLS_CBT.map((d) => [d.id, d]));
-  if (route.canonicalProblem === 'saque_terceira_bola') {
-    return ['D003', 'D035', 'D019', 'D023'].map((id) => byId.get(id)).filter(Boolean);
+
+  // (a) Curadoria validada por problema canônico (cobre os 6).
+  const curated = CURATED_BY_PROBLEM[route.canonicalProblem];
+  if (curated) {
+    const picked = curated.map((id) => byId.get(id)).filter(Boolean);
+    if (picked.length) return picked;
   }
-  if (route.canonicalProblem === 'devolucao_direta') {
-    return ['D016', 'D006', 'D023', 'D003'].map((id) => byId.get(id)).filter(Boolean);
-  }
+
+  // (b) Fallback dirigido pela TRANSIÇÃO corretiva (não mais pela palavra do fundamento).
+  const linked = drillsByTransition(route);
+  if (linked.length >= 3) return linked;
+
+  // (c) Último recurso: scorer por palavra-chave (comportamento anterior).
   const currentCbt = recomendarSequenciaDrillsCbt({
     nivel: route.level,
     foco: route.focusLabel || label(route.allowedShots?.[0] || route.targetShot || ''),
