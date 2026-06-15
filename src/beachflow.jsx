@@ -1712,6 +1712,11 @@ function ScreenTurma({ nav, params }) {
 
           {scout ? <div style={{ marginTop:12, paddingTop:11, borderTop:`1px solid ${C.line}` }}>
             <Mini color={C.info}>Scout da turma</Mini>
+            {scout.scoutSuspeito && <div style={{ marginTop:8, padding:'9px 11px', borderRadius:10,
+              background:'rgba(246,180,60,.12)', border:'1px solid rgba(246,180,60,.30)',
+              fontSize:11.5, color:C.warn, lineHeight:1.4 }}>
+              ⚠ Scout suspeito — re-scoutear. {scout.suspeitaScout}
+            </div>}
             <div style={{ fontSize:12.5, color:C.ink, marginTop:6, lineHeight:1.4 }}>
               {scout.leituraPratica || scout.leitura || 'Há scout vinculado, mas sem padrão prático forte ainda.'}
             </div>

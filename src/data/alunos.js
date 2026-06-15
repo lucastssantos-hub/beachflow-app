@@ -123,6 +123,15 @@ export function buildScoutResumo(events = []) {
     topIssue ? topIssue[0] : '',
   ].filter(Boolean).join(' · ');
 
+  // Guarda de qualidade: se um único fundamento concentra parcela implausível
+  // dos eventos (ex.: importação que colapsou aces/winners de saque em "Erro de
+  // saque"), o scout é provavelmente lixo importado. Não confiar no diagnóstico.
+  const dominantShare = topError && rows.length ? topError[1] / rows.length : 0;
+  const scoutSuspeito = rows.length >= 8 && dominantShare >= 0.5;
+  const suspeitaScout = scoutSuspeito
+    ? `${topError[0]} concentra ${Math.round(dominantShare * 100)}% dos eventos (${topError[1]}/${rows.length}) — distribuição implausível, provável scout importado/mal-rotulado. Re-scoutear antes de confiar no diagnóstico.`
+    : '';
+
   return {
     fonte: 'BT Tracker / scout_events',
     totalEventos: rows.length,
@@ -132,6 +141,8 @@ export function buildScoutResumo(events = []) {
     winners: kindCount.winner || 0,
     fundamentoMaisVisto: topEntries(byFund, 1)[0]?.[0] || null,
     erroPrincipal: topError ? { fundamento: topError[0], total: topError[1] } : null,
+    scoutSuspeito,
+    suspeitaScout,
     zonaCritica: topZone ? { zona: topZone[0], total: topZone[1] } : null,
     zonaErroPrincipal: topErrorZone ? { zona: topErrorZone[0], total: topErrorZone[1] } : null,
     errosPorFundamento: Object.fromEntries(topEntries(errorsByFund, 6)),

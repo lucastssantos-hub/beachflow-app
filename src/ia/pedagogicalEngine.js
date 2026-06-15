@@ -402,14 +402,20 @@ export function generatePedagogicalPlan(input = {}) {
 }
 
 export function buildPedagogicalInputFromContext(ctx = {}) {
-  const scoutDiagnosis = [
+  // Scout suspeito (distribuição implausível) não alimenta o motor: o
+  // diagnóstico cai para o fundamento avaliado em vez de ancorar em dado
+  // contaminado. Mantém header/transição/drills coerentes com o foco.
+  const scoutConfiavel = !ctx.scout?.scoutSuspeito;
+  const scoutDiagnosis = (scoutConfiavel ? [
     ctx.scout?.prioritizedDiagnosis,
     ctx.scout?.serveContext,
     ctx.scout?.returnContext,
     ctx.scout?.rallyContext,
     ctx.scout?.brokenTransition,
-  ].filter(Boolean).join('\n');
-  const scoutGap = ctx.scout?.erroPrincipal?.fundamento || ctx.scout?.leitura || ctx.scout?.semanticDiagnosis || '';
+  ] : []).filter(Boolean).join('\n');
+  const scoutGap = scoutConfiavel
+    ? (ctx.scout?.erroPrincipal?.fundamento || ctx.scout?.leitura || ctx.scout?.semanticDiagnosis || '')
+    : '';
   const scoreSources = [ctx.avaliacaoProfessor, ctx.avaliacaoScout, ctx.autoavaliacao].filter(Boolean);
   const scoreEntries = scoreSources.flatMap((source) => Object.entries(source || {}).map(([k, v]) => [k, Number(v)]));
   const weakest = scoreEntries
