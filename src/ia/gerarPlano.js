@@ -171,7 +171,10 @@ function chooseFocus(ctx = {}) {
   const profWorst = sortedTechnicalScores(ctx.avaliacaoProfessor || {})[0];
   const scoutWorst = sortedTechnicalScores(ctx.avaliacaoScout || {})[0];
   const mergedWorst = sortedTechnicalScores(Object.fromEntries(Object.entries(merged).map(([f, v]) => [f, v.score])))[0];
-  const scoutFund = ctx.scout?.erroPrincipal?.fundamento;
+  // Scout suspeito (distribuição implausível) não ancora o foco: cai para
+  // avaliação do professor / autoavaliação em vez de gerar plano confiante
+  // sobre dado contaminado.
+  const scoutFund = ctx.scout?.scoutSuspeito ? null : ctx.scout?.erroPrincipal?.fundamento;
   const preferred =
     sourcePref === 'auto' ? autoWorst :
     sourcePref === 'prof' ? profWorst :
