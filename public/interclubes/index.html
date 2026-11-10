@@ -1,0 +1,1624 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Interclubes • GoSports</title>
+<meta name="description" content="Chaves, agenda, resultados e ranking do Interclubes de Beach Tennis.">
+<meta property="og:title" content="Interclubes • GoSports">
+<meta property="og:description" content="Chaves, agenda, resultados e ranking do Interclubes de Beach Tennis.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Inter+Tight:wght@400;500;600&display=swap">
+<style>
+/* Layout: app de uma coluna, cabeçalho fixo com seletor de evento, barra inferior de abas, gaveta lateral para as áreas logadas */
+:root{
+  --bg:#17181b; --surface:#202226; --surface-2:#2a2c31; --line:#34373d;
+  --fg:#eef0f2; --muted:#9a9ea6; --accent:#e4f04d; --accent-ink:#17181b;
+  --good:#5fd38d; --warn:#f2b84b; --bad:#ef6a5b;
+  --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body:"Inter Tight", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius:14px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--body);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.num{font-variant-numeric:tabular-nums}
+
+/* cabeçalho */
+.top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);
+  padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));
+  display:flex;align-items:center;gap:10px}
+.brand{font:800 18px var(--display);letter-spacing:-.01em;white-space:nowrap}
+.brand b{color:var(--accent)}
+.event-btn{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);
+  border-radius:10px;padding:8px 10px;text-align:left}
+.event-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.event-btn .tag{font:800 12px var(--display);color:var(--accent)}
+.icon-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;flex:none}
+.icon-btn svg{width:18px;height:18px}
+
+main{padding:18px max(16px,env(safe-area-inset-right,0px)) calc(96px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  max-width:880px;margin:0 auto}
+.eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.eyebrow.acc{color:var(--accent)}
+h1{font:800 clamp(26px,6vw,34px)/1.1 var(--display);margin:4px 0 4px;letter-spacing:-.02em;text-wrap:balance}
+h2{font:700 19px/1.2 var(--display);margin:0;text-wrap:balance}
+h3{font:700 15px var(--display);margin:0}
+.sub{color:var(--muted);margin:0 0 16px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+
+/* controles */
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-bottom:14px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:transparent;border-radius:999px;padding:7px 14px;font-size:13px;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.field{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.input,select.input,textarea.input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--fg)}
+.btn{border:0;border-radius:10px;padding:11px 16px;font-weight:600;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--fg)}
+.btn.danger{background:transparent;border:1px solid var(--bad);color:var(--bad)}
+.btn.sm{padding:7px 12px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:14px}
+
+/* superfícies */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+.card.click{cursor:pointer}
+.card.click:hover{border-color:#4a4e56}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;border-radius:999px;padding:3px 9px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.good{color:var(--good)} .pill.warn{color:var(--warn)} .pill.bad{color:var(--bad)} .pill.acc{color:var(--accent)}
+.empty{text-align:center;color:var(--muted);padding:34px 12px;border:1px dashed var(--line);border-radius:var(--radius)}
+.stat-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-size:13px}
+.stat b{color:var(--accent);margin-left:6px}
+
+/* tabelas */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:left;padding:10px 12px;background:var(--surface);white-space:nowrap}
+td{padding:10px 12px;border-top:1px solid var(--line);white-space:nowrap}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr.q td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.pos{font:800 14px var(--display);color:var(--accent)}
+
+/* partidas */
+.match{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center}
+.team{display:flex;justify-content:space-between;gap:10px;font-weight:600}
+.team.win{color:var(--fg)} .team.lose{color:var(--muted);font-weight:500}
+.score{font:800 18px var(--display);font-variant-numeric:tabular-nums}
+.meta{font-size:12.5px;color:var(--muted)}
+.day-head{font:700 13px var(--display);color:var(--accent);margin:16px 0 8px}
+.day-head::first-letter{text-transform:uppercase}
+.time{font:800 15px var(--display);font-variant-numeric:tabular-nums;min-width:52px}
+
+/* chave em árvore */
+.tree{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:16px;overflow-x:auto;padding-bottom:6px}
+.round{display:flex;flex-direction:column;justify-content:space-around;gap:12px}
+.round h4{font:700 12px var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0}
+.champ{border-color:var(--accent)}
+
+/* barra inferior */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--bg);border-top:1px solid var(--line);
+  display:grid;grid-template-columns:repeat(6,1fr);
+  padding:6px max(6px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
+.tab{background:none;border:0;border-radius:10px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--muted);min-width:0}
+.tab svg{width:20px;height:20px}
+.tab span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.tab[aria-current="page"]{color:var(--accent)}
+
+/* modal e gaveta */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:18px 18px 0 0;width:100%;max-width:560px;max-height:88vh;overflow:auto;
+  padding:20px max(18px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
+@media (min-width:700px){.scrim{align-items:center}.sheet{border-radius:18px}}
+.sheet-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px}
+.drawer{position:fixed;inset:0 auto 0 0;width:min(300px,86vw);background:var(--surface);border-right:1px solid var(--line);z-index:41;
+  padding:calc(18px + env(safe-area-inset-top,0px)) 14px 18px max(14px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:4px;overflow:auto}
+.drawer .item{display:flex;justify-content:space-between;align-items:center;background:none;border:0;border-radius:10px;padding:11px 12px;text-align:left;color:var(--fg)}
+.drawer .item[aria-current="page"]{background:var(--surface-2);color:var(--accent)}
+.drawer .item .badge{background:var(--accent);color:var(--accent-ink);border-radius:999px;font-size:11px;font-weight:700;padding:1px 7px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--fg);color:var(--bg);
+  padding:10px 16px;border-radius:10px;font-weight:600;font-size:13.5px;max-width:calc(100% - 32px)}
+.news-img{width:100%;border-radius:10px;display:block;margin:10px 0;background:var(--surface-2)}
+.lineup-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:420px){.lineup-grid{grid-template-columns:1fr}}
+.sets{display:flex;gap:10px 16px;align-items:center;flex-wrap:wrap}
+.setbox{display:inline-flex;gap:6px;align-items:center;flex:none}
+.sets input{width:54px;text-align:center}
+.err{color:var(--bad);font-size:13px;min-height:1em;margin:0}
+@media print{
+  body.printing{background:#fff;color:#000}
+  body.printing .top,body.printing .tabbar,body.printing #layer,body.printing #view>*:not(#printArea){display:none!important}
+  body.printing main{padding:0;max-width:none}
+  body.printing #printArea[hidden]{display:block!important}
+  body.printing #printArea h1{color:#000;font-size:20px}
+  body.printing #printArea table{border-collapse:collapse;width:100%;font-size:11px}
+  body.printing #printArea th,body.printing #printArea td{border:1px solid #999;padding:4px 6px;color:#000;background:#fff;white-space:normal}
+}
+@media (prefers-reduced-motion:no-preference){.sheet,.drawer{animation:rise .18s ease-out}@keyframes rise{from{transform:translateY(8px);opacity:.6}}}
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="icon-btn" id="menuBtn" aria-label="Abrir menu" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <div class="brand">FPT <b>gosports</b></div>
+  <button class="event-btn" id="eventBtn" aria-label="Trocar evento"><span class="tag">BT</span><span id="eventName">Carregando…</span></button>
+  <button class="icon-btn" id="refreshBtn" aria-label="Atualizar dados da tela">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg>
+  </button>
+</header>
+
+<main id="view" aria-live="polite"></main>
+
+<nav class="tabbar" id="tabbar" aria-label="Seções">
+  <button class="tab" data-tab="chaves"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h5v5H4zM4 14h5v5H4zM9 7.5h4v9H9M13 12h7"/></svg><span>Chaves</span></button>
+  <button class="tab" data-tab="agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span>Agenda</span></button>
+  <button class="tab" data-tab="resultados"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><span>Resultados</span></button>
+  <button class="tab" data-tab="ranking"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 20V12M12 20V5M19 20v-9"/></svg><span>Ranking</span></button>
+  <button class="tab" data-tab="news"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg><span>News</span></button>
+  <button class="tab" data-tab="conta" id="accountTab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span id="accountLabel">Entrar</span></button>
+</nav>
+
+<div id="layer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+/* ============ configuração ============ */
+const CONFIG = {
+  url: "https://tajvijpuhugjfrnbgyzg.supabase.co",
+  key: "sb_publishable_BGwWJrm0ZDkGsf4_BF4_CA_gv_NSuB3", // chave pública, feita para o navegador; a segurança vem do RLS
+  defaultEvent: "beach-tennis-44-maringa"
+};
+const sb = supabase.createClient(CONFIG.url, CONFIG.key);
+
+/* ============ estado ============ */
+const S = {
+  events: [], event: null, clubs: [], cats: [], matches: [], games: [], news: [], rules: null, likes: new Set(),
+  user: null, profiles: [], profile: null,
+  tab: "news", area: null, filters: {}, live: null
+};
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch {} } };
+const fmtDay = d => new Date(d).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" });
+const fmtTime = d => new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
+const fmtDate = d => new Date(d).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+const dayKey = d => new Date(d).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+const club = id => S.clubs.find(c => c.id === id);
+const clubName = id => club(id)?.name ?? "A definir";
+const cat = id => S.cats.find(c => c.id === id);
+const teamName = (m, side) => { const id = side === "A" ? m.club_a_id : m.club_b_id; const lbl = side === "A" ? m.team_a_label : m.team_b_label; const src = side === "A" ? m.source_a : m.source_b; return id ? clubName(id) + (lbl && lbl !== "Equipe 1" ? " · " + lbl : "") : (typeof slotLabel === "function" && src ? slotLabel(src) : "A definir"); };
+const STATUS = { scheduled: ["Programado", ""], on_court: ["Em quadra", "acc"], result_pending: ["Resultado pendente", "warn"], finished: ["Finalizado", "good"], walkover: ["W.O.", "bad"], cancelled: ["Cancelado", "bad"] };
+const statusPill = s => { const [t, c] = STATUS[s] || [s, ""]; return `<span class="pill ${c}">${t}</span>`; };
+const ROLE = { organizer: "Organização", club_manager: "Gestor do clube", captain: "Capitão", referee: "Arbitragem" };
+const LINEUP = { draft: ["Rascunho", ""], submitted: ["Enviada ao árbitro", "warn"], accepted: ["Aceita", "good"], adjustment_requested: ["Ajuste solicitado", "bad"] };
+
+function toast(msg) {
+  const t = document.createElement("div"); t.className = "toast"; t.role = "status"; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
+}
+function openSheet(html, onMount) {
+  const layer = $("#layer");
+  layer.innerHTML = `<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+  $("#scrim").addEventListener("click", e => { if (e.target.id === "scrim" || e.target.closest("[data-close]")) closeSheet(); });
+  onMount && onMount($(".sheet", layer));
+  $(".sheet input, .sheet button", layer)?.focus();
+}
+function closeSheet() { $("#layer").innerHTML = ""; }
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+const sheetHead = (eyebrow, title) => `<div class="sheet-head"><div style="flex:1;min-width:0"><div class="eyebrow acc">${esc(eyebrow)}</div><h2>${esc(title)}</h2></div><button class="icon-btn" data-close aria-label="Fechar">✕</button></div>`;
+
+/* ============ dados ============ */
+async function loadEvents() {
+  const { data, error } = await sb.from("events").select("*").order("starts_on", { ascending: false });
+  if (error) throw error;
+  S.events = data;
+  const saved = store.get("ic:event", CONFIG.defaultEvent);
+  S.event = data.find(e => e.slug === saved) || data.find(e => e.status === "in_progress") || data[0] || null;
+}
+async function loadEventData() {
+  if (!S.event) return;
+  const id = S.event.id;
+  const [c, k, m, n, r] = await Promise.all([
+    sb.from("clubs").select("*").eq("event_id", id).order("name"),
+    sb.from("categories").select("*").eq("event_id", id).order("name"),
+    sb.from("matches").select("*").eq("event_id", id).order("scheduled_at", { nullsFirst: false }).order("match_number"),
+    sb.from("news").select("*").eq("event_id", id).order("published_at", { ascending: false }),
+    sb.from("ranking_rules").select("rules").eq("event_id", id).maybeSingle()
+  ]);
+  for (const x of [c, k, m, n, r]) if (x.error) throw x.error;
+  S.clubs = c.data; S.cats = k.data.sort(catSort); S.matches = m.data; S.news = n.data; S.rules = r.data?.rules || null;
+  S.games = [];
+  for (let from = 0; ; from += 1000) {
+    const g = await sb.from("match_games").select("id,match_id,idx,label,game_type,sets,winner,status,live,matches!inner(event_id)")
+      .eq("matches.event_id", id).order("id").range(from, from + 999);
+    if (g.error) throw g.error;
+    S.games.push(...g.data.map(({ matches, ...x }) => x));
+    if (g.data.length < 1000) break;
+  }
+  const likes = await sb.from("news_likes").select("news_id,user_id");
+  S.likeCount = {}; S.likes = new Set();
+  (likes.data || []).forEach(l => { S.likeCount[l.news_id] = (S.likeCount[l.news_id] || 0) + 1; if (l.user_id === S.user?.id) S.likes.add(l.news_id); });
+  $("#eventName").textContent = S.event.name;
+}
+function catSort(a, b) {
+  const g = x => x.name.startsWith("SUB") ? 2 : x.name.startsWith("MASC") ? 1 : 0;
+  return g(a) - g(b) || a.name.localeCompare(b.name, "pt-BR", { numeric: true });
+}
+const gamesOf = mid => S.games.filter(g => g.match_id === mid).sort((a, b) => a.idx - b.idx);
+
+/* ============ regras: classificação e ranking ============ */
+function setPairs(sets) { const out = []; for (let i = 0; i + 1 < sets.length; i += 2) if (sets[i] != null && sets[i + 1] != null) out.push([sets[i], sets[i + 1]]); return out; }
+function standings(matches) {
+  const t = new Map();
+  const row = (id, lbl) => { const k = id + "|" + lbl; if (!t.has(k)) t.set(k, { club: id, label: lbl, J: 0, V: 0, E: 0, D: 0, ST: 0, SG: 0 }); return t.get(k); };
+  for (const m of matches) {
+    if (!m.club_a_id || !m.club_b_id) continue;
+    const a = row(m.club_a_id, m.team_a_label), b = row(m.club_b_id, m.team_b_label);
+    if (!["finished", "walkover"].includes(m.status)) continue;
+    a.J++; b.J++;
+    const sa = m.score_a ?? 0, sb2 = m.score_b ?? 0;
+    if (m.winner === "A") { a.V++; b.D++; } else if (m.winner === "B") { b.V++; a.D++; } else { a.E++; b.E++; }
+    a.ST += sa - sb2; b.ST += sb2 - sa;
+    for (const g of gamesOf(m.id)) for (const [x, y] of setPairs(g.sets)) { a.SG += x - y; b.SG += y - x; }
+  }
+  // desempate: vitórias; entre empatados, confronto direto (mini-tabela dos empatados); depois saldo de jogos internos e de games
+  const rows = [...t.values()];
+  const key = r => r.club + "|" + r.label;
+  const mini = tied => {
+    const ids = new Set(tied.map(key)), mt = new Map(tied.map(r => [key(r), { V: 0, ST: 0, SG: 0 }]));
+    for (const m of matches) {
+      const ka = m.club_a_id + "|" + m.team_a_label, kb = m.club_b_id + "|" + m.team_b_label;
+      if (!ids.has(ka) || !ids.has(kb) || !m.winner) continue;
+      const a = mt.get(ka), b = mt.get(kb);
+      if (m.winner === "A") a.V++; else b.V++;
+      a.ST += (m.score_a ?? 0) - (m.score_b ?? 0); b.ST += (m.score_b ?? 0) - (m.score_a ?? 0);
+      for (const g of gamesOf(m.id)) for (const [x, y] of setPairs(g.sets)) { a.SG += x - y; b.SG += y - x; }
+    }
+    return mt;
+  };
+  rows.sort((x, y) => y.V - x.V);
+  const out = [];
+  for (let i = 0; i < rows.length;) {
+    let j = i; while (j < rows.length && rows[j].V === rows[i].V) j++;
+    const tied = rows.slice(i, j);
+    if (tied.length > 1) {
+      const mt = mini(tied);
+      tied.sort((x, y) => { const a = mt.get(key(x)), b = mt.get(key(y)); return b.V - a.V || b.ST - a.ST || b.SG - a.SG || y.ST - x.ST || y.SG - x.SG; });
+    }
+    out.push(...tied); i = j;
+  }
+  return out;
+}
+const isGroup = m => /^grupo/i.test(m.phase_name);
+const KO_ORDER = ["oitavas", "quartas", "semifinal", "final"];
+const koRank = p => { const s = p.toLowerCase(); return KO_ORDER.findIndex(k => s.startsWith(k)); };
+
+function categoryPlacements(c) {
+  const ms = S.matches.filter(m => m.category_id === c.id);
+  const out = new Map(); // clubId -> {phase,label,points}
+  const R = S.rules || {};
+  const put = (clubId, phase, label, pts) => { const cur = out.get(clubId); if (!cur || pts > cur.points) out.set(clubId, { phase, label, points: pts }); };
+  if (c.competition_type === "round_robin") {
+    const st = standings(ms);
+    const n = st.length;
+    const rule = R["group" + n] || R.group5 || {};
+    const keys = ["champion", "finalist", "third_place", "fourth_place", "fifth_place"];
+    const labels = ["Campeão", "Vice", "3º lugar", "4º lugar", "5º lugar"];
+    const done = ms.length && ms.every(m => ["finished", "walkover", "cancelled"].includes(m.status));
+    if (!done) return out;
+    st.forEach((r, i) => put(r.club, keys[i] || "", labels[i] || `${i + 1}º lugar`, rule[keys[i]]?.class1 ?? 0));
+  } else {
+    const main = R.main || {};
+    const ko = ms.filter(m => !isGroup(m));
+    const groupClubs = new Set(ms.filter(isGroup).flatMap(m => [m.club_a_id, m.club_b_id]).filter(Boolean));
+    const final = ko.find(m => koRank(m.phase_name) === 3);
+    const pts = k => main[k]?.class1 ?? 0;
+    for (const id of groupClubs) put(id, "group_phase", "Fase de grupos", pts("group_phase"));
+    for (const m of ko) {
+      if (!m.winner) continue;
+      const loser = m.winner === "A" ? m.club_b_id : m.club_a_id;
+      const r = koRank(m.phase_name);
+      const map = { 0: ["round16", "Oitavas"], 1: ["quarter", "Quartas"], 2: ["semifinalist", "Semifinal"] }[r];
+      if (map) put(loser, map[0], map[1], pts(map[0]));
+    }
+    if (final?.winner) {
+      put(final.winner === "A" ? final.club_a_id : final.club_b_id, "champion", "Campeão", pts("champion"));
+      put(final.winner === "A" ? final.club_b_id : final.club_a_id, "finalist", "Vice", pts("finalist"));
+    }
+  }
+  return out;
+}
+function ranking(group) {
+  const rows = new Map(S.clubs.filter(c => S.matches.some(m => m.club_a_id === c.id || m.club_b_id === c.id)).map(c => [c.id, { club: c.id, total: 0, by: {} }]));
+  for (const c of S.cats.filter(c => c.ranking_group === group)) {
+    for (const [id, p] of categoryPlacements(c)) {
+      const r = rows.get(id); if (!r) continue;
+      r.by[c.name] = p; r.total += p.points;
+    }
+  }
+  return [...rows.values()].sort((a, b) => b.total - a.total || clubName(a.club).localeCompare(clubName(b.club)));
+}
+
+/* ============ componentes ============ */
+function matchCard(m, { clickable = true } = {}) {
+  const c = cat(m.category_id);
+  const wa = m.winner === "A", wb = m.winner === "B", done = m.winner;
+  return `<article class="card ${clickable ? "click" : ""}" data-match="${m.id}" ${clickable ? 'tabindex="0" role="button"' : ""}>
+    <div class="row" style="margin-bottom:8px"><span class="small muted">${esc(c?.name)} · ${esc(m.phase_name)}${m.match_number ? " · Jogo " + m.match_number : ""}</span><span class="spacer"></span>${statusPill(m.status)}</div>
+    <div class="match">
+      <div class="team ${done ? (wa ? "win" : "lose") : ""}">${esc(teamName(m, "A"))}</div><div class="score num">${m.score_a ?? "–"}</div>
+      <div class="team ${done ? (wb ? "win" : "lose") : ""}">${esc(teamName(m, "B"))}</div><div class="score num">${m.score_b ?? "–"}</div>
+    </div>${liveLine(m)}
+    <div class="meta" style="margin-top:8px">${m.scheduled_at ? fmtDate(m.scheduled_at) + " " + fmtTime(m.scheduled_at) : "Sem horário"}${m.venue_id ? " · " + esc(clubName(m.venue_id)) : ""}${m.court ? " · " + esc(m.court) : ""}</div>
+  </article>`;
+}
+function bindMatchClicks(root) {
+  root.querySelectorAll("[data-match]").forEach(el => {
+    const open = () => openMatch(+el.dataset.match);
+    el.addEventListener("click", open);
+    el.addEventListener("keydown", e => { if (e.key === "Enter") open(); });
+  });
+}
+async function openMatch(id) {
+  const m = S.matches.find(x => x.id === id); if (!m) return;
+  const gs = gamesOf(id);
+  let lineups = [];
+  if (S.user) { const r = await sb.from("lineups").select("*").eq("match_id", id); lineups = r.data || []; }
+  const names = await athleteNames(lineups);
+  const line = (club, idx) => { const l = lineups.find(x => x.club_id === club && x.game_idx === idx && x.status === "accepted"); return l ? [l.player1_id, l.player2_id].map(p => names[p]).filter(Boolean).join(" / ") : ""; };
+  openSheet(sheetHead(`${cat(m.category_id)?.name} · ${m.phase_name}`, `${teamName(m, "A")} × ${teamName(m, "B")}`) + `
+    <div class="row" style="margin-bottom:12px">${statusPill(m.status)}<span class="meta">${m.scheduled_at ? fmtDate(m.scheduled_at) + " " + fmtTime(m.scheduled_at) : "Sem horário"}${m.venue_id ? " · " + esc(clubName(m.venue_id)) : ""}${m.court ? " · " + esc(m.court) : ""}</span></div>
+    <div class="card" style="margin-bottom:12px"><div class="match"><div class="team">${esc(teamName(m, "A"))}</div><div class="score">${m.score_a ?? "–"}</div><div class="team">${esc(teamName(m, "B"))}</div><div class="score">${m.score_b ?? "–"}</div></div></div>
+    <div class="stack">${gs.length ? gs.map(g => `<div class="card"><div class="row"><h3>${esc(g.label)}</h3><span class="spacer"></span>${g.winner ? `<span class="pill good">Vitória ${g.winner === "A" ? esc(clubName(m.club_a_id)) : esc(clubName(m.club_b_id))}</span>` : statusPill(g.status === "in_progress" ? "on_court" : "scheduled")}</div>
+      <div class="meta" style="margin-top:6px">${g.live && g.status === "in_progress" ? "Ao vivo · " + esc(liveText(scoreFromRow(g, cat(m.category_id)?.sets_format))) : setPairs(g.sets).map(([a, b]) => `${a}–${b}`).join(" · ") || "Sem placar"}</div>
+      ${line(m.club_a_id, g.idx) || line(m.club_b_id, g.idx) ? `<div class="small" style="margin-top:6px">${esc(line(m.club_a_id, g.idx) || "—")} <span class="muted">×</span> ${esc(line(m.club_b_id, g.idx) || "—")}</div>` : ""}</div>`).join("") : `<div class="empty">Os jogos internos aparecem quando a escalação for aceita.</div>`}</div>`);
+}
+async function athleteNames(lineups) {
+  const ids = [...new Set(lineups.flatMap(l => [l.player1_id, l.player2_id]).filter(Boolean))];
+  if (!ids.length) return {};
+  const { data } = await sb.from("athletes").select("id,name").in("id", ids);
+  return Object.fromEntries((data || []).map(a => [a.id, a.name]));
+}
+function catChips(selected, list = S.cats, all = false) {
+  return `<div class="chips" role="group" aria-label="Categorias">${all ? `<button class="chip" data-cat="" aria-pressed="${!selected}">Todas</button>` : ""}${list.map(c => `<button class="chip" data-cat="${c.id}" aria-pressed="${selected === c.id}">${esc(c.name)}</button>`).join("")}</div>`;
+}
+
+/* ============ telas públicas ============ */
+const VIEWS = {};
+
+VIEWS.chaves = (opts = {}) => {
+  const list = opts.club ? S.cats.filter(c => S.matches.some(m => m.category_id === c.id && (m.club_a_id === opts.club || m.club_b_id === opts.club))) : S.cats;
+  let sel = S.filters.cat && list.find(c => c.id === S.filters.cat) ? S.filters.cat : list[0]?.id;
+  const c = cat(sel);
+  if (!c) return `<h1>Chaves</h1><div class="empty">Nenhuma chave publicada para este evento.</div>`;
+  const ms = S.matches.filter(m => m.category_id === c.id);
+  const groups = {}; ms.filter(isGroup).forEach(m => (groups[m.phase_name] ||= []).push(m));
+  const ko = ms.filter(m => !isGroup(m)).sort((a, b) => koRank(a.phase_name) - koRank(b.phase_name) || a.match_number - b.match_number);
+  const rr = c.competition_type === "round_robin";
+  const nTeams = new Set(ms.flatMap(m => [m.club_a_id + m.team_a_label, m.club_b_id + m.team_b_label])).size;
+  const view = S.filters.tree ?? "tree";
+  const table = (rows, qualify) => `<div class="table-wrap"><table><thead><tr><th>#</th><th>Clube</th><th class="n" title="Jogos">J</th><th class="n" title="Vitórias">V</th><th class="n" title="Empates">E</th><th class="n" title="Derrotas">D</th><th class="n" title="Saldo de jogos internos">ST</th><th class="n" title="Saldo de games">SG</th></tr></thead><tbody>
+    ${rows.map((r, i) => `<tr class="${i < qualify ? "q" : ""}"><td class="pos">${i + 1}</td><td>${esc(clubName(r.club))}${r.label && r.label !== "Equipe 1" ? ` <span class="muted small">${esc(r.label)}</span>` : ""}</td><td class="n">${r.J}</td><td class="n">${r.V}</td><td class="n">${r.E}</td><td class="n">${r.D}</td><td class="n">${r.ST > 0 ? "+" : ""}${r.ST}</td><td class="n">${r.SG > 0 ? "+" : ""}${r.SG}</td></tr>`).join("")}</tbody></table></div>`;
+  const final = ko.find(m => koRank(m.phase_name) === 3 && m.winner);
+  const rounds = {}; ko.forEach(m => (rounds[m.phase_name] ||= []).push(m));
+  return `${opts.header || `<div class="eyebrow">${esc(S.event.city || "")} · ${fmtDate(S.event.starts_on + "T12:00")} a ${fmtDate(S.event.ends_on + "T12:00")}</div><h1>Chaves</h1><p class="sub">Classificação e confrontos por categoria.</p>`}
+    ${catChips(sel, list)}
+    <div class="card" style="margin-bottom:14px"><div class="eyebrow">Chave</div><h2>${esc(c.name)} · ${nTeams} equipes</h2>
+      <p class="muted small" style="margin:6px 0 0">${rr ? "Todos contra todos. A classificação final define a pontuação no ranking." : "Os dois primeiros de cada grupo avançam para a fase eliminatória."} ${gamesPerMatch(c) === 1 ? "Uma dupla por confronto" : "Três duplas por confronto, vence quem ganhar duas"}; ${setsNeeded(c) === 2 ? "cada dupla joga melhor de 3 sets, com super tie-break até 10 no 3º" : "cada dupla joga um set até 6 games, com tie-break em 6–6"}.</p></div>
+    ${Object.keys(groups).length ? `<h3 style="margin:18px 0 10px">${rr ? "Classificação" : "Fase de grupos"}</h3><div class="stack">${Object.entries(groups).sort().map(([g, list]) => `<div><div class="small muted" style="margin-bottom:6px">${esc(g)}</div>${table(standings(list), rr ? 0 : 2)}</div>`).join("")}</div>` : ""}
+    ${ko.length ? `<div class="row" style="margin:22px 0 10px"><h3>Fase eliminatória</h3><span class="spacer"></span>
+       <div class="chips" style="margin:0"><button class="chip" data-tree="tree" aria-pressed="${view === "tree"}">Árvore</button><button class="chip" data-tree="list" aria-pressed="${view === "list"}">Lista</button></div></div>
+      ${view === "tree" ? `<div class="tree">${Object.entries(rounds).map(([r, list]) => `<div class="round"><h4>${esc(r)}</h4>${list.map(m => matchCard(m)).join("")}</div>`).join("")}
+        ${final ? `<div class="round"><h4>Campeão</h4><div class="card champ"><div class="eyebrow acc">Campeão</div><h2>${esc(teamName(final, final.winner))}</h2></div></div>` : ""}</div>`
+      : `<div class="stack">${ko.map(m => matchCard(m)).join("")}</div>`}` : ""}
+    ${!ms.length ? `<div class="empty">Esta categoria ainda não tem confrontos.</div>` : ""}`;
+};
+
+function matchFilters(list, { withClub = true } = {}) {
+  const f = S.filters;
+  const days = [...new Set(list.filter(m => m.scheduled_at).map(m => dayKey(m.scheduled_at)))].sort();
+  return `<div class="filters">
+    <select class="input" id="fCat" aria-label="Categoria"><option value="">Todas as categorias</option>${S.cats.map(c => `<option value="${c.id}" ${f.cat == c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>
+    <select class="input" id="fDay" aria-label="Dia"><option value="">Todos os dias</option>${days.map(d => `<option value="${d}" ${f.day === d ? "selected" : ""}>${fmtDay(d + "T12:00")}</option>`).join("")}</select>
+    ${withClub ? `<select class="input" id="fClub" aria-label="Clube"><option value="">Todos os clubes</option>${S.clubs.map(c => `<option value="${c.id}" ${f.club == c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>` : ""}
+    <select class="input" id="fStatus" aria-label="Status"><option value="">Todos os status</option>${Object.entries(STATUS).slice(0, 5).map(([k, [t]]) => `<option value="${k}" ${f.status === k ? "selected" : ""}>${t}</option>`).join("")}</select>
+  </div>`;
+}
+function applyFilters(list, fixedClub) {
+  const f = S.filters;
+  return list.filter(m => (!f.cat || m.category_id == f.cat) && (!f.day || (m.scheduled_at && dayKey(m.scheduled_at) === f.day))
+    && (!(fixedClub || f.club) || [m.club_a_id, m.club_b_id].includes(+(fixedClub || f.club))) && (!f.status || m.status === f.status));
+}
+function bindFilters(root) {
+  [["#fCat", "cat"], ["#fDay", "day"], ["#fClub", "club"], ["#fStatus", "status"]].forEach(([s, k]) => {
+    const el = $(s, root); if (el) el.addEventListener("change", () => { S.filters[k] = el.value ? (k === "cat" || k === "club" ? +el.value : el.value) : ""; render(); });
+  });
+}
+
+VIEWS.agenda = (opts = {}) => {
+  const list = applyFilters(S.matches.filter(m => m.scheduled_at && (m.schedule_published || S.profile?.role === "organizer")), opts.club);
+  const byDay = {}; list.forEach(m => (byDay[dayKey(m.scheduled_at)] ||= []).push(m));
+  const counts = { total: list.length, fin: list.filter(m => m.status === "finished").length };
+  return `${opts.header || `<h1>Agenda</h1><p class="sub">Programação publicada do evento.</p>`}
+    <div class="stat-row"><div class="stat">Jogos<b class="num">${counts.total}</b></div><div class="stat">A jogar<b class="num">${counts.total - counts.fin}</b></div><div class="stat">Finalizados<b class="num">${counts.fin}</b></div></div>
+    ${matchFilters(S.matches, { withClub: !opts.club })}
+    ${Object.keys(byDay).length ? Object.entries(byDay).sort().map(([d, ms]) => `<div class="day-head">${fmtDay(d + "T12:00")} · ${ms.length} jogo(s)</div>
+      <div class="stack">${ms.map(m => `<div class="card click" data-match="${m.id}" tabindex="0" role="button"><div class="row" style="flex-wrap:nowrap;align-items:flex-start">
+        <div class="time">${fmtTime(m.scheduled_at)}</div><div style="flex:1;min-width:0"><div class="small muted">${esc(cat(m.category_id)?.name)} · ${esc(m.phase_name)}${m.match_number ? " · Jogo " + m.match_number : ""}</div>
+        <div style="font-weight:600;white-space:normal">${esc(teamName(m, "A"))} × ${esc(teamName(m, "B"))}</div><div class="meta">${esc(clubName(m.venue_id))}${m.court ? " · " + esc(m.court) : ""}</div></div>${statusPill(m.status)}</div></div>`).join("")}</div>`).join("")
+      : `<div class="empty">Nenhum jogo com esses filtros.</div>`}`;
+};
+
+VIEWS.resultados = (opts = {}) => {
+  const list = applyFilters(S.matches.filter(m => ["finished", "walkover", "result_pending"].includes(m.status)), opts.club)
+    .sort((a, b) => new Date(b.scheduled_at) - new Date(a.scheduled_at));
+  return `${opts.header || `<h1>Resultados</h1><p class="sub">Placar em jogos internos vencidos. Toque para ver os sets de cada dupla.</p>`}
+    ${matchFilters(S.matches, { withClub: !opts.club })}
+    ${list.length ? `<div class="stack">${list.map(m => matchCard(m)).join("")}</div>` : `<div class="empty">Ainda não há resultados com esses filtros.</div>`}`;
+};
+
+VIEWS.ranking = () => {
+  const group = S.filters.rank || "geral";
+  const rows = ranking(group);
+  return `<h1>Ranking</h1><p class="sub">Pontos por clube somando a colocação em cada categoria.</p>
+    <div class="chips"><button class="chip" data-rank="geral" aria-pressed="${group === "geral"}">Ranking Geral</button><button class="chip" data-rank="juniors" aria-pressed="${group === "juniors"}">Ranking Juniors</button></div>
+    ${rows.length ? `<div class="table-wrap"><table><thead><tr><th>#</th><th>Clube</th><th class="n">Categorias</th><th class="n">Total</th></tr></thead><tbody>
+      ${rows.map((r, i) => `<tr class="click" data-club="${r.club}" style="cursor:pointer"><td class="pos">${i + 1}</td><td><b>${esc(clubName(r.club))}</b></td><td class="n">${Object.values(r.by).filter(p => p.points).length}</td><td class="n"><b>${r.total}</b></td></tr>`).join("")}
+    </tbody></table></div><p class="small muted">Toque em um clube para ver os pontos por categoria.</p>` : `<div class="empty">O ranking aparece quando as categorias forem concluídas.</div>`}`;
+};
+
+VIEWS.news = () => {
+  const f = S.filters.news || "";
+  const q = (S.filters.q || "").toLowerCase();
+  const list = S.news.filter(n => (!f || n.kind === f) && (!q || (n.title + " " + (n.content || "")).toLowerCase().includes(q)));
+  return `<h1>News</h1><p class="sub">Comunicados e novidades dos eventos.</p>
+    <input class="input" id="newsQ" placeholder="Buscar notícia" aria-label="Buscar notícia" value="${esc(S.filters.q || "")}" style="margin-bottom:10px">
+    <div class="chips"><button class="chip" data-news="" aria-pressed="${!f}">Todos os tipos</button><button class="chip" data-news="notice" aria-pressed="${f === "notice"}">Aviso</button><button class="chip" data-news="sponsor" aria-pressed="${f === "sponsor"}">Patrocinador</button></div>
+    ${list.length ? `<div class="stack">${list.map(n => `<article class="card">
+      <div class="row"><span class="small muted">Interclubes · ${fmtDate(n.published_at)}</span><span class="spacer"></span><span class="pill ${n.kind === "sponsor" ? "acc" : ""}">${n.kind === "sponsor" ? "Patrocinador" : "Aviso"}</span></div>
+      <h2 style="margin-top:8px">${esc(n.title)}</h2>
+      ${n.image_url ? `<img class="news-img" src="${esc(n.image_url)}" alt="${esc(n.title)}" loading="lazy">` : ""}
+      ${n.content ? `<p style="margin:8px 0 0">${esc(n.content)}</p>` : ""}
+      <div class="row" style="margin-top:10px"><button class="btn ghost sm" data-like="${n.id}" aria-pressed="${S.likes.has(n.id)}">${S.likes.has(n.id) ? "♥" : "♡"} ${S.likeCount?.[n.id] || 0}</button>
+      <button class="btn ghost sm" data-share="${n.id}">Copiar link</button></div></article>`).join("")}</div>` : `<div class="empty">Nenhuma notícia encontrada.</div>`}`;
+};
+
+VIEWS.conta = () => {
+  if (!S.user) { setTimeout(() => openLogin("login"), 0); S.tab = "news"; return VIEWS.news(); }
+  return `<div class="eyebrow acc">Minha conta</div><h1>${esc(S.user.email)}</h1><p class="sub">${S.profile ? `Ambiente ativo: ${esc(S.event?.name)} · ${ROLE[S.profile.role]}${S.profile.club_id ? " · " + esc(clubName(S.profile.club_id)) : ""}` : "Você ainda não tem perfil de acesso neste evento. Peça à organização para vincular sua conta."}</p>
+    ${S.profiles.length > 1 ? `<h3 style="margin:16px 0 8px">Trocar perfil</h3><div class="stack">${S.profiles.map(p => `<button class="card click" style="text-align:left" data-profile="${p.id}" ${S.profile?.id === p.id ? 'aria-current="true"' : ""}><b>${ROLE[p.role]}</b>${p.club_id ? " · " + esc(clubName(p.club_id)) : ""}<div class="small muted">${esc(S.events.find(e => e.id === p.event_id)?.name)}</div></button>`).join("")}</div>` : ""}
+    <h3 style="margin:20px 0 8px">Clubes favoritos</h3><div class="chips" style="flex-wrap:wrap">${S.clubs.map(c => `<button class="chip" data-fav="${c.id}" aria-pressed="${S.favs?.has(c.id) ? "true" : "false"}">${esc(c.name)}</button>`).join("")}</div>
+    <div class="row" style="margin-top:20px"><button class="btn ghost" id="pwBtn">Alterar senha</button><button class="btn danger" id="logoutBtn">Sair</button></div>`;
+};
+
+/* ============ áreas logadas ============ */
+const AREAS = {
+  captain: [["escalacoes", "Escalações"], ["andamento", "Jogos em andamento"], ["c_chaves", "Chaves"], ["jogadores", "Jogadores"], ["inscricoes", "Inscrições"], ["c_programacao", "Programação"], ["c_resultados", "Resultados"], ["ranking", "Ranking"]],
+  club_manager: [["clube_painel", "Painel do clube"], ["escalacoes", "Escalações"], ["clube_atletas", "Atletas"], ["clube_capitaes", "Capitães"], ["inscricoes", "Inscrições"], ["andamento", "Jogos em andamento"], ["c_chaves", "Chaves"], ["c_programacao", "Programação"], ["c_resultados", "Resultados"], ["ranking", "Ranking"]],
+  referee: [["arbitragem", "Jogos"], ["ref_aceites", "Escalações"], ["ref_quadra", "Jogos em andamento"], ["agenda", "Programação"], ["resultados", "Resultados"]],
+  organizer: [["painel", "Painel"], ["org_inscricoes", "Inscrições"], ["org_chaves", "Chaves"], ["org_grade", "Programação"], ["org_partidas", "Partidas"], ["arbitragem", "Súmulas"], ["org_arbitros", "Escala de arbitragem"], ["org_atletas", "Atletas"], ["org_acessos", "Acessos"], ["org_news", "Notícias"], ["ranking", "Ranking"]]
+};
+const myClub = () => S.profile?.club_id;
+const areaHeader = (title, note) => `<div class="eyebrow acc">${ROLE[S.profile.role]}${myClub() ? " · " + esc(clubName(myClub())) : ""}</div><h1>${title}</h1><p class="sub">${note}</p>`;
+
+VIEWS.c_chaves = () => VIEWS.chaves({ club: myClub(), header: areaHeader("Chaves", "Somente consulta, nas categorias em que o clube joga.") });
+VIEWS.c_programacao = () => VIEWS.agenda({ club: myClub(), header: areaHeader("Programação", "Jogos do clube, somente consulta.") });
+VIEWS.c_resultados = () => VIEWS.resultados({ club: myClub(), header: areaHeader("Resultados", "Resultados do clube, somente consulta.") });
+
+VIEWS.andamento = () => {
+  const list = S.matches.filter(m => [m.club_a_id, m.club_b_id].includes(myClub()) && ["on_court", "result_pending"].includes(m.status));
+  return areaHeader("Jogos em andamento", "Partidas do clube em quadra, com placar ao vivo.") +
+    (list.length ? `<div class="stack">${list.map(m => matchCard(m)).join("")}</div>` : `<div class="empty">Nenhum jogo do clube está em quadra agora. O placar atualiza sozinho quando a arbitragem lançar.</div>`);
+};
+
+VIEWS.jogadores = () => `<div id="playersBox">${areaHeader("Jogadores", "Atletas inscritos pelo clube. Alterações são feitas pela organização.")}<div class="empty">Carregando atletas…</div></div>`;
+async function mountPlayers() {
+  const box = $("#playersBox"); if (!box) return;
+  const { data: ath, error } = await sb.from("athletes").select("id,name,fpt_registration,is_example,roster(category_id,role,status)").eq("club_id", myClub()).eq("active", true).order("name");
+  if (error) { box.innerHTML += `<p class="err">${esc(error.message)}</p>`; return; }
+  const rows = ath.flatMap(a => (a.roster.length ? a.roster : [{}]).map(r => ({ ...a, ...r })));
+  const f = S.filters.pcat || "", q = (S.filters.pq || "").toLowerCase();
+  const list = rows.filter(r => (!f || r.category_id == f) && (!q || (r.name + r.fpt_registration).toLowerCase().includes(q)));
+  box.innerHTML = areaHeader("Jogadores", "Atletas inscritos pelo clube. Alterações são feitas pela organização.") + `
+    <div class="stat-row"><div class="stat">Jogadores<b class="num">${ath.length}</b></div><div class="stat">Categorias<b class="num">${new Set(rows.map(r => r.category_id).filter(Boolean)).size}</b></div></div>
+    <div class="filters"><input class="input" id="pq" placeholder="Buscar jogador ou registro" value="${esc(S.filters.pq || "")}" aria-label="Buscar jogador">
+    <select class="input" id="pcat" aria-label="Categoria"><option value="">Todas as categorias</option>${S.cats.map(c => `<option value="${c.id}" ${f == c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
+    ${list.length ? `<div class="table-wrap"><table><thead><tr><th>Registro</th><th>Nome</th><th>Categoria</th><th>Função</th><th>Status</th></tr></thead><tbody>
+      ${list.map(r => `<tr><td class="num">${esc(r.fpt_registration || "—")}</td><td><b>${esc(r.name)}</b>${r.is_example ? ' <span class="muted small">exemplo</span>' : ""}</td><td>${esc(cat(r.category_id)?.name || "—")}</td><td>${r.role === "reserva" ? "Reserva" : "Titular"}</td><td>${{ valid: '<span class="pill good">Válido</span>', pending: '<span class="pill warn">Pendente</span>', rejected: '<span class="pill bad">Recusado</span>' }[r.status] || "—"}</td></tr>`).join("")}
+    </tbody></table></div>` : `<div class="empty">Nenhum atleta com esses filtros.</div>`}`;
+  $("#pq").addEventListener("input", e => { S.filters.pq = e.target.value; clearTimeout(mountPlayers.t); mountPlayers.t = setTimeout(mountPlayers, 250); });
+  $("#pcat").addEventListener("change", e => { S.filters.pcat = e.target.value; mountPlayers(); });
+}
+
+VIEWS.escalacoes = () => `<div id="lineupBox">${areaHeader("Escalações", "Monte a escalação de cada confronto liberado pela arbitragem.")}<div class="empty">Carregando confrontos…</div></div>`;
+async function mountLineups() {
+  const box = $("#lineupBox"); if (!box) return;
+  const allowed = S.profile?.role === "captain" && S.profile.categories?.length ? new Set(S.profile.categories) : null;
+  const open = S.matches.filter(m => m.lineup_released && [m.club_a_id, m.club_b_id].includes(myClub()) && !["finished", "walkover", "cancelled"].includes(m.status) && (!allowed || allowed.has(m.category_id)));
+  const { data: lu } = await sb.from("lineups").select("*").eq("club_id", myClub()).in("match_id", open.map(m => m.id).concat(-1));
+  const playedCats = S.cats.filter(c => S.matches.some(m => m.category_id === c.id && [m.club_a_id, m.club_b_id].includes(myClub())) && (!allowed || allowed.has(c.id)));
+  box.innerHTML = areaHeader("Escalações", "Monte a escalação de cada confronto liberado pela arbitragem.") +
+    `<p class="small muted" style="margin-top:-8px">${esc(clubName(myClub()))} · classes liberadas: ${playedCats.map(c => esc(c.name)).join(", ") || "nenhuma"}.</p>` +
+    (open.length ? `<div class="stack">${open.map(m => {
+      const mine = (lu || []).filter(l => l.match_id === m.id);
+      const st = mine.length ? (mine.some(l => l.status === "adjustment_requested") ? "adjustment_requested" : mine.every(l => l.status === "accepted") ? "accepted" : mine.some(l => l.status === "submitted") ? "submitted" : "draft") : null;
+      return `<div class="card"><div class="row"><span class="small muted">${esc(cat(m.category_id)?.name)} · ${esc(m.phase_name)}</span><span class="spacer"></span>${st ? `<span class="pill ${LINEUP[st][1]}">${LINEUP[st][0]}</span>` : '<span class="pill warn">Aguardando escalação</span>'}</div>
+        <h3 style="margin-top:6px">${esc(teamName(m, "A"))} × ${esc(teamName(m, "B"))}</h3><div class="meta">${m.scheduled_at ? fmtDate(m.scheduled_at) + " " + fmtTime(m.scheduled_at) : ""} · ${esc(clubName(m.venue_id))} ${esc(m.court || "")}</div>
+        ${mine.find(l => l.referee_note) ? `<p class="small" style="color:var(--bad)">Árbitro: ${esc(mine.find(l => l.referee_note).referee_note)}</p>` : ""}
+        <div class="row" style="margin-top:10px"><button class="btn sm" data-lineup="${m.id}" ${st === "accepted" ? "disabled" : ""}>${st ? (st === "accepted" ? "Escalação aceita" : "Editar escalação") : "Montar escalação"}</button></div></div>`;
+    }).join("")}</div>` : `<div class="empty">Nenhum confronto liberado para escalação. A arbitragem libera cada confronto perto do horário do jogo.</div>`);
+  box.querySelectorAll("[data-lineup]").forEach(b => b.addEventListener("click", () => editLineup(+b.dataset.lineup)));
+}
+async function editLineup(matchId) {
+  const m = S.matches.find(x => x.id === matchId);
+  const n = gamesPerMatch(cat(m.category_id));
+  const [{ data: ath }, { data: cur }] = await Promise.all([
+    sb.from("athletes").select("id,name,roster!inner(category_id,role,status)").eq("club_id", myClub()).eq("roster.category_id", m.category_id).eq("roster.status", "valid").eq("active", true).order("name"),
+    sb.from("lineups").select("*").eq("match_id", matchId).eq("club_id", myClub())
+  ]);
+  const opt = (sel) => `<option value="">Escolher atleta</option>${(ath || []).map(a => `<option value="${a.id}" ${sel === a.id ? "selected" : ""}>${esc(a.name)}${a.roster[0]?.role === "reserva" ? " (reserva)" : ""}</option>`).join("")}`;
+  const games = Array.from({ length: n }, (_, i) => cur?.find(l => l.game_idx === i) || { game_idx: i });
+  openSheet(sheetHead(`${cat(m.category_id)?.name} · ${m.phase_name}`, "Escalação") + `
+    <p class="sub">${esc(teamName(m, "A"))} × ${esc(teamName(m, "B"))}</p>
+    <form id="lineupForm" class="stack">${games.map(g => `<fieldset class="card" style="margin:0"><legend class="small muted" style="padding:0 4px">Dupla ${g.game_idx + 1}${g.status ? " · " + LINEUP[g.status][0] : ""}</legend>
+      <div class="lineup-grid"><select class="input" id="p1_${g.game_idx}" aria-label="Atleta 1 da dupla ${g.game_idx + 1}">${opt(g.player1_id)}</select><select class="input" id="p2_${g.game_idx}" aria-label="Atleta 2 da dupla ${g.game_idx + 1}">${opt(g.player2_id)}</select></div></fieldset>`).join("")}
+      ${!(ath || []).length ? `<p class="err">Nenhum atleta do clube inscrito nesta categoria. Fale com a organização.</p>` : ""}
+      <p class="err" id="luErr"></p>
+      <div class="row"><button class="btn ghost" type="button" id="luDraft">Salvar rascunho</button><button class="btn" type="submit">Enviar ao árbitro</button></div></form>`, sheet => {
+    const save = async status => {
+      const rows = games.map(g => ({ match_id: matchId, club_id: myClub(), game_idx: g.game_idx, player1_id: +$("#p1_" + g.game_idx, sheet).value || null, player2_id: +$("#p2_" + g.game_idx, sheet).value || null, status, referee_note: null }));
+      if (status === "submitted") {
+        if (rows.some(r => !r.player1_id || !r.player2_id)) return $("#luErr").textContent = "Escolha os dois atletas de cada dupla antes de enviar.";
+        if (rows.some(r => r.player1_id === r.player2_id)) return $("#luErr").textContent = "A mesma atleta não pode formar dupla consigo mesma.";
+      }
+      const { error } = await sb.from("lineups").upsert(rows, { onConflict: "match_id,club_id,game_idx" });
+      if (error) return $("#luErr").textContent = "Não foi possível salvar: " + error.message;
+      closeSheet(); toast(status === "submitted" ? "Escalação enviada ao árbitro" : "Rascunho salvo"); mountLineups();
+    };
+    $("#luDraft", sheet).onclick = () => save("draft");
+    $("#lineupForm", sheet).onsubmit = e => { e.preventDefault(); save("submitted"); };
+  });
+}
+
+/* ---- regras de placar do beach tennis ----
+   game sem vantagem (no 40–40, ponto decisivo), set até 6 games com 2 de diferença, tie-break até 7 em 6–6;
+   em "melhor de 3 sets", o 3º set é um super tie-break até 10 (com 2 de diferença). */
+const gamesPerMatch = c => /1/.test(c?.match_format || "") ? 1 : 3;
+const setsNeeded = c => c?.sets_format === "melhor_de_3_sets" ? 2 : 1;
+function newScore(fmt) { return { fmt, sets: [], g: [0, 0], p: [0, 0], tb: false, stb: false, winner: null }; }
+function scoreFromRow(row, fmt) {
+  if (row?.live && !row.winner) { const s = JSON.parse(JSON.stringify(row.live)); s.fmt = fmt; return s; }
+  const s = newScore(fmt); s.sets = setPairs(row?.sets || []); s.winner = row?.winner || null; return s;
+}
+function setWinner(a, b) { return a > b ? 0 : b > a ? 1 : null; }
+function setsWon(s) { const w = [0, 0]; s.sets.forEach(([a, b]) => { if (a > b) w[0]++; else if (b > a) w[1]++; }); return w; }
+function addPoint(s0, side) {
+  const s = JSON.parse(JSON.stringify(s0));
+  if (s.winner) return s;
+  const o = 1 - side, need = s.fmt === "melhor_de_3_sets" ? 2 : 1;
+  s.p[side]++;
+  if (s.stb || s.tb) {
+    const target = s.stb ? 10 : 7;
+    if (s.p[side] >= target && s.p[side] - s.p[o] >= 2) {
+      if (s.stb) s.sets.push([s.p[0], s.p[1]]);
+      else { s.g[side]++; s.sets.push([s.g[0], s.g[1]]); }
+      s.g = [0, 0]; s.p = [0, 0]; s.tb = false; s.stb = false;
+    } else return s;
+  } else {
+    // 0,15,30,40 → índices 0..3; no 40–40 (3–3) o próximo ponto decide
+    if (s.p[side] >= 4) {
+      s.g[side]++; s.p = [0, 0];
+      const [ga, gb] = s.g;
+      const setDone = (Math.max(ga, gb) >= 6 && Math.abs(ga - gb) >= 2) || Math.max(ga, gb) === 7;
+      if (setDone) { s.sets.push([ga, gb]); s.g = [0, 0]; }
+      else if (ga === 6 && gb === 6) s.tb = true;
+    } else return s;
+  }
+  const w = setsWon(s);
+  if (w[0] >= need) s.winner = "A"; else if (w[1] >= need) s.winner = "B";
+  else if (need === 2 && w[0] === 1 && w[1] === 1) s.stb = true;
+  return s;
+}
+function pointLabel(s, side) {
+  if (s.tb || s.stb) return String(s.p[side]);
+  const p = s.p[side], o = s.p[1 - side];
+  if (p === 3 && o === 3) return "40";
+  return ["0", "15", "30", "40"][Math.min(p, 3)];
+}
+function liveText(s) {
+  const sets = s.sets.map(([a, b]) => `${a}–${b}`).join(" ");
+  if (s.winner) return sets;
+  const cur = s.stb ? `Super tie-break ${s.p[0]}–${s.p[1]}` : `${s.g[0]}–${s.g[1]}${s.tb ? " · tie-break " : " · "}${pointLabel(s, 0)}–${pointLabel(s, 1)}`;
+  return [sets, cur].filter(Boolean).join(" · ");
+}
+
+/* ---- placar ponto a ponto (árbitro de quadra) ---- */
+async function openLive(matchId, idx) {
+  const m = S.matches.find(x => x.id === matchId), c = cat(m.category_id), fmt = c?.sets_format || "um_set";
+  const row = gamesOf(matchId).find(g => g.idx === idx);
+  let s = scoreFromRow(row, fmt);
+  const hist = [];
+  const label = row?.label || "Dupla " + (idx + 1);
+  const save = async () => {
+    const flat = s.sets.flat();
+    if (!s.winner && !s.stb && (s.g[0] || s.g[1])) flat.push(s.g[0], s.g[1]);   // set em andamento aparece na súmula
+    const rec = { match_id: matchId, idx, label, sets: flat, winner: s.winner, status: s.winner ? "finished" : "in_progress", live: s.winner ? null : s };
+    const { data, error } = await sb.from("match_games").upsert(rec, { onConflict: "match_id,idx" }).select().single();
+    if (error) { toast("Não foi possível salvar o ponto: " + error.message); return false; }
+    const i = S.games.findIndex(g => g.match_id === matchId && g.idx === idx); if (i >= 0) S.games[i] = data; else S.games.push(data);
+    if (s.winner) {
+      const gs = gamesOf(matchId), wa = gs.filter(g => g.winner === "A").length, wb = gs.filter(g => g.winner === "B").length;
+      const need = Math.ceil(gamesPerMatch(c) / 2);
+      await sb.from("matches").update({ score_a: wa, score_b: wb, status: Math.max(wa, wb) >= need ? "result_pending" : "on_court" }).eq("id", matchId);
+      Object.assign(m, { score_a: wa, score_b: wb });
+    }
+    return true;
+  };
+  const draw = () => {
+    const sheet = $(".sheet"); if (!sheet) return;
+    const w = setsWon(s);
+    $("#liveBoard", sheet).innerHTML = `<div class="table-wrap"><table><thead><tr><th>Equipe</th>${s.sets.map((_, i) => `<th class="n">Set ${i + 1}</th>`).join("")}${s.winner ? "" : `<th class="n">${s.stb ? "Super TB" : s.tb ? "Tie-break" : "Games"}</th><th class="n">Pontos</th>`}</tr></thead><tbody>
+      ${[0, 1].map(k => `<tr><td><b>${esc(clubName(k ? m.club_b_id : m.club_a_id))}</b>${s.winner === (k ? "B" : "A") ? ' <span class="pill good">Venceu</span>' : ""}</td>${s.sets.map(st => `<td class="n">${st[k]}</td>`).join("")}${s.winner ? "" : `<td class="n">${s.stb ? "—" : s.g[k]}</td><td class="n" style="font:800 22px var(--display);color:var(--accent)">${pointLabel(s, k)}</td>`}</tr>`).join("")}</tbody></table></div>
+      <p class="small muted" style="margin:8px 0 0">${s.winner ? `${esc(label)} encerrada.` : s.stb ? "Super tie-break até 10, com 2 de diferença." : s.tb ? "Tie-break até 7, com 2 de diferença." : s.p[0] === 3 && s.p[1] === 3 ? "40–40: próximo ponto decide o game (ponto decisivo)." : `Sets: ${w[0]}–${w[1]}`}</p>`;
+    $("#ptA", sheet).disabled = $("#ptB", sheet).disabled = !!s.winner;
+    $("#ptUndo", sheet).disabled = !hist.length;
+  };
+  openSheet(sheetHead(`${c?.name} · ${label} · ponto a ponto`, `${clubName(m.club_a_id)} × ${clubName(m.club_b_id)}`) + `
+    <div id="liveBoard"></div>
+    <div class="lineup-grid" style="margin-top:14px"><button class="btn" id="ptA" style="padding:18px">Ponto ${esc(clubName(m.club_a_id))}</button><button class="btn" id="ptB" style="padding:18px">Ponto ${esc(clubName(m.club_b_id))}</button></div>
+    <div class="row" style="margin-top:10px"><button class="btn ghost" id="ptUndo">Desfazer ponto</button><span class="spacer"></span><button class="btn ghost" id="ptBack">Voltar ao confronto</button></div>`, sheet => {
+    const point = async side => {
+      hist.push(s); s = addPoint(s, side); draw();
+      const ok = await save(); if (!ok) { s = hist.pop(); draw(); return; }
+      if (s.winner) toast(`${label}: vitória de ${clubName(s.winner === "A" ? m.club_a_id : m.club_b_id)}.`);
+    };
+    $("#ptA", sheet).onclick = () => point(0);
+    $("#ptB", sheet).onclick = () => point(1);
+    $("#ptUndo", sheet).onclick = async () => { if (!hist.length) return; const wasWin = s.winner; s = hist.pop(); draw(); await save(); if (wasWin) await sb.from("matches").update({ status: "on_court" }).eq("id", matchId); };
+    $("#ptBack", sheet).onclick = async () => { await refresh(); openReferee(matchId); };
+    draw();
+  });
+}
+// linha "ao vivo" para o público: dupla em jogo com games e pontos
+function liveLine(m) {
+  const g = gamesOf(m.id).find(x => x.status === "in_progress" && x.live);
+  if (!g || !["on_court", "result_pending"].includes(m.status)) return "";
+  return `<div class="small" style="margin-top:6px;color:var(--accent)">Ao vivo · ${esc(g.label)}: ${esc(liveText(scoreFromRow(g, cat(m.category_id)?.sets_format)))}</div>`;
+}
+
+/* ---- arbitragem ---- */
+/* Fluxo do original: liberar escalação → capitães enviam → árbitro valida (aceita, ajusta ou pede ajuste)
+   → inicia o jogo na quadra → lança o placar por jogo interno → finaliza. W.O. simples ou duplo, com punição opcional. */
+const REF = {
+  waiting_release: ["Aguardando liberação", "", "Libere a escalação para os capitães montarem as duplas."],
+  pending:         ["Escala pendente", "warn", "Aguardando os capitães enviarem suas escalações."],
+  adjustment:      ["Ajuste de escala solicitado", "bad", "O clube precisa corrigir e reenviar a escalação."],
+  validating:      ["Escala aguardando validação", "warn", "As duas escalações foram enviadas e aguardam aceite."],
+  validated:       ["Escala validada", "good", "Os dois clubes foram conferidos pelo Árbitro Geral."],
+  on_court:        ["Jogo em quadra", "acc", "A partida está em andamento na quadra informada."],
+  partial:         ["Resultado parcial", "warn", "O confronto possui resultado parcial e precisa ser finalizado."],
+  finished:        ["Jogo finalizado", "good", "O resultado deste confronto já foi encerrado."],
+  walkover:        ["W.O.", "bad", "Confronto encerrado por W.O."]
+};
+S.lineups = [];
+async function loadEventLineups() {
+  S.lineups = [];
+  for (let from = 0; ; from += 1000) {
+    const r = await sb.from("lineups").select("*,matches!inner(event_id)").eq("matches.event_id", S.event.id).range(from, from + 999);
+    if (r.error) { toast(r.error.message); break; }
+    S.lineups.push(...r.data.map(({ matches, ...x }) => x));
+    if (r.data.length < 1000) break;
+  }
+}
+function refState(m) {
+  if (m.status === "walkover") return "walkover";
+  if (m.status === "finished") return "finished";
+  if (m.status === "result_pending") return "partial";
+  if (m.status === "on_court") return gamesOf(m.id).some(g => setPairs(g.sets).length) ? "partial" : "on_court";
+  if (!m.lineup_released) return "waiting_release";
+  const lu = S.lineups.filter(l => l.match_id === m.id);
+  const side = c => lu.filter(l => l.club_id === c);
+  const a = side(m.club_a_id), b = side(m.club_b_id);
+  if (lu.some(l => l.status === "adjustment_requested")) return "adjustment";
+  if (a.length && b.length && [...a, ...b].every(l => l.status === "accepted")) return "validated";
+  if (a.length && b.length && [...a, ...b].every(l => ["submitted", "accepted"].includes(l.status))) return "validating";
+  return "pending";
+}
+const refPill = s => `<span class="pill ${REF[s][1]}">${REF[s][0]}</span>`;
+function myScope() {
+  const p = S.profile || {};
+  return { venue: p.venue_id || null, court: p.court || null, level: p.referee_level || "geral" };
+}
+function inScope(m) {
+  const sc = myScope();
+  if (S.profile?.role === "organizer") return true;
+  if (sc.venue && m.venue_id !== sc.venue) return false;
+  if (sc.level === "auxiliar" && sc.court && m.court !== sc.court) return false;
+  return true;
+}
+function courtsPanel(list) {
+  const venues = S.clubs.filter(c => c.is_venue && (!myScope().venue || c.id === myScope().venue));
+  if (!venues.length) return "";
+  const open = S.filters.courtsOpen !== false;
+  return `<div class="card" style="margin-bottom:14px"><div class="row"><h3>Status das quadras</h3><span class="spacer"></span>
+    <button class="btn ghost sm" data-courts>${open ? "Recolher quadras" : "Expandir quadras"}</button></div>
+    ${open ? venues.map(v => {
+      const n = v.court_count || 0;
+      return `<div class="small muted" style="margin:10px 0 6px">${esc(v.name)} · ${n} quadras</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">${Array.from({ length: n }, (_, i) => {
+        const q = "Q" + (i + 1);
+        const live = S.matches.find(m => m.venue_id === v.id && m.court === q && ["on_court", "result_pending"].includes(m.status));
+        return `<div class="card" style="padding:10px;${live ? "border-color:var(--accent)" : ""}"><div class="row"><b>${q}</b><span class="spacer"></span><span class="pill ${live ? "acc" : ""}">${live ? "Ocupada" : "Livre"}</span></div>
+          <div class="small ${live ? "" : "muted"}" style="margin-top:4px;white-space:normal">${live ? `${esc(cat(live.category_id)?.name)} · ${esc(clubName(live.club_a_id))} ${live.score_a ?? 0}×${live.score_b ?? 0} ${esc(clubName(live.club_b_id))}` : "Sem partida em jogo"}</div></div>`;
+      }).join("")}</div>`;
+    }).join("") : ""}</div>`;
+}
+function refList(list, empty) {
+  return list.length ? `<div class="stack">${list.slice(0, 150).map(m => { const st = refState(m); return `<div class="card click" data-ref="${m.id}" tabindex="0" role="button">
+      <div class="row"><span class="small muted">${esc(cat(m.category_id)?.name)} · ${esc(m.phase_name)}${m.match_number ? " · Jogo #" + m.match_number : ""}</span><span class="spacer"></span>${refPill(st)}</div>
+      <div style="font-weight:600;margin-top:4px">${esc(teamName(m, "A"))} <span class="num">${m.score_a ?? ""}</span> × <span class="num">${m.score_b ?? ""}</span> ${esc(teamName(m, "B"))}</div>
+      <div class="meta">${m.scheduled_at ? fmtDate(m.scheduled_at) + " " + fmtTime(m.scheduled_at) : "Sem horário"} · ${esc(clubName(m.venue_id))} ${esc(m.court || "")}</div></div>`; }).join("")}</div>
+      ${list.length > 150 ? `<p class="small muted">Mostrando 150 de ${list.length}. Use os filtros para achar a partida.</p>` : ""}`
+    : `<div class="empty">${empty}</div>`;
+}
+function refScopeChips() {
+  const s = S.filters.scope || "mine";
+  const sc = myScope();
+  const label = sc.level === "auxiliar" ? "Apenas suas quadras atribuídas" : sc.venue ? "Sedes atribuídas ao Árbitro Geral" : "Jogos sob sua responsabilidade";
+  return `<div class="chips"><button class="chip" data-scope="mine" aria-pressed="${s === "mine"}">${label}</button><button class="chip" data-scope="all" aria-pressed="${s === "all"}">Todas as quadras</button></div>`;
+}
+const refBase = () => applyFilters(S.matches.filter(m => m.status !== "cancelled" && ((S.filters.scope || "mine") === "all" || inScope(m))));
+VIEWS.arbitragem = () => `<div id="refBox">${areaHeader("Jogos", "Libere as escalações, valide as duplas e conduza cada confronto até o resultado.")}<div class="empty">Carregando jogos…</div></div>`;
+VIEWS.ref_aceites = () => `<div id="refBox">${areaHeader("Escalações", "Confrontos com escalação enviada aguardando a sua validação.")}<div class="empty">Carregando escalações…</div></div>`;
+VIEWS.ref_quadra = () => `<div id="refBox">${areaHeader("Jogos em andamento", "Partidas em quadra e resultados parciais para finalizar.")}<div class="empty">Carregando jogos…</div></div>`;
+async function mountReferee(kind) {
+  await loadEventLineups();
+  const box = $("#refBox"); if (!box) return;
+  const base = refBase();
+  const body = {
+    arbitragem: () => courtsPanel() + refScopeChips() + matchFilters(S.matches) + refList(base, "Nenhum jogo encontrado para os filtros selecionados."),
+    ref_aceites: () => refScopeChips() + refList(base.filter(m => ["validating", "adjustment", "pending"].includes(refState(m))), "Nenhuma escalação aguardando validação."),
+    ref_quadra: () => courtsPanel() + refScopeChips() + refList(base.filter(m => ["on_court", "partial", "validated"].includes(refState(m))), "Sem partida em jogo nas suas quadras.")
+  }[kind]();
+  const head = { arbitragem: ["Jogos", "Libere as escalações, valide as duplas e conduza cada confronto até o resultado."], ref_aceites: ["Escalações", "Confrontos com escalação enviada aguardando a sua validação."], ref_quadra: ["Jogos em andamento", "Partidas em quadra e resultados parciais para finalizar."] }[kind];
+  box.innerHTML = areaHeader(...head) + body;
+  bindFilters(box);
+  box.querySelectorAll("[data-ref]").forEach(b => { b.onclick = () => openReferee(+b.dataset.ref); b.onkeydown = e => { if (e.key === "Enter") openReferee(+b.dataset.ref); }; });
+  box.querySelectorAll("[data-scope]").forEach(b => b.onclick = () => { S.filters.scope = b.dataset.scope; mountReferee(kind); });
+  const c = $("[data-courts]", box); if (c) c.onclick = () => { S.filters.courtsOpen = !(S.filters.courtsOpen !== false); mountReferee(kind); };
+}
+async function logAction(matchId, action, note) { await sb.from("match_log").insert({ match_id: matchId, action, note: note || null }); }
+
+async function openReferee(matchId) {
+  const m = S.matches.find(x => x.id === matchId);
+  await loadEventLineups();
+  const lu = S.lineups.filter(l => l.match_id === matchId);
+  const names = await athleteNames(lu);
+  const st = refState(m);
+  const n = gamesPerMatch(cat(m.category_id));
+  const games = Array.from({ length: n }, (_, i) => gamesOf(matchId).find(g => g.idx === i) || { idx: i, label: "Dupla " + (i + 1), sets: [], winner: null, status: "scheduled" });
+  const maxSets = setsNeeded(cat(m.category_id)) === 2 ? 3 : 1;
+  const sideTxt = (club, i) => { const l = lu.find(x => x.club_id === club && x.game_idx === i); return l ? `${esc([l.player1_id, l.player2_id].map(p => names[p] || "?").join(" / "))} <span class="pill ${LINEUP[l.status][1]}">${LINEUP[l.status][0]}</span>` : `<span class="muted">Nenhuma escalação enviada.</span>`; };
+  const canScore = ["on_court", "partial", "finished"].includes(st);
+  const btn = (id, label, cls = "", dis = false) => `<button class="btn ${cls} sm" id="${id}" ${dis ? "disabled" : ""}>${label}</button>`;
+  const actions = {
+    waiting_release: btn("rRelease", "Liberar escalação"),
+    pending: btn("rUnrelease", "Desfazer liberação", "ghost"),
+    adjustment: btn("rUnrelease", "Desfazer liberação", "ghost"),
+    validating: btn("rAccept", "Aceitar escalação") + btn("rAdjustEdit", "Ajustar escalação", "ghost") + btn("rAskAdjust", "Pedir ajuste ao clube", "ghost") + btn("rUnrelease", "Desfazer liberação", "ghost"),
+    validated: btn("rStart", "Iniciar jogo") + btn("rUnaccept", "Desfazer aceite", "ghost") + btn("rCourt", "Alterar quadra", "ghost"),
+    on_court: btn("rCourt", "Alterar quadra", "ghost"),
+    partial: btn("rCourt", "Alterar quadra", "ghost"),
+    finished: btn("rReopen", "Reabrir confronto", "ghost"),
+    walkover: btn("rUndoWo", "Desfazer W.O.", "ghost")
+  }[st];
+  openSheet(sheetHead(`${cat(m.category_id)?.name} · ${m.phase_name}${m.match_number ? " · Jogo #" + m.match_number : ""}`, `${teamName(m, "A")} × ${teamName(m, "B")}`) + `
+    <div class="card" style="margin-bottom:12px;border-color:var(--line)"><div class="row">${refPill(st)}<span class="spacer"></span><span class="meta">${m.scheduled_at ? fmtDate(m.scheduled_at) + " " + fmtTime(m.scheduled_at) : "Sem horário"} · ${esc(clubName(m.venue_id))} ${esc(m.court || "")}</span></div>
+      <p class="small muted" style="margin:8px 0 0">${REF[st][2]}</p>
+      <div class="row" style="margin-top:10px">${actions}</div><div id="rExtra"></div></div>
+    <h3 style="margin:4px 0 8px">Jogos internos</h3>
+    <div class="stack" id="refGames">${games.map(g => { const pairs = setPairs(g.sets); return `<div class="card" data-g="${g.idx}">
+      <div class="row"><h3>${esc(g.label)}</h3><span class="spacer"></span>${g.winner ? `<span class="pill good">Vitória ${esc(clubName(g.winner === "A" ? m.club_a_id : m.club_b_id))}</span>` : g.status === "in_progress" ? `<span class="pill acc">Em jogo${g.live ? " · " + esc(liveText(scoreFromRow(g, cat(m.category_id)?.sets_format))) : ""}</span>` : ""}${canScore && !g.winner ? `<button class="btn ghost sm" data-live="${g.idx}">Ponto a ponto</button>` : ""}</div>
+      <div class="small" style="margin:6px 0">${esc(clubName(m.club_a_id))}: ${sideTxt(m.club_a_id, g.idx)}<br>${esc(clubName(m.club_b_id))}: ${sideTxt(m.club_b_id, g.idx)}</div>
+      <div class="sets">${Array.from({ length: maxSets }, (_, s) => `<span class="setbox"><span class="small muted">Set ${s + 1}</span>
+        <input class="input num" inputmode="numeric" aria-label="Set ${s + 1}, games de ${esc(clubName(m.club_a_id))}" data-s="${s}" data-side="a" value="${pairs[s]?.[0] ?? ""}" ${canScore ? "" : "disabled"}><span>–</span>
+        <input class="input num" inputmode="numeric" aria-label="Set ${s + 1}, games de ${esc(clubName(m.club_b_id))}" data-s="${s}" data-side="b" value="${pairs[s]?.[1] ?? ""}" ${canScore ? "" : "disabled"}></span>`).join("")}</div></div>`; }).join("")}</div>
+    ${canScore ? "" : `<p class="small muted">${st === "walkover" ? "Confronto decidido por W.O." : "Valide as escalas dos dois clubes e inicie o jogo antes de lançar o placar."}</p>`}
+    <p class="err" id="refErr"></p>
+    <div class="row" style="margin-top:12px">${canScore ? `<button class="btn ghost" id="rPartial">Salvar parcial</button><button class="btn" id="rFinish">Finalizar confronto</button>` : ""}${!["finished", "walkover"].includes(st) ? `<button class="btn danger" id="rWo">Registrar W.O.</button>` : ""}</div>`, sheet => {
+    const err = t => $("#refErr").textContent = t;
+    const upd = async (patch, msg, action, note) => { const { error } = await sb.from("matches").update(patch).eq("id", matchId); if (error) return err(error.message); if (action) await logAction(matchId, action, note); Object.assign(m, patch); if (["finished", "walkover"].includes(patch.status)) await fillKnockout(m.category_id); toast(msg); await refresh(); openReferee(matchId); };
+    const setLu = async (patch, where, msg, action, note) => { let q = sb.from("lineups").update(patch).eq("match_id", matchId); if (where) q = q.in("status", where); const { error } = await q; if (error) return err(error.message); if (action) await logAction(matchId, action, note); toast(msg); await refresh(); openReferee(matchId); };
+    const on = (id, fn) => { const el = $("#" + id, sheet); if (el) el.onclick = fn; };
+    on("rRelease", () => upd({ lineup_released: true }, "Escalação liberada. Aguardando escalações dos capitães.", "release"));
+    on("rUnrelease", () => upd({ lineup_released: false }, "Liberação desfeita. O jogo voltou para aguardando liberação.", "unrelease"));
+    on("rAccept", () => setLu({ status: "accepted", referee_note: null }, ["submitted"], "Escalação aceita. Jogo liberado para a quadra.", "accept"));
+    on("rUnaccept", () => setLu({ status: "submitted" }, ["accepted"], "Aceite desfeito. O confronto voltou para aguardando aceite.", "unaccept"));
+    on("rAskAdjust", () => { $("#rExtra").innerHTML = `<div class="row" style="margin-top:10px"><input class="input" id="rAdjNote" placeholder="O que o clube precisa corrigir" style="flex:1"><select class="input" id="rAdjClub" style="width:auto"><option value="${m.club_a_id}">${esc(clubName(m.club_a_id))}</option><option value="${m.club_b_id}">${esc(clubName(m.club_b_id))}</option></select><button class="btn sm" id="rAdjSend">Enviar</button></div>`;
+      $("#rAdjSend").onclick = async () => { const note = $("#rAdjNote").value.trim() || "Revise a escalação"; const { error } = await sb.from("lineups").update({ status: "adjustment_requested", referee_note: note }).eq("match_id", matchId).eq("club_id", +$("#rAdjClub").value); if (error) return err(error.message); await logAction(matchId, "ask_adjustment", note); toast("Ajuste solicitado ao clube."); await refresh(); openReferee(matchId); }; });
+    on("rAdjustEdit", () => refereeEditLineup(m, n));
+    on("rStart", () => upd({ status: "on_court" }, "Jogo em quadra.", "start"));
+    on("rReopen", () => upd({ status: "on_court", winner: null }, "Confronto reaberto para correção do placar.", "reopen"));
+    on("rUndoWo", () => upd({ status: m.lineup_released ? "scheduled" : "scheduled", winner: null, score_a: null, score_b: null, walkover_type: null, walkover_punished: false, walkover_club_id: null }, "W.O. desfeito.", "undo_walkover"));
+    on("rCourt", async () => {
+      const v = club(m.venue_id); const n2 = v?.court_count || 8;
+      $("#rExtra").innerHTML = `<div class="stack" style="margin-top:10px"><select class="input" id="rNewCourt">${Array.from({ length: n2 }, (_, i) => `<option ${m.court === "Q" + (i + 1) ? "selected" : ""}>Q${i + 1}</option>`).join("")}</select>
+        <input class="input" id="rCourtWhy" placeholder="Motivo: atraso, troca de quadra, chuva, conflito, pedido do gestor…"><button class="btn sm" id="rCourtSave">Salvar quadra</button></div>`;
+      $("#rCourtSave").onclick = () => { const why = $("#rCourtWhy").value.trim(); if (!why) return err("Informe o motivo da troca de quadra."); upd({ court: $("#rNewCourt").value }, "Quadra alterada com sucesso.", "court_change", `${m.court || "?"} → ${$("#rNewCourt").value}: ${why}`); };
+    });
+    const readScores = () => {
+      const rows = []; let wa = 0, wb = 0;
+      for (const card of sheet.querySelectorAll("[data-g]")) {
+        const idx = +card.dataset.g, sets = []; let sa = 0, sbb = 0;
+        for (let s = 0; s < maxSets; s++) {
+          const a = card.querySelector(`[data-s="${s}"][data-side="a"]`).value.trim(), b = card.querySelector(`[data-s="${s}"][data-side="b"]`).value.trim();
+          if (a === "" && b === "") continue;
+          if (!/^\d+$/.test(a) || !/^\d+$/.test(b)) throw new Error(`Dupla ${idx + 1}, set ${s + 1}: preencha os games dos dois lados.`);
+          if (+a === +b) throw new Error(`Dupla ${idx + 1}, set ${s + 1}: um set não termina empatado.`);
+          sets.push(+a, +b); +a > +b ? sa++ : sbb++;
+        }
+        const need = Math.ceil(maxSets / 2);
+        const winner = sa >= need ? "A" : sbb >= need ? "B" : null;
+        if (winner === "A") wa++; if (winner === "B") wb++;
+        rows.push({ match_id: matchId, idx, label: "Dupla " + (idx + 1), sets, winner, status: winner ? "finished" : sets.length ? "in_progress" : "scheduled" });
+      }
+      return { rows, wa, wb };
+    };
+    const saveScores = async final => {
+      let r; try { r = readScores(); } catch (e) { return err(e.message); }
+      if (!r.rows.some(x => x.sets.length)) return err("Informe o placar de pelo menos um jogo interno.");
+      if (final && Math.max(r.wa, r.wb) < Math.ceil(n / 2)) return err(`Para finalizar, uma equipe precisa vencer ${Math.ceil(n / 2)} dupla(s).`);
+      const { error } = await sb.from("match_games").upsert(r.rows, { onConflict: "match_id,idx" });
+      if (error) return err(error.message);
+      await upd({ score_a: r.wa, score_b: r.wb, winner: final ? (r.wa > r.wb ? "A" : "B") : null, status: final ? "finished" : "result_pending" },
+        final ? "Resultado final salvo." : "Resultado parcial salvo.", final ? "finish" : "partial", `${r.wa} × ${r.wb}`);
+    };
+    sheet.querySelectorAll("[data-live]").forEach(b => b.onclick = () => openLive(matchId, +b.dataset.live));
+    on("rPartial", () => saveScores(false));
+    on("rFinish", () => saveScores(true));
+    on("rWo", () => {
+      $("#rExtra").innerHTML = `<div class="stack" style="margin-top:10px"><label class="field">Selecione o tipo de W.O.<select class="input" id="rWoType">
+        <option value="A">Ausência de ${esc(teamName(m, "A"))}</option><option value="B">Ausência de ${esc(teamName(m, "B"))}</option><option value="double">Duplo WO · ambas as equipes</option></select></label>
+        <label class="row small"><input type="checkbox" id="rWoPun"> Aplicar punição por W.O. no ranking</label>
+        <input class="input" id="rWoWhy" placeholder="Observação (opcional)"><button class="btn danger sm" id="rWoSave">Confirmar W.O.</button></div>`;
+      $("#rWoSave").onclick = () => {
+        const t = $("#rWoType").value, half = Math.ceil(n / 2);
+        upd({ status: "walkover", walkover_type: t, walkover_punished: $("#rWoPun").checked,
+          walkover_club_id: t === "A" ? m.club_a_id : t === "B" ? m.club_b_id : null,
+          winner: t === "A" ? "B" : t === "B" ? "A" : null, score_a: t === "B" ? half : 0, score_b: t === "A" ? half : 0 },
+          "W.O. registrado.", "walkover", [t === "double" ? "Duplo WO" : "Ausência " + teamName(m, t), $("#rWoWhy").value.trim()].filter(Boolean).join(" · "));
+      };
+    });
+  });
+}
+async function refereeEditLineup(m, n) {
+  const sides = [m.club_a_id, m.club_b_id];
+  const [{ data: ath }, { data: cur }] = await Promise.all([
+    sb.from("athletes").select("id,name,club_id,roster!inner(category_id)").in("club_id", sides).eq("roster.category_id", m.category_id).eq("active", true).order("name"),
+    sb.from("lineups").select("*").eq("match_id", m.id)
+  ]);
+  const opt = (club, sel) => `<option value="">Escolher atleta</option>${(ath || []).filter(a => a.club_id === club).map(a => `<option value="${a.id}" ${sel === a.id ? "selected" : ""}>${esc(a.name)}</option>`).join("")}`;
+  openSheet(sheetHead("Ajustar escalação", `${teamName(m, "A")} × ${teamName(m, "B")}`) + `<p class="sub">Altere os atletas antes de aceitar as escalações deste confronto.</p>
+    <form id="raForm" class="stack">${sides.map(c => `<h3>${esc(clubName(c))}</h3>${Array.from({ length: n }, (_, i) => { const l = (cur || []).find(x => x.club_id === c && x.game_idx === i) || {}; return `<div class="lineup-grid"><select class="input" id="ra_${c}_${i}_1" aria-label="Dupla ${i + 1} · jogador 1">${opt(c, l.player1_id)}</select><select class="input" id="ra_${c}_${i}_2" aria-label="Dupla ${i + 1} · jogador 2">${opt(c, l.player2_id)}</select></div>`; }).join("")}`).join("")}
+    <p class="err" id="raErr"></p><div class="row"><button class="btn" type="submit">Salvar e aceitar</button><button class="btn ghost" type="button" id="raBack">Voltar</button></div></form>`, sheet => {
+    $("#raBack", sheet).onclick = () => openReferee(m.id);
+    $("#raForm", sheet).onsubmit = async e => {
+      e.preventDefault();
+      const rows = sides.flatMap(c => Array.from({ length: n }, (_, i) => ({ match_id: m.id, club_id: c, game_idx: i, player1_id: +$(`#ra_${c}_${i}_1`).value || null, player2_id: +$(`#ra_${c}_${i}_2`).value || null, status: "accepted", referee_note: null })));
+      if (rows.some(r => !r.player1_id || !r.player2_id || r.player1_id === r.player2_id)) return $("#raErr").textContent = "Escolha dois atletas diferentes em cada dupla.";
+      const { error } = await sb.from("lineups").upsert(rows, { onConflict: "match_id,club_id,game_idx" });
+      if (error) return $("#raErr").textContent = error.message;
+      await logAction(m.id, "referee_adjust"); toast("Escalação ajustada e aceita."); await refresh(); openReferee(m.id);
+    };
+  });
+}
+
+/* ---- inscrições ---- */
+const REG = { pending: ["Aguardando análise", "warn"], approved: ["Aprovada", "good"], rejected: ["Recusada", "bad"] };
+const regPill = s => `<span class="pill ${REG[s][1]}">${REG[s][0]}</span>`;
+async function loadRegs() {
+  const r = await sb.from("registrations").select("*").eq("event_id", S.event.id).order("created_at");
+  if (r.error) { toast(r.error.message); return []; }
+  return r.data;
+}
+VIEWS.inscricoes = () => `<div id="regBox">${areaHeader("Inscrições", "Equipes do clube inscritas em cada categoria.")}<div class="empty">Carregando inscrições…</div></div>`;
+async function mountClubRegs() {
+  const box = $("#regBox"); if (!box) return;
+  const regs = (await loadRegs()).filter(r => r.club_id === myClub());
+  box.innerHTML = areaHeader("Inscrições", "Equipes do clube inscritas em cada categoria. A organização aprova cada pedido.") + `
+    <form id="regForm" class="card stack" style="margin-bottom:14px"><h3>Pedir inscrição</h3>
+      <div class="filters" style="margin:0"><label class="field">Categoria<select class="input" id="rgCat">${S.cats.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label>
+      <label class="field">Equipe<select class="input" id="rgLbl"><option>Equipe 1</option><option>Equipe 2</option><option>Equipe 3</option></select></label></div>
+      <p class="err" id="rgErr"></p><div class="row"><button class="btn" type="submit">Enviar pedido</button></div></form>
+    ${regs.length ? `<div class="table-wrap"><table><thead><tr><th>Categoria</th><th>Equipe</th><th>Status</th><th></th></tr></thead><tbody>${regs.sort((a, b) => catSort(cat(a.category_id), cat(b.category_id))).map(r => `<tr><td>${esc(cat(r.category_id)?.name)}</td><td>${esc(r.team_label)}</td><td>${regPill(r.status)}${r.note ? `<div class="small muted">${esc(r.note)}</div>` : ""}</td><td>${r.status === "pending" ? `<button class="btn ghost sm" data-cancel="${r.id}">Cancelar</button>` : ""}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">O clube ainda não tem inscrições neste evento.</div>`}`;
+  $("#regForm").onsubmit = async e => {
+    e.preventDefault();
+    const { error } = await sb.from("registrations").insert({ event_id: S.event.id, category_id: +$("#rgCat").value, club_id: myClub(), team_label: $("#rgLbl").value });
+    if (error) return $("#rgErr").textContent = error.code === "23505" ? "Essa equipe já está inscrita nessa categoria." : error.message;
+    toast("Pedido de inscrição enviado."); mountClubRegs();
+  };
+  box.querySelectorAll("[data-cancel]").forEach(b => b.onclick = async () => { const { error } = await sb.from("registrations").delete().eq("id", +b.dataset.cancel); if (error) return toast(error.message); toast("Pedido cancelado."); mountClubRegs(); });
+}
+VIEWS.org_inscricoes = () => `<div id="oregBox">${areaHeader("Inscrições", "Analise os pedidos dos clubes por categoria.")}<div class="empty">Carregando inscrições…</div></div>`;
+async function mountOrgRegs() {
+  const box = $("#oregBox"); if (!box) return;
+  const all = await loadRegs();
+  const f = S.filters.rst ?? "pending", fc = S.filters.rcat || "";
+  const list = all.filter(r => (!f || r.status === f) && (!fc || r.category_id == fc));
+  const cnt = s => all.filter(r => r.status === s).length;
+  box.innerHTML = areaHeader("Inscrições", "Analise os pedidos dos clubes por categoria.") + `
+    <div class="chips"><button class="chip" data-rst="pending" aria-pressed="${f === "pending"}">Aguardando análise · ${cnt("pending")}</button><button class="chip" data-rst="approved" aria-pressed="${f === "approved"}">Aprovadas · ${cnt("approved")}</button><button class="chip" data-rst="rejected" aria-pressed="${f === "rejected"}">Recusadas · ${cnt("rejected")}</button><button class="chip" data-rst="" aria-pressed="${!f}">Todas</button></div>
+    <div class="filters"><select class="input" id="rCatF" aria-label="Categoria"><option value="">Todas as categorias</option>${S.cats.map(c => `<option value="${c.id}" ${fc == c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>
+      <button class="btn ghost" id="rAddBtn">Inscrever equipe</button></div>
+    <div id="rAdd"></div>
+    ${list.length ? `<div class="table-wrap"><table><thead><tr><th>Categoria</th><th>Clube</th><th>Equipe</th><th>Status</th><th></th></tr></thead><tbody>${list.sort((a, b) => catSort(cat(a.category_id), cat(b.category_id)) || clubName(a.club_id).localeCompare(clubName(b.club_id))).map(r => `<tr><td>${esc(cat(r.category_id)?.name)}</td><td><b>${esc(clubName(r.club_id))}</b></td><td>${esc(r.team_label)}</td><td>${regPill(r.status)}</td>
+      <td class="row" style="flex-wrap:nowrap">${r.status !== "approved" ? `<button class="btn sm" data-dec="approved" data-id="${r.id}">Aprovar</button>` : ""}${r.status !== "rejected" ? `<button class="btn ghost sm" data-dec="rejected" data-id="${r.id}">Recusar</button>` : ""}</td></tr>`).join("")}</tbody></table></div>`
+      : `<div class="empty">${f === "pending" ? "Nenhuma inscrição aguardando análise." : "Nenhuma inscrição com esses filtros."}</div>`}`;
+  box.querySelectorAll("[data-rst]").forEach(b => b.onclick = () => { S.filters.rst = b.dataset.rst; mountOrgRegs(); });
+  $("#rCatF").onchange = e => { S.filters.rcat = e.target.value; mountOrgRegs(); };
+  box.querySelectorAll("[data-dec]").forEach(b => b.onclick = async () => {
+    const { error } = await sb.from("registrations").update({ status: b.dataset.dec, decided_at: new Date().toISOString() }).eq("id", +b.dataset.id);
+    if (error) return toast(error.message); toast(b.dataset.dec === "approved" ? "Inscrição aprovada." : "Inscrição recusada."); mountOrgRegs();
+  });
+  $("#rAddBtn").onclick = () => {
+    $("#rAdd").innerHTML = `<form class="card stack" id="rAddForm" style="margin-bottom:14px"><div class="filters" style="margin:0">
+      <select class="input" id="raCat" aria-label="Categoria">${S.cats.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select>
+      <select class="input" id="raClub" aria-label="Clube">${S.clubs.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select>
+      <select class="input" id="raLbl" aria-label="Equipe"><option>Equipe 1</option><option>Equipe 2</option><option>Equipe 3</option></select></div>
+      <p class="err" id="raErr2"></p><div class="row"><button class="btn" type="submit">Inscrever e aprovar</button></div></form>`;
+    $("#rAddForm").onsubmit = async e => { e.preventDefault(); const { error } = await sb.from("registrations").insert({ event_id: S.event.id, category_id: +$("#raCat").value, club_id: +$("#raClub").value, team_label: $("#raLbl").value, status: "approved", decided_at: new Date().toISOString() }); if (error) return $("#raErr2").textContent = error.code === "23505" ? "Essa equipe já está inscrita nessa categoria." : error.message; toast("Equipe inscrita."); mountOrgRegs(); };
+  };
+}
+
+/* ---- geração de chaves ---- */
+// rodízio (método do círculo): cada equipe enfrenta todas as outras uma vez
+function roundRobin(teams) {
+  const t = teams.slice(); if (t.length % 2) t.push(null);
+  const n = t.length, rounds = [];
+  for (let r = 0; r < n - 1; r++) {
+    const pairs = [];
+    for (let i = 0; i < n / 2; i++) { const a = t[i], b = t[n - 1 - i]; if (a && b) pairs.push(r % 2 ? [b, a] : [a, b]); }
+    rounds.push(pairs); t.splice(1, 0, t.pop());
+  }
+  return rounds.flat();
+}
+// distribui em grupos: cabeças de chave primeiro, um por grupo, depois as demais em serpentina
+function splitGroups(teams, nGroups) {
+  const seeds = teams.filter(t => t.seed).sort((a, b) => a.seed - b.seed), rest = teams.filter(t => !t.seed).sort(() => Math.random() - .5);
+  const groups = Array.from({ length: nGroups }, () => []);
+  [...seeds, ...rest].forEach((t, i) => { const r = Math.floor(i / nGroups), k = i % nGroups; groups[r % 2 ? nGroups - 1 - k : k].push(t); });
+  return groups;
+}
+function koPlan(nGroups) {
+  // classificados: 1º e 2º de cada grupo, cruzando grupos
+  const Q = []; for (let g = 1; g <= nGroups; g++) Q.push(`1:Grupo ${g}`);
+  const S2 = []; for (let g = nGroups; g >= 1; g--) S2.push(`2:Grupo ${g}`);
+  let slots = Q.map((q, i) => [q, S2[i]]);
+  const rounds = [];
+  const names = { 1: "Final", 2: "Semifinal", 4: "Quartas de final", 8: "Oitavas de final" };
+  if (nGroups === 1) return [{ phase: "Final", games: [["1:Grupo 1", "2:Grupo 1"]] }];
+  let cur = slots;
+  while (cur.length >= 1) {
+    const phase = names[cur.length] || `Fase de ${cur.length * 2}`;
+    rounds.push({ phase, games: cur });
+    if (cur.length === 1) break;
+    const next = []; for (let i = 0; i < cur.length; i += 2) next.push([`W:${phase} ${i + 1}`, `W:${phase} ${i + 2}`]);
+    cur = next;
+  }
+  return rounds;
+}
+function slotLabel(src) {
+  if (!src) return "A definir";
+  const [k, v] = src.split(/:(.*)/s);
+  if (k === "1" || k === "2") return `${k}º ${v}`;
+  if (k === "W") return `Vencedor ${v}`;
+  return src;
+}
+VIEWS.org_chaves = () => `<div id="chvBox">${areaHeader("Chaves", "Gere a chave de cada categoria a partir das inscrições aprovadas.")}<div class="empty">Carregando…</div></div>`;
+async function mountChaves() {
+  const box = $("#chvBox"); if (!box) return;
+  const regs = (await loadRegs()).filter(r => r.status === "approved");
+  const sel = S.filters.ccat && cat(S.filters.ccat) ? S.filters.ccat : S.cats[0]?.id;
+  const c = cat(sel);
+  const teams = regs.filter(r => r.category_id === sel);
+  const ms = S.matches.filter(m => m.category_id === sel);
+  const played = ms.filter(m => ["finished", "walkover", "on_court", "result_pending"].includes(m.status)).length;
+  const gk = c.competition_type === "groups_knockout";
+  const nG = S.filters.ngroups || (teams.length >= 12 ? 4 : teams.length >= 6 ? 2 : 1);
+  box.innerHTML = areaHeader("Chaves", "Gere a chave de cada categoria a partir das inscrições aprovadas.") + catChips(sel) + `
+    <div class="card stack" style="margin-bottom:14px">
+      <div class="row"><h2>${esc(c.name)}</h2><span class="spacer"></span><span class="pill">${teams.length} equipes</span><span class="pill ${ms.length ? "good" : "warn"}">${ms.length ? ms.length + " confrontos" : "Sem chave"}</span></div>
+      <div class="filters" style="margin:0"><label class="field">Formato<select class="input" id="cType"><option value="round_robin" ${!gk ? "selected" : ""}>Todos contra todos</option><option value="groups_knockout" ${gk ? "selected" : ""}>Grupos + mata-mata</option></select></label>
+        ${gk ? `<label class="field">Grupos<select class="input" id="cGroups">${[1, 2, 4].map(g => `<option ${g === nG ? "selected" : ""}>${g}</option>`).join("")}</select></label>` : ""}
+        <label class="field">Duplas por confronto<select class="input" id="cFmt"><option value="melhor de 1" ${c.match_format === "melhor de 1" ? "selected" : ""}>1 dupla</option><option value="melhor de 3" ${c.match_format === "melhor de 3" ? "selected" : ""}>3 duplas (melhor de 3)</option></select></label>
+        <label class="field">Sets por dupla<select class="input" id="cSets"><option value="um_set" ${c.sets_format !== "melhor_de_3_sets" ? "selected" : ""}>1 set até 6</option><option value="melhor_de_3_sets" ${c.sets_format === "melhor_de_3_sets" ? "selected" : ""}>Melhor de 3 sets</option></select></label></div>
+      ${teams.length ? `<div class="field">Cabeças de chave (ficam em grupos diferentes)<div class="chips" style="flex-wrap:wrap;margin:0">${teams.map(t => `<button class="chip" data-seed="${t.id}" aria-pressed="${!!t.seed}">${esc(clubName(t.club_id))}${t.team_label !== "Equipe 1" ? " · " + esc(t.team_label) : ""}</button>`).join("")}</div></div>` : `<p class="err">Nenhuma inscrição aprovada nesta categoria.</p>`}
+      ${played ? `<p class="small" style="color:var(--warn);margin:0">Esta categoria já tem ${played} confronto(s) com resultado. Gerar de novo apaga a chave atual e os resultados. Para confirmar, digite o nome da categoria.</p><input class="input" id="cConfirm" placeholder="${esc(c.name)}">` : ""}
+      <p class="err" id="cErr"></p>
+      <div class="row"><button class="btn" id="cGen" ${teams.length < 2 ? "disabled" : ""}>${ms.length ? "Gerar a chave de novo" : "Gerar chave"}</button>${gk && ms.length ? `<button class="btn ghost" id="cFill">Atualizar mata-mata com os classificados</button>` : ""}</div>
+    </div>
+    ${ms.length ? `<p class="small muted">A chave atual aparece na aba pública Chaves. Os jogos novos ficam sem horário até serem programados em Partidas.</p>` : ""}`;
+  box.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { S.filters.ccat = +b.dataset.cat; S.filters.ngroups = null; mountChaves(); });
+  $("#cType").onchange = async e => { const { error } = await sb.from("categories").update({ competition_type: e.target.value }).eq("id", sel); if (error) return toast(error.message); c.competition_type = e.target.value; mountChaves(); };
+  $("#cSets").onchange = async e => { const { error } = await sb.from("categories").update({ sets_format: e.target.value }).eq("id", sel); if (error) return toast(error.message); c.sets_format = e.target.value; toast("Formato de sets salvo."); };
+  $("#cFmt").onchange = async e => { const { error } = await sb.from("categories").update({ match_format: e.target.value }).eq("id", sel); if (error) return toast(error.message); c.match_format = e.target.value; toast("Formato salvo."); };
+  const g = $("#cGroups"); if (g) g.onchange = e => { S.filters.ngroups = +e.target.value; mountChaves(); };
+  box.querySelectorAll("[data-seed]").forEach(b => b.onclick = async () => {
+    const t = teams.find(x => x.id === +b.dataset.seed); const next = t.seed ? null : (Math.max(0, ...teams.map(x => x.seed || 0)) + 1);
+    const { error } = await sb.from("registrations").update({ seed: next }).eq("id", t.id); if (error) return toast(error.message); mountChaves();
+  });
+  const fill = $("#cFill"); if (fill) fill.onclick = async () => { const n = await fillKnockout(sel); toast(n ? `${n} vaga(s) do mata-mata preenchida(s).` : "Nenhuma vaga nova: os grupos ainda não terminaram."); await refresh(); };
+  $("#cGen").onclick = async () => {
+    const err = t => $("#cErr").textContent = t;
+    if (played && $("#cConfirm").value.trim() !== c.name) return err(`Digite ${c.name} para confirmar.`);
+    const T = teams.map(t => ({ id: t.id, club: t.club_id, label: t.team_label, seed: t.seed }));
+    const rows = []; let num = 1;
+    const base = { event_id: S.event.id, category_id: sel, schedule_published: false, status: "scheduled" };
+    if (c.competition_type === "round_robin") {
+      roundRobin(T).forEach(([a, b]) => rows.push({ ...base, phase_index: 0, phase_name: "Grupo 1", match_number: num++, club_a_id: a.club, team_a_label: a.label, club_b_id: b.club, team_b_label: b.label }));
+    } else {
+      const groups = splitGroups(T, nG);
+      groups.forEach((gr, gi) => roundRobin(gr).forEach(([a, b]) => rows.push({ ...base, phase_index: 0, phase_name: `Grupo ${gi + 1}`, match_number: num++, club_a_id: a.club, team_a_label: a.label, club_b_id: b.club, team_b_label: b.label })));
+      koPlan(nG).forEach((rd, ri) => rd.games.forEach(([sa, sb2], i) => rows.push({ ...base, phase_index: ri + 1, phase_name: rd.games.length > 1 ? `${rd.phase} ${i + 1}` : rd.phase, match_number: num++, source_a: sa, source_b: sb2, team_a_label: null, team_b_label: null })));
+      // grupo de cada equipe nas inscrições
+      for (const [gi, gr] of groups.entries()) for (const t of gr) await sb.from("registrations").update({ group_name: `Grupo ${gi + 1}` }).eq("id", t.id);
+    }
+    const del = await sb.from("matches").delete().eq("category_id", sel);
+    if (del.error) return err(del.error.message);
+    const ins = await sb.from("matches").insert(rows);
+    if (ins.error) return err(ins.error.message);
+    toast(`Chave gerada: ${rows.length} confrontos.`); await refresh(); mountChaves();
+  };
+}
+// preenche as vagas do mata-mata a partir da classificação dos grupos e dos vencedores
+async function fillKnockout(categoryId) {
+  const ms = S.matches.filter(m => m.category_id === categoryId);
+  const groups = {}; ms.filter(isGroup).forEach(m => (groups[m.phase_name] ||= []).push(m));
+  const resolve = src => {
+    if (!src) return null;
+    const [k, v] = src.split(/:(.*)/s);
+    if (k === "1" || k === "2") {
+      const gm = groups[v]; if (!gm || !gm.every(m => ["finished", "walkover"].includes(m.status))) return null;
+      const r = standings(gm)[+k - 1]; return r ? { club: r.club, label: r.label } : null;
+    }
+    if (k === "W") {
+      const m = ms.find(x => x.phase_name === v || (x.phase_name === "Final" && v === "Final 1")); if (!m || !m.winner) return null;
+      return m.winner === "A" ? { club: m.club_a_id, label: m.team_a_label } : { club: m.club_b_id, label: m.team_b_label };
+    }
+    return null;
+  };
+  let n = 0;
+  for (const m of ms.filter(m => m.source_a || m.source_b)) {
+    const a = resolve(m.source_a), b = resolve(m.source_b), patch = {};
+    if (a && m.club_a_id !== a.club) Object.assign(patch, { club_a_id: a.club, team_a_label: a.label });
+    if (b && m.club_b_id !== b.club) Object.assign(patch, { club_b_id: b.club, team_b_label: b.label });
+    if (Object.keys(patch).length) { const { error } = await sb.from("matches").update(patch).eq("id", m.id); if (!error) { Object.assign(m, patch); n++; } }
+  }
+  return n;
+}
+
+/* ---- grade de programação (organização) ---- */
+const hm = d => fmtTime(d);                                   // "14:30" no horário de Brasília
+const toISO = (day, t) => `${day}T${t}:00-03:00`;
+const addMin = (t, n) => { const [h, m] = t.split(":").map(Number); const x = h * 60 + m + n; return String(Math.floor(x / 60)).padStart(2, "0") + ":" + String(x % 60).padStart(2, "0"); };
+const minutes = t => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+const overlap = (a, b) => { const sa = new Date(a.scheduled_at), sb2 = new Date(b.scheduled_at); return sa < new Date(+sb2 + (b.duration_minutes || 90) * 6e4) && sb2 < new Date(+sa + (a.duration_minutes || 90) * 6e4); };
+function eventDays() {
+  const out = []; const d = new Date(S.event.starts_on + "T12:00:00-03:00"), end = new Date(S.event.ends_on + "T12:00:00-03:00");
+  for (; d <= end; d.setDate(d.getDate() + 1)) out.push(dayKey(d));
+  return out;
+}
+function conflictsOf(m, at, venue, court, dur) {
+  const probe = { ...m, scheduled_at: at, venue_id: venue, court, duration_minutes: dur };
+  const others = S.matches.filter(x => x.id !== m.id && x.scheduled_at);
+  const courtHit = others.find(x => x.venue_id === venue && x.court === court && overlap(x, probe));
+  const clubs = [m.club_a_id, m.club_b_id].filter(Boolean);
+  const clubHit = others.find(x => overlap(x, probe) && [x.club_a_id, x.club_b_id].some(c => clubs.includes(c)));
+  return { courtHit, clubHit };
+}
+function allConflicts() {
+  const ms = S.matches.filter(m => m.scheduled_at && !["cancelled"].includes(m.status));
+  const out = [];
+  for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) {
+    const a = ms[i], b = ms[j]; if (!overlap(a, b)) continue;
+    if (a.venue_id === b.venue_id && a.court && a.court === b.court) out.push({ kind: "Quadra", a, b, why: `${clubName(a.venue_id)} ${a.court} com dois jogos ao mesmo tempo` });
+    const shared = [a.club_a_id, a.club_b_id].filter(c => c && [b.club_a_id, b.club_b_id].includes(c));
+    // mesmo clube em categorias diferentes ao mesmo tempo é comum (atletas diferentes); só conta se for a mesma equipe
+    for (const c of shared) {
+      const la = a.club_a_id === c ? a.team_a_label : a.team_b_label, lb = b.club_a_id === c ? b.team_a_label : b.team_b_label;
+      if (a.category_id === b.category_id && la === lb) out.push({ kind: "Equipe", a, b, why: `${clubName(c)} (${cat(a.category_id)?.name}) em dois jogos ao mesmo tempo` });
+    }
+  }
+  return out;
+}
+VIEWS.org_grade = () => {
+  const days = eventDays();
+  const day = S.filters.gday && days.includes(S.filters.gday) ? S.filters.gday : (days.find(d => S.matches.some(m => m.scheduled_at && dayKey(m.scheduled_at) === d)) || days[0]);
+  S.filters.gday = day;
+  const venues = S.clubs.filter(c => c.is_venue);
+  const v = venues.find(x => x.id === S.filters.gvenue) || venues[0];
+  if (!v) return areaHeader("Programação", "Distribua os jogos por sede, quadra e horário.") + `<div class="empty">Nenhuma sede cadastrada. Marque um clube como sede em Clubes.</div>`;
+  S.filters.gvenue = v.id;
+  const slot = v.slot_minutes || 30, start = (v.venue_start || "08:00").slice(0, 5), end = (v.venue_end || "22:00").slice(0, 5);
+  const rows = []; for (let t = start; minutes(t) < minutes(end); t = addMin(t, slot)) rows.push(t);
+  const courts = Array.from({ length: v.court_count || 1 }, (_, i) => "Q" + (i + 1));
+  const dayMs = S.matches.filter(m => m.scheduled_at && dayKey(m.scheduled_at) === day && m.venue_id === v.id);
+  const unsched = S.matches.filter(m => !m.scheduled_at && m.status !== "cancelled" && (!S.filters.gcat || m.category_id === S.filters.gcat));
+  const sel = S.matches.find(m => m.id === S.filters.gsel);
+  const unpub = S.matches.filter(m => m.scheduled_at && !m.schedule_published && dayKey(m.scheduled_at) === day).length;
+  const conf = allConflicts().filter(c => dayKey(c.a.scheduled_at) === day);
+  // tabela com rowspan: cada jogo ocupa as linhas da sua duração
+  const covered = new Set();
+  const body = rows.map(t => `<tr><th class="num" style="position:sticky;left:0;background:var(--surface);z-index:1">${t}</th>${courts.map(q => {
+    if (covered.has(q + t)) return "";
+    const here = dayMs.filter(x => x.court === q && hm(x.scheduled_at) === t);
+    if (here.length) {
+      const span = Math.max(1, Math.ceil(Math.max(...here.map(m => m.duration_minutes || 90)) / slot));
+      for (let k = 1; k < span; k++) covered.add(q + addMin(t, k * slot));
+      return `<td rowspan="${span}" style="padding:4px;vertical-align:top"><div class="stack" style="gap:4px">${here.map(m => `<button class="card click" data-gm="${m.id}" style="width:100%;text-align:left;padding:8px;${sel?.id === m.id ? "border-color:var(--accent);" : ""}${here.length > 1 ? "border-color:var(--bad);" : ""}${m.schedule_published ? "" : "border-style:dashed;"}">
+        <div class="small muted">${esc(cat(m.category_id)?.name)} · ${esc(m.phase_name)}</div><div class="small" style="font-weight:600;white-space:normal">${esc(teamName(m, "A"))} × ${esc(teamName(m, "B"))}</div>
+        <div class="small muted">${t}–${addMin(t, m.duration_minutes || 90)}${m.schedule_published ? "" : " · rascunho"}${here.length > 1 ? ' · <span style="color:var(--bad)">conflito</span>' : ""}</div></button>`).join("")}</div></td>`;
+    }
+    return `<td style="padding:4px"><button class="btn ghost sm" data-gcell="${q}|${t}" style="width:100%;opacity:${sel ? 1 : .5}" aria-label="${q} às ${t}${sel ? ", programar jogo selecionado" : ", livre"}">${sel ? "Programar aqui" : "Livre"}</button></td>`;
+  }).join("")}</tr>`).join("");
+  return areaHeader("Programação", "Selecione um jogo sem horário e toque numa quadra livre. Jogos novos ficam em rascunho até você publicar.") + `
+    <div class="chips">${days.map(d => `<button class="chip" data-gday="${d}" aria-pressed="${d === day}">${fmtDay(d + "T12:00")}</button>`).join("")}</div>
+    <div class="chips">${venues.map(x => `<button class="chip" data-gvenue="${x.id}" aria-pressed="${x.id === v.id}">${esc(x.name)} · ${x.court_count || "?"} quadras</button>`).join("")}</div>
+    <div class="stat-row"><div class="stat">Jogos sem programação<b class="num">${S.matches.filter(m => !m.scheduled_at && m.status !== "cancelled").length}</b></div><div class="stat">No dia, nesta sede<b class="num">${dayMs.length}</b></div><div class="stat">Rascunho no dia<b class="num">${unpub}</b></div><div class="stat">Conflitos no dia<b class="num" style="${conf.length ? "color:var(--bad)" : ""}">${conf.length}</b></div></div>
+    <div class="row" style="margin-bottom:12px"><button class="btn" id="gPublish" ${unpub ? "" : "disabled"}>Publicar programação do dia</button><button class="btn ghost" id="gPrint">Imprimir programação</button><button class="btn ghost" id="gVenueCfg">Horário da sede</button></div>
+    <div id="gCfg"></div>
+    ${sel ? `<div class="card" style="margin-bottom:12px;border-color:var(--accent)"><div class="row"><span class="pill acc">Selecionado</span><b>${esc(cat(sel.category_id)?.name)} · ${esc(teamName(sel, "A"))} × ${esc(teamName(sel, "B"))}</b><span class="spacer"></span>
+      <label class="small muted row">Duração do jogo <select class="input" id="gDur" style="width:auto;padding:4px 8px">${[30, 45, 60, 75, 90, 120].map(n => `<option ${n === (sel.duration_minutes || 90) ? "selected" : ""}>${n}</option>`).join("")}</select> min</label>
+      <button class="btn ghost sm" id="gUnsel">Cancelar seleção</button></div><p class="err" id="gErr" style="margin-top:6px"></p></div>` : `<p class="err" id="gErr"></p>`}
+    ${conf.length ? `<div class="card" style="margin-bottom:12px;border-color:var(--bad)"><h3>Conflitos</h3><ul class="small" style="margin:6px 0 0;padding-left:18px">${conf.slice(0, 12).map(c => `<li>${c.kind}: ${esc(c.why)} · ${hm(c.a.scheduled_at)} (${esc(cat(c.a.category_id)?.name)} e ${esc(cat(c.b.category_id)?.name)})</li>`).join("")}</ul></div>` : ""}
+    <div class="table-wrap" style="margin-bottom:16px"><table style="min-width:${120 + courts.length * 150}px"><thead><tr><th style="position:sticky;left:0;z-index:1">Hora</th>${courts.map(q => `<th>${q}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>
+    <h3 style="margin:8px 0">Jogos sem programação</h3>
+    <select class="input" id="gCat" style="margin-bottom:10px"><option value="">Todas as categorias</option>${S.cats.map(c => `<option value="${c.id}" ${S.filters.gcat === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>
+    ${unsched.length ? `<div class="stack">${unsched.slice(0, 80).map(m => `<button class="card click" data-gpick="${m.id}" style="text-align:left;${sel?.id === m.id ? "border-color:var(--accent)" : ""}"><div class="small muted">${esc(cat(m.category_id)?.name)} · ${esc(m.phase_name)}${m.match_number ? " · Jogo " + m.match_number : ""}</div><b>${esc(teamName(m, "A"))} × ${esc(teamName(m, "B"))}</b></button>`).join("")}</div>`
+      : `<div class="empty">Todos os jogos têm horário. Para mexer num jogo da grade, toque nele.</div>`}
+    <div id="printArea" hidden></div>`;
+};
+function mountGrade() {
+  const view = $("#view");
+  const err = t => { const e = $("#gErr"); if (e) e.textContent = t; else toast(t); };
+  view.querySelectorAll("[data-gday]").forEach(b => b.onclick = () => { S.filters.gday = b.dataset.gday; render(); });
+  view.querySelectorAll("[data-gvenue]").forEach(b => b.onclick = () => { S.filters.gvenue = +b.dataset.gvenue; render(); });
+  view.querySelectorAll("[data-gpick]").forEach(b => b.onclick = () => { S.filters.gsel = +b.dataset.gpick; render(); });
+  const cs = $("#gCat"); if (cs) cs.onchange = () => { S.filters.gcat = +cs.value || null; render(); };
+  const un = $("#gUnsel"); if (un) un.onclick = () => { S.filters.gsel = null; render(); };
+  view.querySelectorAll("[data-gcell]").forEach(b => b.onclick = async () => {
+    const m = S.matches.find(x => x.id === S.filters.gsel);
+    if (!m) return err("Selecione um jogo antes de escolher o horário.");
+    const [court, t] = b.dataset.gcell.split("|");
+    const dur = +($("#gDur")?.value || m.duration_minutes || 90);
+    const at = toISO(S.filters.gday, t), venue = S.filters.gvenue;
+    const v = club(venue); if (minutes(t) + dur > minutes((v.venue_end || "23:00").slice(0, 5))) return err(`O jogo terminaria depois do fechamento da sede (${(v.venue_end || "").slice(0, 5)}).`);
+    const { courtHit, clubHit } = conflictsOf(m, at, venue, court, dur);
+    if (courtHit) return err(`${court} já tem ${cat(courtHit.category_id)?.name} às ${hm(courtHit.scheduled_at)} nesse intervalo.`);
+    if (clubHit && clubHit.category_id === m.category_id) return err(`${clubName([m.club_a_id, m.club_b_id].find(c => [clubHit.club_a_id, clubHit.club_b_id].includes(c)))} já joga ${cat(clubHit.category_id)?.name} às ${hm(clubHit.scheduled_at)}.`);
+    const { error } = await sb.from("matches").update({ scheduled_at: at, venue_id: venue, court, duration_minutes: dur, schedule_published: false }).eq("id", m.id);
+    if (error) return err(error.message);
+    S.filters.gsel = null; toast(`Jogo programado: ${court} às ${t} (rascunho).`); await refresh();
+  });
+  view.querySelectorAll("[data-gm]").forEach(b => b.onclick = () => {
+    const m = S.matches.find(x => x.id === +b.dataset.gm);
+    openSheet(sheetHead(`${cat(m.category_id)?.name} · ${m.phase_name}`, `${teamName(m, "A")} × ${teamName(m, "B")}`) + `
+      <div class="row" style="margin-bottom:12px">${statusPill(m.status)}<span class="meta">${fmtDate(m.scheduled_at)} ${hm(m.scheduled_at)} · ${esc(clubName(m.venue_id))} ${esc(m.court || "")} · ${m.duration_minutes || 90} min</span></div>
+      <p class="small muted">${m.schedule_published ? "Publicado na agenda." : "Rascunho: ainda não aparece na agenda pública."}</p>
+      <div class="row"><button class="btn" id="gMove">Mover</button><button class="btn ghost" id="gPubOne">${m.schedule_published ? "Despublicar" : "Publicar"}</button>${["finished", "walkover", "on_court"].includes(m.status) ? "" : `<button class="btn danger" id="gRemove">Tirar da grade</button>`}</div>`, sheet => {
+      $("#gMove", sheet).onclick = () => { S.filters.gsel = m.id; closeSheet(); render(); toast("Toque na nova quadra e horário."); };
+      $("#gPubOne", sheet).onclick = async () => { const { error } = await sb.from("matches").update({ schedule_published: !m.schedule_published }).eq("id", m.id); if (error) return toast(error.message); closeSheet(); await refresh(); };
+      const rm = $("#gRemove", sheet); if (rm) rm.onclick = async () => { const { error } = await sb.from("matches").update({ scheduled_at: null, court: null, schedule_published: false }).eq("id", m.id); if (error) return toast(error.message); closeSheet(); toast("Jogo voltou para a lista sem programação."); await refresh(); };
+    });
+  });
+  // ao mover, o próprio jogo libera a célula de origem
+  if (S.filters.gsel) { const m = S.matches.find(x => x.id === S.filters.gsel); if (m?.scheduled_at) toast("Escolha a nova quadra e horário. A posição atual é liberada ao salvar."); }
+  const pub = $("#gPublish"); if (pub) pub.onclick = async () => {
+    const ids = S.matches.filter(m => m.scheduled_at && !m.schedule_published && dayKey(m.scheduled_at) === S.filters.gday).map(m => m.id);
+    const { error } = await sb.from("matches").update({ schedule_published: true }).in("id", ids);
+    if (error) return toast(error.message); toast(`${ids.length} jogo(s) publicados na agenda.`); await refresh();
+  };
+  $("#gVenueCfg").onclick = () => {
+    const v = club(S.filters.gvenue);
+    $("#gCfg").innerHTML = `<form class="card stack" id="gCfgForm" style="margin-bottom:12px"><h3>${esc(v.name)}</h3><div class="filters" style="margin:0">
+      <label class="field">Abre às<input class="input" type="time" id="cfS" value="${(v.venue_start || "08:00").slice(0, 5)}"></label>
+      <label class="field">Fecha às<input class="input" type="time" id="cfE" value="${(v.venue_end || "22:00").slice(0, 5)}"></label>
+      <label class="field">Intervalo da grade (min)<select class="input" id="cfSl">${[15, 30, 60].map(n => `<option ${n === v.slot_minutes ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+      <label class="field">Quadras<input class="input" type="number" min="1" max="30" id="cfQ" value="${v.court_count || 1}"></label></div>
+      <div class="row"><button class="btn" type="submit">Salvar</button></div></form>`;
+    $("#gCfgForm").onsubmit = async e => { e.preventDefault(); const { error } = await sb.from("clubs").update({ venue_start: $("#cfS").value, venue_end: $("#cfE").value, slot_minutes: +$("#cfSl").value, court_count: +$("#cfQ").value }).eq("id", v.id); if (error) return toast(error.message); toast("Horário da sede salvo."); await refresh(); };
+  };
+  $("#gPrint").onclick = () => {
+    const day = S.filters.gday;
+    const ms = S.matches.filter(m => m.scheduled_at && dayKey(m.scheduled_at) === day).sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at) || clubName(a.venue_id).localeCompare(clubName(b.venue_id)) || (a.court || "").localeCompare(b.court || "", "pt-BR", { numeric: true }));
+    const area = $("#printArea");
+    area.innerHTML = `<h1>${esc(S.event.name)}</h1><p>Programação de ${fmtDay(day + "T12:00")}${ms.some(m => !m.schedule_published) ? " · contém jogos em rascunho" : ""}</p>
+      <table><thead><tr><th>Hora</th><th>Sede</th><th>Quadra</th><th>Categoria</th><th>Fase</th><th>Confronto</th></tr></thead><tbody>${ms.map(m => `<tr><td>${hm(m.scheduled_at)}</td><td>${esc(clubName(m.venue_id))}</td><td>${esc(m.court || "")}</td><td>${esc(cat(m.category_id)?.name)}</td><td>${esc(m.phase_name)}</td><td>${esc(teamName(m, "A"))} × ${esc(teamName(m, "B"))}</td></tr>`).join("")}</tbody></table>`;
+    document.body.classList.add("printing");
+    const done = () => { document.body.classList.remove("printing"); window.removeEventListener("afterprint", done); };
+    window.addEventListener("afterprint", done);
+    try { window.print(); } catch { done(); }
+    setTimeout(() => { if (document.body.classList.contains("printing")) done(); }, 60000);
+  };
+}
+
+/* ---- escala de arbitragem (organização) ---- */
+VIEWS.org_arbitros = () => `<div id="escBox">${areaHeader("Escala de arbitragem", "Árbitro Geral por sede e Árbitro auxiliar por quadra.")}<div class="empty">Carregando…</div></div>`;
+async function mountEscala() {
+  const box = $("#escBox"); if (!box) return;
+  const { data, error } = await sb.rpc("list_event_access", { p_event: S.event.id });
+  const refs = (data || []).filter(r => r.role === "referee");
+  const venues = S.clubs.filter(c => c.is_venue);
+  box.innerHTML = areaHeader("Escala de arbitragem", "Árbitro Geral por sede e Árbitro auxiliar por quadra.") + `
+    <form id="escForm" class="card stack" style="margin-bottom:14px"><h3>Escalar árbitro</h3>
+      <label class="field">E-mail da conta do árbitro<input class="input" id="escEmail" type="email" required placeholder="arbitro@exemplo.com.br"></label>
+      <div class="filters" style="margin:0"><label class="field">Função<select class="input" id="escLevel"><option value="geral">Árbitro Geral (sede)</option><option value="auxiliar">Árbitro auxiliar (quadra)</option></select></label>
+      <label class="field">Sede<select class="input" id="escVenue">${venues.map(v => `<option value="${v.id}">${esc(v.name)} · ${v.court_count || "?"} quadras</option>`).join("")}</select></label>
+      <label class="field" id="escCourtF" hidden>Quadra<select class="input" id="escCourt"></select></label></div>
+      <p class="err" id="escErr"></p><div class="row"><button class="btn" type="submit">Salvar escala</button></div></form>
+    ${error ? `<p class="err">${esc(error.message)}</p>` : venues.map(v => `<div class="card" style="margin-bottom:10px"><div class="row"><h3>${esc(v.name)}</h3><span class="spacer"></span><span class="small muted">${v.court_count || "?"} quadras</span></div>
+      <div class="small" style="margin:8px 0">Mesa · Árbitro Geral: ${refs.filter(r => r.referee_level === "geral" && (r.venue_id === v.id || !r.venue_id)).map(r => `<b>${esc(r.email)}</b>${r.venue_id ? ` <button class="btn ghost sm" data-unesc="${r.id}">Soltar</button>` : ' <span class="muted">(todas as sedes)</span>'}`).join(", ") || '<span class="muted">Nenhum Árbitro Geral escalado.</span>'}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px">${Array.from({ length: v.court_count || 0 }, (_, i) => { const q = "Q" + (i + 1); const a = refs.filter(r => r.referee_level === "auxiliar" && r.venue_id === v.id && r.court === q);
+        return `<div class="card" style="padding:8px"><b>${q}</b><div class="small ${a.length ? "" : "muted"}" style="white-space:normal">${a.map(r => `${esc(r.email)} <button class="btn ghost sm" data-unesc="${r.id}">Soltar</button>`).join("<br>") || "Sem árbitro auxiliar"}</div></div>`; }).join("")}</div></div>`).join("")}`;
+  const fillCourts = () => { const v = club(+$("#escVenue").value); $("#escCourt").innerHTML = Array.from({ length: v?.court_count || 0 }, (_, i) => `<option>Q${i + 1}</option>`).join(""); $("#escCourtF").hidden = $("#escLevel").value !== "auxiliar"; };
+  $("#escVenue").onchange = fillCourts; $("#escLevel").onchange = fillCourts; fillCourts();
+  $("#escForm").onsubmit = async e => {
+    e.preventDefault();
+    const lvl = $("#escLevel").value;
+    const { error } = await sb.rpc("grant_event_access", { p_event: S.event.id, p_email: $("#escEmail").value.trim(), p_role: "referee", p_club: null, p_level: lvl, p_venue: +$("#escVenue").value, p_court: lvl === "auxiliar" ? $("#escCourt").value : null });
+    if (error) return $("#escErr").textContent = error.message.includes("duplicate") ? "Esse árbitro já está escalado nesse posto." : error.message;
+    toast("Escala salva."); mountEscala();
+  };
+  box.querySelectorAll("[data-unesc]").forEach(b => b.onclick = async () => { const { error } = await sb.from("access_profiles").delete().eq("id", +b.dataset.unesc); if (error) return toast(error.message); toast("Árbitro removido da escala."); mountEscala(); });
+}
+
+/* ---- área do gestor de clube ---- */
+const clubCats = () => S.cats.filter(c => S.matches.some(m => m.category_id === c.id && [m.club_a_id, m.club_b_id].includes(myClub())));
+VIEWS.clube_painel = () => `<div id="cpBox">${areaHeader("Painel do clube", "Jogadores, inscrições, capitães e escalas do clube.")}<div class="empty">Carregando…</div></div>`;
+async function mountClubPanel() {
+  const box = $("#cpBox"); if (!box) return;
+  const [ath, regs, acc] = await Promise.all([
+    sb.from("athletes").select("id,active,roster(status)").eq("club_id", myClub()),
+    sb.from("registrations").select("status").eq("club_id", myClub()).eq("event_id", S.event.id),
+    sb.rpc("list_club_access", { p_club: myClub() })
+  ]);
+  await loadEventLineups();
+  const active = (ath.data || []).filter(a => a.active);
+  const pendAth = active.filter(a => a.roster.some(r => r.status === "pending")).length;
+  const pendReg = (regs.data || []).filter(r => r.status === "pending").length;
+  const caps = (acc.data || []).filter(r => r.role === "captain").length;
+  const open = S.matches.filter(m => m.lineup_released && [m.club_a_id, m.club_b_id].includes(myClub()) && !["finished", "walkover", "cancelled"].includes(m.status));
+  const waiting = open.filter(m => !S.lineups.some(l => l.match_id === m.id && l.club_id === myClub() && ["submitted", "accepted"].includes(l.status))).length;
+  const adjust = open.filter(m => S.lineups.some(l => l.match_id === m.id && l.club_id === myClub() && l.status === "adjustment_requested")).length;
+  const card = (go, title, n, note, tone) => `<button class="card click" style="text-align:left" data-go="${go}"><div class="row"><h3>${title}</h3><span class="spacer"></span><span class="pill ${tone}">${n}</span></div><p class="small muted" style="margin:6px 0 0">${note}</p></button>`;
+  box.innerHTML = areaHeader("Painel do clube", "Jogadores, inscrições, capitães e escalas do clube.") + `<div class="stack">
+    ${card("escalacoes", "Escalações a enviar", waiting, "Confrontos liberados pela arbitragem sem escalação enviada.", waiting ? "warn" : "good")}
+    ${card("escalacoes", "Ajustes pedidos pelo árbitro", adjust, "Escalações que precisam ser corrigidas e reenviadas.", adjust ? "bad" : "good")}
+    ${card("clube_atletas", "Atletas", active.length, `${pendAth} com inscrição aguardando validação da organização.`, pendAth ? "warn" : "good")}
+    ${card("inscricoes", "Inscrições de equipes", (regs.data || []).length, `${pendReg} aguardando análise.`, pendReg ? "warn" : "good")}
+    ${card("clube_capitaes", "Capitães", caps, "Quem escala o clube e em quais classes.", caps ? "good" : "warn")}</div>`;
+  bindGo();
+}
+
+VIEWS.clube_atletas = () => `<div id="caBox">${areaHeader("Atletas", "Cadastre os atletas do clube e inscreva-os nas classes. A organização valida cada inscrição.")}<div class="empty">Carregando atletas…</div></div>`;
+async function mountClubAthletes() {
+  const box = $("#caBox"); if (!box) return;
+  const { data, error } = await sb.from("athletes").select("id,name,fpt_registration,is_example,active,roster(category_id,role,status)").eq("club_id", myClub()).order("name");
+  if (error) { box.innerHTML += `<p class="err">${esc(error.message)}</p>`; return; }
+  const q = (S.filters.caq || "").toLowerCase(), fc = S.filters.cacat || "", show = S.filters.cashow || "real";
+  const list = data.filter(a => (show === "all" || !a.is_example) && (!q || (a.name + (a.fpt_registration || "")).toLowerCase().includes(q)) && (!fc || a.roster.some(r => r.category_id == fc)));
+  const ST = { valid: ["Válida", "good"], pending: ["Pendente", "warn"], rejected: ["Recusada", "bad"] };
+  box.innerHTML = areaHeader("Atletas", "Cadastre os atletas do clube e inscreva-os nas classes. A organização valida cada inscrição.") + `
+    <div class="filters"><input class="input" id="caQ" placeholder="Buscar atleta ou registro" value="${esc(S.filters.caq || "")}" aria-label="Buscar atleta">
+      <select class="input" id="caCat" aria-label="Classe"><option value="">Todas as classes</option>${S.cats.map(c => `<option value="${c.id}" ${fc == c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>
+      <select class="input" id="caShow" aria-label="Mostrar"><option value="real" ${show === "real" ? "selected" : ""}>Só atletas cadastrados</option><option value="all" ${show === "all" ? "selected" : ""}>Incluir atletas de exemplo</option></select>
+      <button class="btn" id="caNew">Novo atleta</button></div>
+    ${list.length ? `<div class="table-wrap"><table><thead><tr><th>Registro</th><th>Nome</th><th>Classes</th><th></th></tr></thead><tbody>${list.map(a => `<tr><td class="num">${esc(a.fpt_registration || "—")}</td><td><b>${esc(a.name)}</b>${a.active ? "" : ' <span class="pill bad">Inativo</span>'}${a.is_example ? ' <span class="muted small">exemplo</span>' : ""}</td>
+      <td style="white-space:normal">${a.roster.map(r => `<span class="pill ${ST[r.status][1]}" title="${ST[r.status][0]}">${esc(cat(r.category_id)?.name)}${r.role === "reserva" ? " (R)" : ""}</span>`).join(" ") || "—"}</td><td><button class="btn ghost sm" data-ca="${a.id}">Editar</button></td></tr>`).join("")}</tbody></table></div>`
+      : `<div class="empty">${show === "real" ? "Nenhum atleta cadastrado pelo clube ainda. Toque em Novo atleta para começar." : "Nenhum atleta com esses filtros."}</div>`}
+    <p class="small muted">Verde: inscrição válida · Amarelo: aguardando a organização · Vermelho: recusada. (R) = reserva.</p>`;
+  $("#caQ").oninput = e => { S.filters.caq = e.target.value; clearTimeout(mountClubAthletes.t); mountClubAthletes.t = setTimeout(mountClubAthletes, 250); };
+  $("#caCat").onchange = e => { S.filters.cacat = e.target.value; mountClubAthletes(); };
+  $("#caShow").onchange = e => { S.filters.cashow = e.target.value; mountClubAthletes(); };
+  $("#caNew").onclick = () => athleteForm(null, myClub(), { club: true, after: mountClubAthletes });
+  box.querySelectorAll("[data-ca]").forEach(b => b.onclick = () => athleteForm(data.find(a => a.id === +b.dataset.ca), myClub(), { club: true, after: mountClubAthletes }));
+}
+
+VIEWS.clube_capitaes = () => `<div id="ccBox">${areaHeader("Capitães", "Defina quem escala o clube e em quais classes.")}<div class="empty">Carregando…</div></div>`;
+async function mountClubCaptains() {
+  const box = $("#ccBox"); if (!box) return;
+  const { data, error } = await sb.rpc("list_club_access", { p_club: myClub() });
+  const cats = clubCats();
+  const caps = (data || []).filter(r => r.role === "captain"), mgrs = (data || []).filter(r => r.role === "club_manager");
+  const catNames = ids => !ids || !ids.length ? "Todas as classes do clube" : ids.map(id => cat(id)?.name).filter(Boolean).join(", ");
+  box.innerHTML = areaHeader("Capitães", "Defina quem escala o clube e em quais classes.") + `
+    <form id="ccForm" class="card stack" style="margin-bottom:14px"><h3>Convidar capitão</h3>
+      <label class="field">E-mail da conta<input class="input" id="ccEmail" type="email" required placeholder="capitao@clube.com.br"></label>
+      <div class="field">Classes que o capitão pode escalar<div class="chips" style="flex-wrap:wrap;margin:0"><button type="button" class="chip" data-ccall aria-pressed="true">Todas</button>${cats.map(c => `<button type="button" class="chip" data-cc="${c.id}" aria-pressed="false">${esc(c.name)}</button>`).join("")}</div></div>
+      <p class="small muted" style="margin:0">A pessoa precisa ter criado a conta no app antes. Ela verá só as classes marcadas.</p>
+      <p class="err" id="ccErr"></p><div class="row"><button class="btn" type="submit">Salvar capitão</button></div></form>
+    ${error ? `<p class="err">${esc(error.message)}</p>` : caps.length ? `<div class="stack">${caps.map(r => `<div class="card"><div class="row"><b>${esc(r.email)}</b><span class="spacer"></span><button class="btn ghost sm" data-ccedit="${r.id}">Editar classes</button><button class="btn danger sm" data-ccdel="${r.id}">Remover</button></div><p class="small muted" style="margin:6px 0 0">Escala: ${esc(catNames(r.categories))}</p></div>`).join("")}</div>`
+      : `<div class="empty">Nenhum capitão convidado ainda.</div>`}
+    ${mgrs.length ? `<p class="small muted" style="margin-top:14px">Gestores do clube: ${mgrs.map(r => esc(r.email)).join(", ")}</p>` : ""}`;
+  const picked = new Set();
+  const sync = () => { box.querySelector("[data-ccall]").setAttribute("aria-pressed", String(!picked.size)); box.querySelectorAll("[data-cc]").forEach(b => b.setAttribute("aria-pressed", String(picked.has(+b.dataset.cc)))); };
+  box.querySelector("[data-ccall]").onclick = () => { picked.clear(); sync(); };
+  box.querySelectorAll("[data-cc]").forEach(b => b.onclick = () => { const id = +b.dataset.cc; picked.has(id) ? picked.delete(id) : picked.add(id); sync(); });
+  $("#ccForm").onsubmit = async e => {
+    e.preventDefault();
+    const { error } = await sb.rpc("grant_club_captain", { p_club: myClub(), p_email: $("#ccEmail").value.trim(), p_categories: picked.size ? [...picked] : null });
+    if (error) return $("#ccErr").textContent = error.message;
+    toast("Capitão salvo."); mountClubCaptains();
+  };
+  box.querySelectorAll("[data-ccedit]").forEach(b => b.onclick = () => {
+    const r = caps.find(x => x.id === +b.dataset.ccedit);
+    $("#ccEmail").value = r.email; picked.clear(); (r.categories || []).forEach(id => picked.add(id)); sync();
+    $("#ccForm").scrollIntoView({ behavior: "smooth" }); toast("Ajuste as classes e toque em Salvar capitão.");
+  });
+  box.querySelectorAll("[data-ccdel]").forEach(b => b.onclick = async () => {
+    if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Confirmar remoção"; return; }
+    const { error } = await sb.rpc("revoke_club_captain", { p_profile: +b.dataset.ccdel }); if (error) return toast(error.message);
+    toast("Capitão removido."); mountClubCaptains();
+  });
+}
+
+/* ---- organização ---- */
+VIEWS.painel = () => {
+  const noSched = S.matches.filter(m => !m.scheduled_at).length;
+  const live = S.matches.filter(m => m.status === "on_court").length;
+  const pend = S.matches.filter(m => m.status === "result_pending").length;
+  return areaHeader("Painel", "O que precisa de atenção neste evento.") + `<div id="pendBox"></div><div class="stack">
+    <button class="card click" style="text-align:left" data-go="org_grade"><div class="row"><h3>Jogos sem programação</h3><span class="spacer"></span><span class="pill ${noSched ? "warn" : "good"}">${noSched}</span></div><p class="small muted" style="margin:6px 0 0">Confrontos sem data ou horário.</p></button>
+    <button class="card click" style="text-align:left" data-go="arbitragem"><div class="row"><h3>Jogos em quadra</h3><span class="spacer"></span><span class="pill acc">${live}</span></div><p class="small muted" style="margin:6px 0 0">${pend} com resultado pendente.</p></button>
+    <button class="card click" style="text-align:left" data-go="org_partidas"><div class="row"><h3>Conferir jogos</h3><span class="spacer"></span><span class="pill">${S.matches.length}</span></div><p class="small muted" style="margin:6px 0 0">Confrontos cadastrados no evento.</p></button></div>`;
+};
+async function mountPainel() {
+  const { count } = await sb.from("lineups").select("id", { count: "exact", head: true }).eq("status", "submitted");
+  const { count: regs } = await sb.from("registrations").select("id", { count: "exact", head: true }).eq("event_id", S.event.id).eq("status", "pending");
+  const b = $("#pendBox"); if (b) b.innerHTML = `<button class="card click" style="text-align:left;width:100%;margin-bottom:12px" data-go="org_inscricoes"><div class="row"><h3>Inscrições para decisão</h3><span class="spacer"></span><span class="pill ${regs ? "warn" : "good"}">${regs || 0}</span></div><p class="small muted" style="margin:6px 0 0">Inscrição(ões) aguardando análise.</p></button><button class="card click" style="text-align:left;width:100%;margin-bottom:12px" data-go="arbitragem"><div class="row"><h3>Escalações aguardando aceite</h3><span class="spacer"></span><span class="pill ${count ? "warn" : "good"}">${count || 0}</span></div></button>`;
+  bindGo();
+}
+VIEWS.org_partidas = () => {
+  const list = applyFilters(S.matches);
+  return areaHeader("Partidas", "Ajuste data, horário, sede e quadra. A agenda pública mostra só jogos publicados.") + matchFilters(S.matches) +
+    `<div class="stack">${list.slice(0, 120).map(m => `<div class="card click" data-org="${m.id}" tabindex="0" role="button"><div class="row"><span class="small muted">${esc(cat(m.category_id)?.name)} · ${esc(m.phase_name)}</span><span class="spacer"></span>${m.schedule_published ? "" : '<span class="pill warn">Não publicado</span>'}${statusPill(m.status)}</div>
+      <div style="font-weight:600;margin-top:4px">${esc(teamName(m, "A"))} × ${esc(teamName(m, "B"))}</div><div class="meta">${m.scheduled_at ? fmtDate(m.scheduled_at) + " " + fmtTime(m.scheduled_at) : "Sem horário"} · ${esc(clubName(m.venue_id))} ${esc(m.court || "")}</div></div>`).join("")}</div>`;
+};
+function openOrgMatch(id) {
+  const m = S.matches.find(x => x.id === id);
+  const local = m.scheduled_at ? new Date(new Date(m.scheduled_at).toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })) : null;
+  const pad = n => String(n).padStart(2, "0");
+  const dt = local ? `${local.getFullYear()}-${pad(local.getMonth() + 1)}-${pad(local.getDate())}T${pad(local.getHours())}:${pad(local.getMinutes())}` : "";
+  openSheet(sheetHead(`${cat(m.category_id)?.name} · ${m.phase_name}`, `${teamName(m, "A")} × ${teamName(m, "B")}`) + `
+    <form id="orgForm" class="stack">
+      <label class="field">Data e hora (Brasília)<input class="input" type="datetime-local" id="oDt" value="${dt}"></label>
+      <div class="filters" style="margin:0"><label class="field">Sede<select class="input" id="oVenue"><option value="">A definir</option>${S.clubs.filter(c => c.is_venue).map(c => `<option value="${c.id}" ${m.venue_id === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
+      <label class="field">Quadra<input class="input" id="oCourt" value="${esc(m.court || "")}" placeholder="Q1"></label></div>
+      <label class="row small"><input type="checkbox" id="oPub" ${m.schedule_published ? "checked" : ""}> Publicar na agenda</label>
+      <p class="err" id="oErr"></p><div class="row"><button class="btn" type="submit">Salvar</button></div></form>`, sheet => {
+    $("#orgForm", sheet).onsubmit = async e => {
+      e.preventDefault();
+      const v = $("#oDt").value;
+      const at = v ? v + ":00-03:00" : null;
+      const venue = +$("#oVenue").value || null, court = $("#oCourt").value.trim() || null;
+      if (at && venue && court) {
+        const clash = S.matches.find(x => x.id !== id && x.venue_id === venue && x.court === court && x.scheduled_at && Math.abs(new Date(x.scheduled_at) - new Date(at)) < (x.duration_minutes || 90) * 60000);
+        if (clash) return $("#oErr").textContent = `Conflito: ${clubName(venue)} ${court} já tem ${cat(clash.category_id)?.name} às ${fmtTime(clash.scheduled_at)}.`;
+      }
+      const { error } = await sb.from("matches").update({ scheduled_at: at, venue_id: venue, court, schedule_published: $("#oPub").checked }).eq("id", id);
+      if (error) return $("#oErr").textContent = error.message;
+      toast("Partida atualizada"); closeSheet(); await refresh();
+    };
+  });
+}
+VIEWS.org_atletas = () => `<div id="athBox">${areaHeader("Atletas", "Cadastro de atletas por clube e inscrição nas categorias.")}<div class="empty">Carregando…</div></div>`;
+async function mountAthletes() {
+  const box = $("#athBox"); if (!box) return;
+  const clubId = S.filters.aclub || S.clubs[0]?.id;
+  const { data, error } = await sb.from("athletes").select("id,name,fpt_registration,is_example,active,roster(category_id,role,status)").eq("club_id", clubId).order("name");
+  if (error) { box.innerHTML += `<p class="err">${esc(error.message)}</p>`; return; }
+  box.innerHTML = areaHeader("Atletas", "Cadastro de atletas por clube e inscrição nas categorias.") + `
+    <div class="filters"><select class="input" id="aClub" aria-label="Clube">${S.clubs.map(c => `<option value="${c.id}" ${c.id === clubId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select><button class="btn" id="newAth">Novo atleta</button></div>
+    ${data.length ? `<div class="table-wrap"><table><thead><tr><th>Registro</th><th>Nome</th><th>Categorias</th><th></th></tr></thead><tbody>${data.map(a => `<tr><td class="num">${esc(a.fpt_registration || "—")}</td><td><b>${esc(a.name)}</b>${a.active ? "" : ' <span class="pill bad">Inativo</span>'}${a.is_example ? ' <span class="muted small">exemplo</span>' : ""}</td><td style="white-space:normal">${a.roster.map(r => `<span class="pill ${{ valid: "good", pending: "warn", rejected: "bad" }[r.status]}">${esc(cat(r.category_id)?.name)}${r.role === "reserva" ? " (R)" : ""}</span>`).join(" ") || "—"}</td><td class="row" style="flex-wrap:nowrap">${a.roster.some(r => r.status === "pending") ? `<button class="btn sm" data-valid="${a.id}">Validar</button><button class="btn ghost sm" data-reject="${a.id}">Recusar</button>` : ""}<button class="btn ghost sm" data-ath="${a.id}">Editar</button></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Nenhum atleta neste clube ainda.</div>`}`;
+  $("#aClub").onchange = e => { S.filters.aclub = +e.target.value; mountAthletes(); };
+  $("#newAth").onclick = () => athleteForm(null, clubId);
+  box.querySelectorAll("[data-ath]").forEach(b => b.onclick = () => athleteForm(data.find(a => a.id === +b.dataset.ath), clubId));
+  box.querySelectorAll("[data-valid],[data-reject]").forEach(b => b.onclick = async () => { const id = +(b.dataset.valid || b.dataset.reject); const { error } = await sb.from("roster").update({ status: b.dataset.valid ? "valid" : "rejected" }).eq("athlete_id", id).eq("status", "pending"); if (error) return toast(error.message); toast(b.dataset.valid ? "Inscrições do atleta validadas." : "Inscrições do atleta recusadas."); mountAthletes(); });
+}
+function athleteForm(a, clubId, opts = {}) {
+  const reg = new Map((a?.roster || []).map(r => [r.category_id, r.role]));
+  const regSt = new Map((a?.roster || []).map(r => [r.category_id, r.status]));
+  const after = opts.after || mountAthletes;
+  const catList = opts.club ? S.cats.filter(c => clubCats().includes(c) || reg.has(c.id)) : S.cats;
+  openSheet(sheetHead(clubName(clubId), a ? "Editar atleta" : "Novo atleta") + `<form id="athForm" class="stack">
+    <label class="field">Nome completo<input class="input" id="aName" required value="${esc(a?.name || "")}"></label>
+    <label class="field">Registro FPT<input class="input" id="aReg" value="${esc(a?.fpt_registration || "")}" placeholder="FPT-00000"></label>
+    ${opts.club ? '<p class="small muted" style="margin:0">Cada classe marcada vai para validação da organização. O atleta só pode ser escalado depois de validado.</p>' : ""}
+    <div class="field">Classes<div class="stack" style="gap:6px">${catList.map(c => `<div class="row small"><label class="row" style="flex:1"><input type="checkbox" data-rc="${c.id}" ${reg.has(c.id) ? "checked" : ""}> ${esc(c.name)}${regSt.get(c.id) === "pending" ? ' <span class="pill warn">Pendente</span>' : regSt.get(c.id) === "rejected" ? ' <span class="pill bad">Recusada</span>' : ""}</label><select class="input" style="width:auto;padding:4px 8px" data-rr="${c.id}"><option value="titular">Titular</option><option value="reserva" ${reg.get(c.id) === "reserva" ? "selected" : ""}>Reserva</option></select></div>`).join("")}</div></div>
+    <p class="err" id="aErr"></p>
+    <div class="row"><button class="btn" type="submit">Salvar</button>${a ? `<button class="btn danger" type="button" id="aToggle">${a.active ? "Desativar" : "Reativar"}</button>` : ""}</div></form>`, sheet => {
+    $("#athForm", sheet).onsubmit = async e => {
+      e.preventDefault();
+      const row = { club_id: clubId, name: $("#aName").value.trim(), fpt_registration: $("#aReg").value.trim() || null };
+      if (!row.name) return $("#aErr").textContent = "Informe o nome do atleta.";
+      let id = a?.id;
+      if (id) { const { error } = await sb.from("athletes").update(row).eq("id", id); if (error) return $("#aErr").textContent = error.message; }
+      else { const { data, error } = await sb.from("athletes").insert(row).select("id").single(); if (error) return $("#aErr").textContent = error.message; id = data.id; }
+      const want = [...sheet.querySelectorAll("[data-rc]:checked")].map(x => ({ athlete_id: id, category_id: +x.dataset.rc, role: sheet.querySelector(`[data-rr="${x.dataset.rc}"]`).value, status: "valid" }));
+      await sb.from("roster").delete().eq("athlete_id", id).not("category_id", "in", `(${want.map(w => w.category_id).concat(-1).join(",")})`);
+      if (want.length) { const { error } = await sb.from("roster").upsert(want, { onConflict: "athlete_id,category_id" }); if (error) return $("#aErr").textContent = error.message; }
+      toast(opts.club ? "Atleta salvo. As classes novas aguardam validação da organização." : "Atleta salvo e inscrições validadas."); closeSheet(); after();
+    };
+    if (a) $("#aToggle", sheet).onclick = async () => { await sb.from("athletes").update({ active: !a.active }).eq("id", a.id); toast(a.active ? "Atleta desativado" : "Atleta reativado"); closeSheet(); after(); };
+  });
+}
+VIEWS.org_acessos = () => `<div id="accBox">${areaHeader("Acessos", "Vincule contas a perfis: capitão e gestor por clube, arbitragem e organização.")}<div class="empty">Carregando…</div></div>`;
+async function mountAccess() {
+  const box = $("#accBox"); if (!box) return;
+  const { data, error } = await sb.rpc("list_event_access", { p_event: S.event.id });
+  box.innerHTML = areaHeader("Acessos", "Vincule contas a perfis: capitão e gestor por clube, arbitragem e organização.") + `
+    <form id="accForm" class="card stack" style="margin-bottom:14px"><h3>Novo acesso</h3>
+      <label class="field">E-mail da conta<input class="input" id="accEmail" type="email" required placeholder="pessoa@clube.com.br"></label>
+      <div class="filters" style="margin:0"><label class="field">Perfil<select class="input" id="accRole">${Object.entries(ROLE).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></label>
+      <label class="field">Clube<select class="input" id="accClub"><option value="">Nenhum</option>${S.clubs.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join("")}</select></label></div>
+      <p class="small muted" style="margin:0">A pessoa precisa ter criado a conta em "Entrar → Criar conta".</p><p class="err" id="accErr"></p><div class="row"><button class="btn" type="submit">Conceder acesso</button></div></form>
+    ${error ? `<p class="err">${esc(error.message)}</p>` : (data || []).length ? `<div class="table-wrap"><table><thead><tr><th>Conta</th><th>Perfil</th><th>Clube</th><th></th></tr></thead><tbody>${data.map(r => `<tr><td>${esc(r.email)}</td><td>${ROLE[r.role]}</td><td>${esc(r.club_id ? clubName(r.club_id) : "—")}</td><td><button class="btn ghost sm" data-revoke="${r.id}">Remover</button></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Nenhum acesso concedido ainda.</div>`}`;
+  $("#accForm").onsubmit = async e => {
+    e.preventDefault();
+    const role = $("#accRole").value, clubId = +$("#accClub").value || null;
+    if (["captain", "club_manager"].includes(role) && !clubId) return $("#accErr").textContent = "Capitão e gestor precisam de um clube.";
+    const { error } = await sb.rpc("grant_event_access", { p_event: S.event.id, p_email: $("#accEmail").value.trim(), p_role: role, p_club: clubId });
+    if (error) return $("#accErr").textContent = error.message.includes("conta") ? error.message : "Não foi possível conceder: " + error.message;
+    toast("Acesso concedido"); mountAccess();
+  };
+  box.querySelectorAll("[data-revoke]").forEach(b => b.onclick = async () => { const { error } = await sb.from("access_profiles").delete().eq("id", +b.dataset.revoke); if (error) return toast(error.message); toast("Acesso removido"); mountAccess(); });
+}
+VIEWS.org_news = () => areaHeader("Notícias", "Publique avisos e posts de patrocinadores no feed.") + `<form id="newsForm" class="card stack">
+  <label class="field">Título<input class="input" id="nTitle" required></label>
+  <label class="field">Tipo<select class="input" id="nKind"><option value="notice">Aviso</option><option value="sponsor">Patrocinador</option></select></label>
+  <label class="field">Texto<textarea class="input" id="nBody" rows="4"></textarea></label>
+  <label class="field">Endereço da imagem (opcional)<input class="input" id="nImg" type="url" placeholder="https://"></label>
+  <p class="err" id="nErr"></p><div class="row"><button class="btn" type="submit">Publicar</button></div></form>`;
+
+/* ============ autenticação ============ */
+function openLogin(mode) {
+  const titles = { login: "Entrar", signup: "Criar conta", forgot: "Recuperar acesso", reset: "Nova senha" };
+  openSheet(sheetHead("Acesso", titles[mode]) + `<form id="authForm" class="stack">
+    ${mode === "login" ? '<p class="sub" style="margin:0">Entre para acessar sua área de capitão, arbitragem ou organização e salvar favoritos.</p>' : ""}
+    ${mode !== "reset" ? '<label class="field">E-mail<input class="input" id="aEmail" type="email" autocomplete="email" required></label>' : ""}
+    ${mode === "login" || mode === "signup" || mode === "reset" ? `<label class="field">${mode === "reset" ? "Nova senha" : "Senha"}<input class="input" id="aPass" type="password" minlength="8" autocomplete="${mode === "login" ? "current-password" : "new-password"}" required></label>` : ""}
+    <p class="err" id="authErr"></p>
+    <button class="btn" type="submit">${{ login: "Entrar", signup: "Criar conta", forgot: "Enviar link", reset: "Salvar senha" }[mode]}</button>
+    ${mode === "login" ? '<div class="row small"><button class="btn ghost sm" type="button" data-mode="signup">Criar conta</button><span class="spacer"></span><button class="btn ghost sm" type="button" data-mode="forgot">Esqueci minha senha</button></div>' : mode !== "reset" ? '<button class="btn ghost sm" type="button" data-mode="login">Já tenho conta</button>' : ""}
+  </form>`, sheet => {
+    sheet.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => openLogin(b.dataset.mode));
+    $("#authForm", sheet).onsubmit = async e => {
+      e.preventDefault(); const err = $("#authErr"); err.textContent = "";
+      const email = $("#aEmail")?.value.trim(), password = $("#aPass")?.value;
+      let r;
+      if (mode === "login") r = await sb.auth.signInWithPassword({ email, password });
+      if (mode === "signup") r = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } });
+      if (mode === "forgot") r = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+      if (mode === "reset") r = await sb.auth.updateUser({ password });
+      if (r.error) return err.textContent = r.error.message === "Invalid login credentials" ? "E-mail ou senha incorretos." : r.error.message;
+      closeSheet();
+      toast({ login: "Você entrou", signup: r.data.session ? "Conta criada" : "Conta criada. Confirme pelo link enviado ao seu e-mail.", forgot: "Enviamos o link de recuperação para o seu e-mail.", reset: "Senha alterada" }[mode]);
+    };
+  });
+}
+async function loadSession(session) {
+  S.user = session?.user || null;
+  S.profiles = []; S.profile = null; S.favs = new Set();
+  if (S.user) {
+    const [p, f] = await Promise.all([sb.from("access_profiles").select("*").eq("user_id", S.user.id), sb.from("favorites").select("club_id").eq("user_id", S.user.id)]);
+    S.profiles = p.data || []; S.favs = new Set((f.data || []).map(x => x.club_id));
+    const saved = store.get("ic:profile", null);
+    S.profile = S.profiles.find(x => x.id === saved && x.event_id === S.event?.id) || S.profiles.find(x => x.event_id === S.event?.id) || null;
+  }
+  $("#accountLabel").textContent = S.user ? S.user.email.split("@")[0] : "Entrar";
+  $("#menuBtn").hidden = !S.profile;
+}
+
+/* ============ gaveta e navegação ============ */
+function openDrawer() {
+  if (!S.profile) return;
+  const items = AREAS[S.profile.role] || [];
+  $("#layer").innerHTML = `<div class="scrim" id="scrim" style="align-items:stretch;justify-content:flex-start"></div><nav class="drawer" aria-label="Área logada">
+    <div class="eyebrow acc">Área ${S.profile.role === "organizer" ? "da organização" : S.profile.role === "referee" ? "da arbitragem" : S.profile.role === "captain" ? "do capitão" : "do clube"}</div>
+    <h2 style="margin:2px 0 0">${esc(S.user.email.split("@")[0])}</h2><div class="small muted" style="margin-bottom:12px">${myClub() ? esc(clubName(myClub())) + " · " : ""}${esc(S.event.name)}</div>
+    ${items.map(([k, label]) => `<button class="item" data-area="${k}" ${S.area === k ? 'aria-current="page"' : ""}>${label}<span>›</span></button>`).join("")}
+    <span class="spacer"></span><button class="item" data-area="">Voltar às abas públicas<span>›</span></button></nav>`;
+  $("#scrim").onclick = closeSheet;
+  document.querySelectorAll("[data-area]").forEach(b => b.onclick = () => { S.area = b.dataset.area || null; S.filters = {}; closeSheet(); render(); });
+}
+function bindGo() { document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { S.area = b.dataset.go; S.filters = {}; render(); }); }
+
+function render() {
+  const key = S.area || S.tab;
+  const fn = VIEWS[key] || VIEWS.news;
+  const view = $("#view");
+  if (!S.event) { view.innerHTML = `<h1>Interclubes</h1><div class="empty">Nenhum evento publicado ainda.</div>`; return; }
+  view.innerHTML = fn();
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-current", !S.area && t.dataset.tab === S.tab ? "page" : "false"));
+  try { history.replaceState(null, "", "#" + key); } catch {}
+  bindMatchClicks(view); bindFilters(view); bindGo();
+  view.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { S.filters.cat = +b.dataset.cat || ""; render(); });
+  view.querySelectorAll("[data-tree]").forEach(b => b.onclick = () => { S.filters.tree = b.dataset.tree; render(); });
+  view.querySelectorAll("[data-rank]").forEach(b => b.onclick = () => { S.filters.rank = b.dataset.rank; render(); });
+  view.querySelectorAll("[data-news]").forEach(b => b.onclick = () => { S.filters.news = b.dataset.news; render(); });
+  view.querySelectorAll("[data-ref]").forEach(b => b.onclick = () => openReferee(+b.dataset.ref));
+  view.querySelectorAll("[data-org]").forEach(b => b.onclick = () => openOrgMatch(+b.dataset.org));
+  view.querySelectorAll("[data-profile]").forEach(b => b.onclick = () => { S.profile = S.profiles.find(p => p.id === +b.dataset.profile); store.set("ic:profile", S.profile.id); S.area = null; $("#menuBtn").hidden = false; render(); toast("Perfil trocado"); });
+  view.querySelectorAll("[data-fav]").forEach(b => b.onclick = async () => { const id = +b.dataset.fav; const on = S.favs.has(id); const r = on ? await sb.from("favorites").delete().eq("user_id", S.user.id).eq("club_id", id) : await sb.from("favorites").insert({ user_id: S.user.id, club_id: id }); if (r.error) return toast(r.error.message); on ? S.favs.delete(id) : S.favs.add(id); render(); });
+  view.querySelectorAll("tr[data-club]").forEach(tr => tr.onclick = () => {
+    const r = ranking(S.filters.rank || "geral").find(x => x.club === +tr.dataset.club);
+    openSheet(sheetHead("Ranking", clubName(r.club)) + `<div class="table-wrap"><table><thead><tr><th>Categoria</th><th>Colocação</th><th class="n">Pontos</th></tr></thead><tbody>${Object.entries(r.by).sort((a, b) => b[1].points - a[1].points).map(([c, p]) => `<tr><td>${esc(c)}</td><td>${esc(p.label)}</td><td class="n">${p.points}</td></tr>`).join("") || '<tr><td colspan="3" class="muted">Sem pontos ainda</td></tr>'}</tbody><tfoot><tr><td colspan="2"><b>Total</b></td><td class="n"><b>${r.total}</b></td></tr></tfoot></table></div>`);
+  });
+  const nq = $("#newsQ"); if (nq) nq.oninput = () => { S.filters.q = nq.value; clearTimeout(render.t); render.t = setTimeout(() => { render(); const el = $("#newsQ"); el.focus(); el.setSelectionRange(el.value.length, el.value.length); }, 250); };
+  view.querySelectorAll("[data-like]").forEach(b => b.onclick = async () => {
+    if (!S.user) return openLogin("login");
+    const id = +b.dataset.like, on = S.likes.has(id);
+    const r = on ? await sb.from("news_likes").delete().eq("news_id", id).eq("user_id", S.user.id) : await sb.from("news_likes").insert({ news_id: id, user_id: S.user.id });
+    if (r.error) return toast(r.error.message);
+    on ? S.likes.delete(id) : S.likes.add(id); S.likeCount[id] = (S.likeCount[id] || 0) + (on ? -1 : 1); render();
+  });
+  view.querySelectorAll("[data-share]").forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(location.origin + location.pathname + "#news"); toast("Link copiado"); } catch { toast(location.origin + location.pathname + "#news"); } });
+  const lo = $("#logoutBtn"); if (lo) lo.onclick = async () => { await sb.auth.signOut(); S.area = null; S.tab = "news"; toast("Você saiu"); };
+  const pw = $("#pwBtn"); if (pw) pw.onclick = () => openLogin("reset");
+  const nf = $("#newsForm"); if (nf) nf.onsubmit = async e => { e.preventDefault(); const { error } = await sb.from("news").insert({ event_id: S.event.id, title: $("#nTitle").value.trim(), kind: $("#nKind").value, content: $("#nBody").value.trim() || null, image_url: $("#nImg").value.trim() || null }); if (error) return $("#nErr").textContent = error.message; toast("Notícia publicada"); await refresh(); S.area = null; S.tab = "news"; render(); };
+  ({ jogadores: mountPlayers, escalacoes: mountLineups, painel: mountPainel, org_atletas: mountAthletes, org_acessos: mountAccess, org_arbitros: mountEscala, inscricoes: mountClubRegs, clube_painel: mountClubPanel, clube_atletas: mountClubAthletes, clube_capitaes: mountClubCaptains, org_grade: mountGrade, org_inscricoes: mountOrgRegs, org_chaves: mountChaves, arbitragem: () => mountReferee("arbitragem"), ref_aceites: () => mountReferee("ref_aceites"), ref_quadra: () => mountReferee("ref_quadra") })[key]?.();
+}
+
+async function refresh() { await loadEventData(); render(); }
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => { S.area = null; S.filters = {}; S.tab = t.dataset.tab; render(); window.scrollTo(0, 0); });
+$("#menuBtn").onclick = openDrawer;
+$("#refreshBtn").onclick = async () => { await refresh(); toast("Dados atualizados"); };
+$("#eventBtn").onclick = () => openSheet(sheetHead("Eventos", "Trocar evento") + `<div class="stack">${S.events.map(e => `<button class="card click" style="text-align:left" data-ev="${e.id}" ${S.event?.id === e.id ? 'aria-current="true"' : ""}><b>${esc(e.name)}</b><div class="small muted">${esc(e.city || "")} · ${fmtDate(e.starts_on + "T12:00")} a ${fmtDate(e.ends_on + "T12:00")}</div></button>`).join("")}</div>`, sheet => {
+  sheet.querySelectorAll("[data-ev]").forEach(b => b.onclick = async () => { S.event = S.events.find(e => e.id === +b.dataset.ev); store.set("ic:event", S.event.slug); closeSheet(); S.area = null; await loadSession((await sb.auth.getSession()).data.session); await refresh(); });
+});
+
+/* ============ inicialização ============ */
+(async function boot() {
+  const view = $("#view");
+  view.innerHTML = `<div class="empty">Carregando o evento…</div>`;
+  try {
+    await loadEvents();
+    await loadEventData();
+    await loadSession((await sb.auth.getSession()).data.session);
+    const h = location.hash.slice(1);
+    if (VIEWS[h] && ["chaves", "agenda", "resultados", "ranking", "news"].includes(h)) S.tab = h;
+    render();
+  } catch (e) {
+    view.innerHTML = `<h1>Interclubes</h1><div class="empty">Não foi possível carregar os dados agora. Verifique a conexão e toque em atualizar.<br><span class="small">${esc(e.message || e)}</span></div>`;
+  }
+  sb.auth.onAuthStateChange(async (ev, session) => {
+    if (ev === "PASSWORD_RECOVERY") { openLogin("reset"); }
+    if (["SIGNED_IN", "SIGNED_OUT", "USER_UPDATED"].includes(ev)) { await loadSession(session); render(); }
+  });
+  S.live = sb.channel("live").on("postgres_changes", { event: "*", schema: "public", table: "matches" }, payload => {
+    const m = payload.new; if (!m || m.event_id !== S.event?.id) return;
+    const i = S.matches.findIndex(x => x.id === m.id); if (i >= 0) S.matches[i] = m; else S.matches.push(m);
+    if (!$("#layer").innerHTML) render();
+  }).on("postgres_changes", { event: "*", schema: "public", table: "match_games" }, payload => {
+    const g = payload.new; if (!g) return;
+    const i = S.games.findIndex(x => x.id === g.id); if (i >= 0) S.games[i] = g; else if (S.matches.some(m => m.id === g.match_id)) S.games.push(g);
+    if (!$("#layer").innerHTML) render();
+  }).subscribe();
+})();
+</script>
+</body>
+</html>
