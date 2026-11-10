@@ -179,7 +179,7 @@ tr.q td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 const CONFIG = {
   url: "https://tajvijpuhugjfrnbgyzg.supabase.co",
   key: "sb_publishable_BGwWJrm0ZDkGsf4_BF4_CA_gv_NSuB3", // chave pública, feita para o navegador; a segurança vem do RLS
-  defaultEvent: "beach-tennis-44-maringa"
+  defaultEvent: "copa-do-mundo-bt-2026"
 };
 const sb = supabase.createClient(CONFIG.url, CONFIG.key);
 
@@ -197,7 +197,7 @@ const fmtTime = d => new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", 
 const fmtDate = d => new Date(d).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 const dayKey = d => new Date(d).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 const club = id => S.clubs.find(c => c.id === id);
-const clubName = id => club(id)?.name ?? "A definir";
+const clubName = id => { const c = club(id); return c ? (c.flag ? c.flag + " " : "") + c.name : "A definir"; };
 const cat = id => S.cats.find(c => c.id === id);
 const teamName = (m, side) => { const id = side === "A" ? m.club_a_id : m.club_b_id; const lbl = side === "A" ? m.team_a_label : m.team_b_label; const src = side === "A" ? m.source_a : m.source_b; return id ? clubName(id) + (lbl && lbl !== "Equipe 1" ? " · " + lbl : "") : (typeof slotLabel === "function" && src ? slotLabel(src) : "A definir"); };
 const STATUS = { scheduled: ["Programado", ""], on_court: ["Em quadra", "acc"], result_pending: ["Resultado pendente", "warn"], finished: ["Finalizado", "good"], walkover: ["W.O.", "bad"], cancelled: ["Cancelado", "bad"] };
@@ -1404,11 +1404,12 @@ function mountClubes() {
   const used = id => S.matches.some(m => [m.club_a_id, m.club_b_id, m.venue_id].includes(id));
   box.innerHTML = areaHeader("Clubes e sedes", "Equipes que disputam o evento e locais onde os jogos acontecem.") + `
     <div class="row" style="margin-bottom:12px"><button class="btn" id="clbNew">Novo clube ou sede</button><span class="small muted">${S.clubs.filter(c => !c.is_venue || S.matches.some(m => [m.club_a_id, m.club_b_id].includes(c.id))).length} clube(s) · ${S.clubs.filter(c => c.is_venue).length} sede(s)</span></div>
-    ${S.clubs.length ? `<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Sigla</th><th>Cidade</th><th>Sede</th><th></th></tr></thead><tbody>${S.clubs.map(c => `<tr><td><b>${esc(c.name)}</b></td><td>${esc(c.short_name || "—")}</td><td>${esc(c.city || "—")}</td><td>${c.is_venue ? `${c.court_count || "?"} quadras · ${(c.venue_start || "").slice(0, 5)}–${(c.venue_end || "").slice(0, 5)}` : "—"}</td><td><button class="btn ghost sm" data-clb="${c.id}">Editar</button></td></tr>`).join("")}</tbody></table></div>`
+    ${S.clubs.length ? `<div class="table-wrap"><table><thead><tr><th>Equipe</th><th>Sigla</th><th>Capitães</th><th>Sede</th><th></th></tr></thead><tbody>${S.clubs.map(c => `<tr><td><b>${esc(clubName(c.id))}</b></td><td>${esc(c.short_name || "—")}</td><td>${esc(c.captain_names || "—")}</td><td>${c.is_venue ? `${c.court_count || "?"} quadras · ${(c.venue_start || "").slice(0, 5)}–${(c.venue_end || "").slice(0, 5)}` : "—"}</td><td><button class="btn ghost sm" data-clb="${c.id}">Editar</button></td></tr>`).join("")}</tbody></table></div>`
       : `<div class="empty">Nenhum clube cadastrado. Comece pela sede (por exemplo, Orla Beach Tennis) e depois as equipes.</div>`}`;
   const form = c => openSheet(sheetHead("Clubes e sedes", c ? "Editar " + c.name : "Novo clube ou sede") + `<form id="clbForm" class="stack">
     <label class="field">Nome<input class="input" id="cbName" required value="${esc(c?.name || "")}"></label>
-    <div class="filters" style="margin:0"><label class="field">Sigla<input class="input" id="cbShort" maxlength="12" value="${esc(c?.short_name || "")}"></label><label class="field">Cidade<input class="input" id="cbCity" value="${esc(c?.city || S.event.city || "")}"></label></div>
+    <div class="filters" style="margin:0"><label class="field">Sigla<input class="input" id="cbShort" maxlength="12" value="${esc(c?.short_name || "")}"></label><label class="field">Bandeira (emoji)<input class="input" id="cbFlag" maxlength="8" value="${esc(c?.flag || "")}" placeholder="🇧🇷"></label><label class="field">Cidade<input class="input" id="cbCity" value="${esc(c?.city || S.event.city || "")}"></label></div>
+    <label class="field">Capitães<input class="input" id="cbCaps" value="${esc(c?.captain_names || "")}" placeholder="Nomes dos capitães"></label>
     <label class="row small"><input type="checkbox" id="cbVenue" ${c?.is_venue ? "checked" : ""}> É sede (tem quadras onde os jogos acontecem)</label>
     <div class="filters" id="cbVenueF" style="margin:0" ${c?.is_venue ? "" : "hidden"}><label class="field">Quadras<input class="input" type="number" min="1" max="40" id="cbCourts" value="${c?.court_count || 4}"></label>
       <label class="field">Abre às<input class="input" type="time" id="cbOpen" value="${(c?.venue_start || "08:00").slice(0, 5)}"></label><label class="field">Fecha às<input class="input" type="time" id="cbClose" value="${(c?.venue_end || "22:00").slice(0, 5)}"></label></div>
@@ -1418,7 +1419,7 @@ function mountClubes() {
     $("#clbForm", sheet).onsubmit = async e => {
       e.preventDefault();
       const v = $("#cbVenue").checked;
-      const row = { event_id: S.event.id, name: $("#cbName").value.trim(), short_name: $("#cbShort").value.trim() || null, city: $("#cbCity").value.trim() || null, is_venue: v, court_count: v ? +$("#cbCourts").value : null, venue_start: v ? $("#cbOpen").value : null, venue_end: v ? $("#cbClose").value : null, slot_minutes: c?.slot_minutes || 30 };
+      const row = { event_id: S.event.id, name: $("#cbName").value.trim(), short_name: $("#cbShort").value.trim() || null, flag: $("#cbFlag").value.trim() || null, captain_names: $("#cbCaps").value.trim() || null, city: $("#cbCity").value.trim() || null, is_venue: v, court_count: v ? +$("#cbCourts").value : null, venue_start: v ? $("#cbOpen").value : null, venue_end: v ? $("#cbClose").value : null, slot_minutes: c?.slot_minutes || 30 };
       const { error } = c ? await sb.from("clubs").update(row).eq("id", c.id) : await sb.from("clubs").insert(row);
       if (error) return $("#cbErr").textContent = error.code === "23505" ? "Já existe um clube com esse nome neste evento." : error.message;
       toast(c ? "Clube salvo." : "Clube cadastrado."); closeSheet(); await refresh();
