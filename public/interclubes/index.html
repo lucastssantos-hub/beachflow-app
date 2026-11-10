@@ -509,7 +509,7 @@ const AREAS = {
   captain: [["escalacoes", "Escalações"], ["andamento", "Jogos em andamento"], ["c_chaves", "Chaves"], ["jogadores", "Jogadores"], ["inscricoes", "Inscrições"], ["c_programacao", "Programação"], ["c_resultados", "Resultados"], ["ranking", "Ranking"]],
   club_manager: [["clube_painel", "Painel do clube"], ["escalacoes", "Escalações"], ["clube_atletas", "Atletas"], ["clube_capitaes", "Capitães"], ["inscricoes", "Inscrições"], ["andamento", "Jogos em andamento"], ["c_chaves", "Chaves"], ["c_programacao", "Programação"], ["c_resultados", "Resultados"], ["ranking", "Ranking"]],
   referee: [["arbitragem", "Jogos"], ["ref_aceites", "Escalações"], ["ref_quadra", "Jogos em andamento"], ["agenda", "Programação"], ["resultados", "Resultados"]],
-  organizer: [["painel", "Painel"], ["org_inscricoes", "Inscrições"], ["org_chaves", "Chaves"], ["org_grade", "Programação"], ["org_partidas", "Partidas"], ["arbitragem", "Súmulas"], ["org_arbitros", "Escala de arbitragem"], ["org_atletas", "Atletas"], ["org_acessos", "Acessos"], ["org_news", "Notícias"], ["ranking", "Ranking"]]
+  organizer: [["painel", "Painel"], ["org_evento", "Evento"], ["org_clubes", "Clubes e sedes"], ["org_categorias", "Categorias"], ["org_inscricoes", "Inscrições"], ["org_chaves", "Chaves"], ["org_grade", "Programação"], ["org_partidas", "Partidas"], ["arbitragem", "Súmulas"], ["org_arbitros", "Escala de arbitragem"], ["org_atletas", "Atletas"], ["org_acessos", "Acessos"], ["org_news", "Notícias"], ["ranking", "Ranking"]]
 };
 const myClub = () => S.profile?.club_id;
 const areaHeader = (title, note) => `<div class="eyebrow acc">${ROLE[S.profile.role]}${myClub() ? " · " + esc(clubName(myClub())) : ""}</div><h1>${title}</h1><p class="sub">${note}</p>`;
@@ -1375,6 +1375,97 @@ async function mountClubCaptains() {
   });
 }
 
+/* ---- cadastros da organização: evento, clubes e sedes, categorias ---- */
+VIEWS.org_evento = () => {
+  const e = S.event;
+  return areaHeader("Evento", "Dados que aparecem no topo do app e definem os dias da programação.") + `<form id="evForm" class="card stack">
+    <label class="field">Nome do evento<input class="input" id="evName" required value="${esc(e.name)}"></label>
+    <div class="filters" style="margin:0"><label class="field">Etapa ou edição<input class="input" id="evStage" value="${esc(e.stage || "")}" placeholder="2026"></label>
+      <label class="field">Cidade<input class="input" id="evCity" value="${esc(e.city || "")}"></label></div>
+    <div class="filters" style="margin:0"><label class="field">Começa em<input class="input" type="date" id="evStart" required value="${e.starts_on || ""}"></label>
+      <label class="field">Termina em<input class="input" type="date" id="evEnd" required value="${e.ends_on || ""}"></label>
+      <label class="field">Situação<select class="input" id="evStatus">${[["draft", "Em preparação"], ["registration", "Inscrições abertas"], ["in_progress", "Em andamento"], ["completed", "Encerrado"]].map(([k, v]) => `<option value="${k}" ${e.status === k ? "selected" : ""}>${v}</option>`).join("")}</select></label></div>
+    <p class="err" id="evErr"></p><div class="row"><button class="btn" type="submit">Salvar evento</button></div></form>`;
+};
+function mountEvento() {
+  $("#evForm").onsubmit = async ev => {
+    ev.preventDefault();
+    const row = { name: $("#evName").value.trim(), stage: $("#evStage").value.trim() || null, city: $("#evCity").value.trim() || null, starts_on: $("#evStart").value, ends_on: $("#evEnd").value, status: $("#evStatus").value };
+    if (row.ends_on < row.starts_on) return $("#evErr").textContent = "A data de término vem antes da de início.";
+    const { error } = await sb.from("events").update(row).eq("id", S.event.id);
+    if (error) return $("#evErr").textContent = error.message;
+    Object.assign(S.event, row); $("#eventName").textContent = row.name; toast("Evento salvo.");
+  };
+}
+
+VIEWS.org_clubes = () => `<div id="clbBox">${areaHeader("Clubes e sedes", "Equipes que disputam o evento e locais onde os jogos acontecem.")}<div class="empty">Carregando…</div></div>`;
+function mountClubes() {
+  const box = $("#clbBox"); if (!box) return;
+  const used = id => S.matches.some(m => [m.club_a_id, m.club_b_id, m.venue_id].includes(id));
+  box.innerHTML = areaHeader("Clubes e sedes", "Equipes que disputam o evento e locais onde os jogos acontecem.") + `
+    <div class="row" style="margin-bottom:12px"><button class="btn" id="clbNew">Novo clube ou sede</button><span class="small muted">${S.clubs.filter(c => !c.is_venue || S.matches.some(m => [m.club_a_id, m.club_b_id].includes(c.id))).length} clube(s) · ${S.clubs.filter(c => c.is_venue).length} sede(s)</span></div>
+    ${S.clubs.length ? `<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Sigla</th><th>Cidade</th><th>Sede</th><th></th></tr></thead><tbody>${S.clubs.map(c => `<tr><td><b>${esc(c.name)}</b></td><td>${esc(c.short_name || "—")}</td><td>${esc(c.city || "—")}</td><td>${c.is_venue ? `${c.court_count || "?"} quadras · ${(c.venue_start || "").slice(0, 5)}–${(c.venue_end || "").slice(0, 5)}` : "—"}</td><td><button class="btn ghost sm" data-clb="${c.id}">Editar</button></td></tr>`).join("")}</tbody></table></div>`
+      : `<div class="empty">Nenhum clube cadastrado. Comece pela sede (por exemplo, Orla Beach Tennis) e depois as equipes.</div>`}`;
+  const form = c => openSheet(sheetHead("Clubes e sedes", c ? "Editar " + c.name : "Novo clube ou sede") + `<form id="clbForm" class="stack">
+    <label class="field">Nome<input class="input" id="cbName" required value="${esc(c?.name || "")}"></label>
+    <div class="filters" style="margin:0"><label class="field">Sigla<input class="input" id="cbShort" maxlength="12" value="${esc(c?.short_name || "")}"></label><label class="field">Cidade<input class="input" id="cbCity" value="${esc(c?.city || S.event.city || "")}"></label></div>
+    <label class="row small"><input type="checkbox" id="cbVenue" ${c?.is_venue ? "checked" : ""}> É sede (tem quadras onde os jogos acontecem)</label>
+    <div class="filters" id="cbVenueF" style="margin:0" ${c?.is_venue ? "" : "hidden"}><label class="field">Quadras<input class="input" type="number" min="1" max="40" id="cbCourts" value="${c?.court_count || 4}"></label>
+      <label class="field">Abre às<input class="input" type="time" id="cbOpen" value="${(c?.venue_start || "08:00").slice(0, 5)}"></label><label class="field">Fecha às<input class="input" type="time" id="cbClose" value="${(c?.venue_end || "22:00").slice(0, 5)}"></label></div>
+    <p class="small muted" style="margin:0">Uma sede que não disputa o evento não aparece no ranking.</p>
+    <p class="err" id="cbErr"></p><div class="row"><button class="btn" type="submit">Salvar</button>${c ? (used(c.id) ? '<span class="small muted">Tem jogos ligados: não pode ser excluído.</span>' : '<button class="btn danger" type="button" id="cbDel">Excluir</button>') : ""}</div></form>`, sheet => {
+    $("#cbVenue", sheet).onchange = e => $("#cbVenueF", sheet).hidden = !e.target.checked;
+    $("#clbForm", sheet).onsubmit = async e => {
+      e.preventDefault();
+      const v = $("#cbVenue").checked;
+      const row = { event_id: S.event.id, name: $("#cbName").value.trim(), short_name: $("#cbShort").value.trim() || null, city: $("#cbCity").value.trim() || null, is_venue: v, court_count: v ? +$("#cbCourts").value : null, venue_start: v ? $("#cbOpen").value : null, venue_end: v ? $("#cbClose").value : null, slot_minutes: c?.slot_minutes || 30 };
+      const { error } = c ? await sb.from("clubs").update(row).eq("id", c.id) : await sb.from("clubs").insert(row);
+      if (error) return $("#cbErr").textContent = error.code === "23505" ? "Já existe um clube com esse nome neste evento." : error.message;
+      toast(c ? "Clube salvo." : "Clube cadastrado."); closeSheet(); await refresh();
+    };
+    const del = $("#cbDel", sheet); if (del) del.onclick = async () => {
+      if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "Confirmar exclusão"; return; }
+      const { error } = await sb.from("clubs").delete().eq("id", c.id); if (error) return $("#cbErr").textContent = error.message;
+      toast("Clube excluído."); closeSheet(); await refresh();
+    };
+  });
+  $("#clbNew").onclick = () => form(null);
+  box.querySelectorAll("[data-clb]").forEach(b => b.onclick = () => form(club(+b.dataset.clb)));
+}
+
+VIEWS.org_categorias = () => `<div id="ctgBox">${areaHeader("Categorias", "Classes disputadas, formato de cada uma e em qual ranking contam.")}<div class="empty">Carregando…</div></div>`;
+function mountCategorias() {
+  const box = $("#ctgBox"); if (!box) return;
+  const RG = { geral: "Ranking Geral", juniors: "Ranking Juniors", nenhum: "Fora do ranking" };
+  const used = id => S.matches.some(m => m.category_id === id);
+  box.innerHTML = areaHeader("Categorias", "Classes disputadas, formato de cada uma e em qual ranking contam.") + `
+    <div class="row" style="margin-bottom:12px"><button class="btn" id="ctgNew">Nova categoria</button><span class="small muted">${S.cats.length} categoria(s)</span></div>
+    ${S.cats.length ? `<div class="table-wrap"><table><thead><tr><th>Categoria</th><th>Formato</th><th>Duplas</th><th>Sets</th><th>Ranking</th><th></th></tr></thead><tbody>${S.cats.map(c => `<tr><td><b>${esc(c.name)}</b></td><td>${c.competition_type === "round_robin" ? "Todos contra todos" : "Grupos + mata-mata"}</td><td>${gamesPerMatch(c)}</td><td>${c.sets_format === "melhor_de_3_sets" ? "Melhor de 3" : "1 set"}</td><td>${RG[c.ranking_group]}</td><td><button class="btn ghost sm" data-ctg="${c.id}">Editar</button></td></tr>`).join("")}</tbody></table></div>`
+      : `<div class="empty">Nenhuma categoria cadastrada.</div>`}`;
+  const form = c => openSheet(sheetHead("Categorias", c ? "Editar " + c.name : "Nova categoria") + `<form id="ctgForm" class="stack">
+    <label class="field">Nome<input class="input" id="cgName" required value="${esc(c?.name || "")}" placeholder="MASC A, FEM 40, SUB 14…"></label>
+    <div class="filters" style="margin:0"><label class="field">Formato<select class="input" id="cgType"><option value="round_robin" ${c?.competition_type === "round_robin" ? "selected" : ""}>Todos contra todos</option><option value="groups_knockout" ${c?.competition_type !== "round_robin" ? "selected" : ""}>Grupos + mata-mata</option></select></label>
+      <label class="field">Duplas por confronto<select class="input" id="cgFmt"><option value="melhor de 3" ${c?.match_format !== "melhor de 1" ? "selected" : ""}>3 duplas (melhor de 3)</option><option value="melhor de 1" ${c?.match_format === "melhor de 1" ? "selected" : ""}>1 dupla</option></select></label>
+      <label class="field">Sets por dupla<select class="input" id="cgSets"><option value="um_set" ${c?.sets_format !== "melhor_de_3_sets" ? "selected" : ""}>1 set até 6</option><option value="melhor_de_3_sets" ${c?.sets_format === "melhor_de_3_sets" ? "selected" : ""}>Melhor de 3 sets</option></select></label>
+      <label class="field">Ranking<select class="input" id="cgRank">${Object.entries(RG).map(([k, v]) => `<option value="${k}" ${(c?.ranking_group || "geral") === k ? "selected" : ""}>${v}</option>`).join("")}</select></label></div>
+    <p class="err" id="cgErr"></p><div class="row"><button class="btn" type="submit">Salvar</button>${c ? (used(c.id) ? '<span class="small muted">Tem jogos: não pode ser excluída.</span>' : '<button class="btn danger" type="button" id="cgDel">Excluir</button>') : ""}</div></form>`, sheet => {
+    $("#ctgForm", sheet).onsubmit = async e => {
+      e.preventDefault();
+      const row = { event_id: S.event.id, name: $("#cgName").value.trim().toUpperCase(), competition_type: $("#cgType").value, match_format: $("#cgFmt").value, sets_format: $("#cgSets").value, ranking_group: $("#cgRank").value, starts_on: c?.starts_on || S.event.starts_on, ends_on: c?.ends_on || S.event.ends_on };
+      const { error } = c ? await sb.from("categories").update(row).eq("id", c.id) : await sb.from("categories").insert(row);
+      if (error) return $("#cgErr").textContent = error.code === "23505" ? "Já existe uma categoria com esse nome." : error.message;
+      toast(c ? "Categoria salva." : "Categoria cadastrada."); closeSheet(); await refresh();
+    };
+    const del = $("#cgDel", sheet); if (del) del.onclick = async () => {
+      if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "Confirmar exclusão"; return; }
+      const { error } = await sb.from("categories").delete().eq("id", c.id); if (error) return $("#cgErr").textContent = error.message;
+      toast("Categoria excluída."); closeSheet(); await refresh();
+    };
+  });
+  $("#ctgNew").onclick = () => form(null);
+  box.querySelectorAll("[data-ctg]").forEach(b => b.onclick = () => form(cat(+b.dataset.ctg)));
+}
+
 /* ---- organização ---- */
 VIEWS.painel = () => {
   const noSched = S.matches.filter(m => !m.scheduled_at).length;
@@ -1579,7 +1670,7 @@ function render() {
   const lo = $("#logoutBtn"); if (lo) lo.onclick = async () => { await sb.auth.signOut(); S.area = null; S.tab = "news"; toast("Você saiu"); };
   const pw = $("#pwBtn"); if (pw) pw.onclick = () => openLogin("reset");
   const nf = $("#newsForm"); if (nf) nf.onsubmit = async e => { e.preventDefault(); const { error } = await sb.from("news").insert({ event_id: S.event.id, title: $("#nTitle").value.trim(), kind: $("#nKind").value, content: $("#nBody").value.trim() || null, image_url: $("#nImg").value.trim() || null }); if (error) return $("#nErr").textContent = error.message; toast("Notícia publicada"); await refresh(); S.area = null; S.tab = "news"; render(); };
-  ({ jogadores: mountPlayers, escalacoes: mountLineups, painel: mountPainel, org_atletas: mountAthletes, org_acessos: mountAccess, org_arbitros: mountEscala, inscricoes: mountClubRegs, clube_painel: mountClubPanel, clube_atletas: mountClubAthletes, clube_capitaes: mountClubCaptains, org_grade: mountGrade, org_inscricoes: mountOrgRegs, org_chaves: mountChaves, arbitragem: () => mountReferee("arbitragem"), ref_aceites: () => mountReferee("ref_aceites"), ref_quadra: () => mountReferee("ref_quadra") })[key]?.();
+  ({ jogadores: mountPlayers, escalacoes: mountLineups, painel: mountPainel, org_atletas: mountAthletes, org_acessos: mountAccess, org_arbitros: mountEscala, inscricoes: mountClubRegs, org_evento: mountEvento, org_clubes: mountClubes, org_categorias: mountCategorias, clube_painel: mountClubPanel, clube_atletas: mountClubAthletes, clube_capitaes: mountClubCaptains, org_grade: mountGrade, org_inscricoes: mountOrgRegs, org_chaves: mountChaves, arbitragem: () => mountReferee("arbitragem"), ref_aceites: () => mountReferee("ref_aceites"), ref_quadra: () => mountReferee("ref_quadra") })[key]?.();
 }
 
 async function refresh() { await loadEventData(); render(); }
